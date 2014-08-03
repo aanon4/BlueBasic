@@ -1,0 +1,8 @@
+A = 1
+PRINT A
+.
+A = 1
+OK
+PRINT A
+1
+OK

@@ -1,0 +1,14 @@
+10 IF 1
+20 PRINT "hello"
+30 IF END
+40 PRINT "done"
+RUN
+.
+10 IF 1
+20 PRINT "hello"
+30 IF END
+40 PRINT "done"
+RUN
+hello
+done
+OK

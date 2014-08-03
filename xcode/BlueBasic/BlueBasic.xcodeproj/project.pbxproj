@@ -1,0 +1,321 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		22FA2DB7197331050049CDB8 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 22FA2DB6197331050049CDB8 /* main.c */; };
+		22FA2DC01973315F0049CDB8 /* BlueBasic_Interpreter.c in Sources */ = {isa = PBXBuildFile; fileRef = 22FA2DBF1973315F0049CDB8 /* BlueBasic_Interpreter.c */; };
+		22FA2DC4197335CE0049CDB8 /* os.c in Sources */ = {isa = PBXBuildFile; fileRef = 22FA2DC3197335CE0049CDB8 /* os.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		22FA2DB1197331050049CDB8 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		226D1CF919837AB2006B289B /* blescan01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = blescan01.test; sourceTree = "<group>"; };
+		226D1CFA1983845A006B289B /* parsehex01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = parsehex01.test; sourceTree = "<group>"; };
+		226D1CFB19846B80006B289B /* if01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = if01.test; sourceTree = "<group>"; };
+		226D1CFC19846DED006B289B /* if02.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = if02.test; sourceTree = "<group>"; };
+		226D1CFD19846E4F006B289B /* if03.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = if03.test; sourceTree = "<group>"; };
+		226D1CFE19846E88006B289B /* if04.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = if04.test; sourceTree = "<group>"; };
+		226D1CFF19847030006B289B /* if05.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = if05.test; sourceTree = "<group>"; };
+		226D1D0019847093006B289B /* if06.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = if06.test; sourceTree = "<group>"; };
+		22BC36F819760C9E00828C73 /* print01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = print01.test; sourceTree = "<group>"; };
+		22BC36F919760CD900828C73 /* testrunner.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = testrunner.sh; sourceTree = "<group>"; };
+		22BC36FA19763A4400828C73 /* tests */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tests; sourceTree = "<group>"; };
+		22BC36FB19763A6D00828C73 /* print02.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = print02.test; sourceTree = "<group>"; };
+		22BC36FC19763B5500828C73 /* forloop01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = forloop01.test; sourceTree = "<group>"; };
+		22BC36FD19763CEF00828C73 /* print03.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = print03.test; sourceTree = "<group>"; };
+		22BC36FE19763EC600828C73 /* forloop02.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = forloop02.test; sourceTree = "<group>"; };
+		22BC36FF19764D3800828C73 /* assign01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = assign01.test; sourceTree = "<group>"; };
+		22BC3700197652C200828C73 /* assign02.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = assign02.test; sourceTree = "<group>"; };
+		22BC3701197652DF00828C73 /* assign03.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = assign03.test; sourceTree = "<group>"; };
+		22BC3702197764CD00828C73 /* add01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = add01.test; sourceTree = "<group>"; };
+		22BC3703197764ED00828C73 /* add02.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = add02.test; sourceTree = "<group>"; };
+		22BC37041978E0C000828C73 /* bleservice01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleservice01.test; sourceTree = "<group>"; };
+		22BC3705197B976300828C73 /* dim01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = dim01.test; sourceTree = "<group>"; };
+		22BC3706197C9E9F00828C73 /* bleadvert01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleadvert01.test; sourceTree = "<group>"; };
+		22BC3707197CD8FC00828C73 /* bleserviceadvert01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleserviceadvert01.test; sourceTree = "<group>"; };
+		22BC3708197CE96400828C73 /* bleadvert02.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleadvert02.test; sourceTree = "<group>"; };
+		22BC3709197CEABC00828C73 /* bleadvert03.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleadvert03.test; sourceTree = "<group>"; };
+		22BC370B197CEC5100828C73 /* bleadvert04.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleadvert04.test; sourceTree = "<group>"; };
+		22BC370C197CEE7E00828C73 /* bleadvert05.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleadvert05.test; sourceTree = "<group>"; };
+		22BC370D197CF78000828C73 /* example01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = example01.test; sourceTree = "<group>"; };
+		22C5B9011985AAA40069D0C7 /* bleservice02.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleservice02.test; sourceTree = "<group>"; };
+		22FA2DB3197331050049CDB8 /* BlueBasic */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = BlueBasic; sourceTree = BUILT_PRODUCTS_DIR; };
+		22FA2DB6197331050049CDB8 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		22FA2DBF1973315F0049CDB8 /* BlueBasic_Interpreter.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = BlueBasic_Interpreter.c; path = "../../../BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Source/BlueBasic_Interpreter.c"; sourceTree = "<group>"; };
+		22FA2DC2197333170049CDB8 /* os.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = os.h; path = "../../../BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Source/os.h"; sourceTree = "<group>"; };
+		22FA2DC3197335CE0049CDB8 /* os.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = os.c; sourceTree = "<group>"; };
+		B81A7E5619774A81007DFEC6 /* add10.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = add10.test; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		22FA2DB0197331050049CDB8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		22BC36F719760C3600828C73 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				22BC36F819760C9E00828C73 /* print01.test */,
+				22BC36FB19763A6D00828C73 /* print02.test */,
+				22BC36F919760CD900828C73 /* testrunner.sh */,
+				22BC36FA19763A4400828C73 /* tests */,
+				22BC36FC19763B5500828C73 /* forloop01.test */,
+				22BC36FD19763CEF00828C73 /* print03.test */,
+				22BC36FE19763EC600828C73 /* forloop02.test */,
+				22BC36FF19764D3800828C73 /* assign01.test */,
+				22BC3700197652C200828C73 /* assign02.test */,
+				22BC3701197652DF00828C73 /* assign03.test */,
+				B81A7E5619774A81007DFEC6 /* add10.test */,
+				22BC3702197764CD00828C73 /* add01.test */,
+				22BC3703197764ED00828C73 /* add02.test */,
+				22BC37041978E0C000828C73 /* bleservice01.test */,
+				22C5B9011985AAA40069D0C7 /* bleservice02.test */,
+				22BC3705197B976300828C73 /* dim01.test */,
+				22BC3706197C9E9F00828C73 /* bleadvert01.test */,
+				22BC3707197CD8FC00828C73 /* bleserviceadvert01.test */,
+				22BC3708197CE96400828C73 /* bleadvert02.test */,
+				22BC3709197CEABC00828C73 /* bleadvert03.test */,
+				22BC370B197CEC5100828C73 /* bleadvert04.test */,
+				22BC370C197CEE7E00828C73 /* bleadvert05.test */,
+				22BC370D197CF78000828C73 /* example01.test */,
+				226D1CF919837AB2006B289B /* blescan01.test */,
+				226D1CFA1983845A006B289B /* parsehex01.test */,
+				226D1CFB19846B80006B289B /* if01.test */,
+				226D1CFC19846DED006B289B /* if02.test */,
+				226D1CFD19846E4F006B289B /* if03.test */,
+				226D1CFE19846E88006B289B /* if04.test */,
+				226D1CFF19847030006B289B /* if05.test */,
+				226D1D0019847093006B289B /* if06.test */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		22FA2DAA197331050049CDB8 = {
+			isa = PBXGroup;
+			children = (
+				22BC36F719760C3600828C73 /* Tests */,
+				22FA2DB5197331050049CDB8 /* BlueBasic */,
+				22FA2DB4197331050049CDB8 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		22FA2DB4197331050049CDB8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				22FA2DB3197331050049CDB8 /* BlueBasic */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		22FA2DB5197331050049CDB8 /* BlueBasic */ = {
+			isa = PBXGroup;
+			children = (
+				22FA2DC2197333170049CDB8 /* os.h */,
+				22FA2DBF1973315F0049CDB8 /* BlueBasic_Interpreter.c */,
+				22FA2DB6197331050049CDB8 /* main.c */,
+				22FA2DC3197335CE0049CDB8 /* os.c */,
+			);
+			path = BlueBasic;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		22FA2DB2197331050049CDB8 /* BlueBasic */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 22FA2DBC197331050049CDB8 /* Build configuration list for PBXNativeTarget "BlueBasic" */;
+			buildPhases = (
+				22FA2DAF197331050049CDB8 /* Sources */,
+				22FA2DB0197331050049CDB8 /* Frameworks */,
+				22FA2DB1197331050049CDB8 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BlueBasic;
+			productName = BlueBasic;
+			productReference = 22FA2DB3197331050049CDB8 /* BlueBasic */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		22FA2DAB197331050049CDB8 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0510;
+				ORGANIZATIONNAME = tim;
+			};
+			buildConfigurationList = 22FA2DAE197331050049CDB8 /* Build configuration list for PBXProject "BlueBasic" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 22FA2DAA197331050049CDB8;
+			productRefGroup = 22FA2DB4197331050049CDB8 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				22FA2DB2197331050049CDB8 /* BlueBasic */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		22FA2DAF197331050049CDB8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				22FA2DC4197335CE0049CDB8 /* os.c in Sources */,
+				22FA2DB7197331050049CDB8 /* main.c in Sources */,
+				22FA2DC01973315F0049CDB8 /* BlueBasic_Interpreter.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		22FA2DBA197331050049CDB8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		22FA2DBB197331050049CDB8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		22FA2DBD197331050049CDB8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "";
+			};
+			name = Debug;
+		};
+		22FA2DBE197331050049CDB8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		22FA2DAE197331050049CDB8 /* Build configuration list for PBXProject "BlueBasic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				22FA2DBA197331050049CDB8 /* Debug */,
+				22FA2DBB197331050049CDB8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		22FA2DBC197331050049CDB8 /* Build configuration list for PBXNativeTarget "BlueBasic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				22FA2DBD197331050049CDB8 /* Debug */,
+				22FA2DBE197331050049CDB8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 22FA2DAB197331050049CDB8 /* Project object */;
+}
