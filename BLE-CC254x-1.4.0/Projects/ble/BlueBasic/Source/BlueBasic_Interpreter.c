@@ -111,6 +111,8 @@ static const unsigned char keywords[] =
   'A','B','S','('+0x80,
   'R','N','D','('+0x80,
   'M','I','L','L','I','S','('+0x80,
+  'B','A','T','T','E','R','Y','('+0x80,
+  'T','E','M','P','('+0x80,
   'A','U','T','O','R','U','N'+0x80,
   '>','='+0x80,
   '<','>'+0x80,
@@ -229,6 +231,8 @@ enum {
   FUNC_ABS,
   FUNC_RND,
   FUNC_MILLIS,
+  FUNC_BATTERY,
+  FUNC_TEMP,
   KW_AUTORUN,
   RELOP_GE,
   RELOP_NE,
@@ -922,6 +926,35 @@ static VAR_TYPE expr4(void)
       {
         case FUNC_MILLIS:
           return OS_millis();
+
+        case FUNC_BATTERY:
+          ADCCON3 = 0x0F | 0x10 | 0x00; // VDD/3, 10-bit, internal voltage reference
+#ifdef SIMULATE_PINS
+          ADCCON1 = 0x80;
+#endif
+          while ((ADCCON1 & 0x80) == 0)
+            ;
+          a = ADCL;
+          a |= ADCH << 8;
+          a = a >> 6;
+          // VDD can be in the range 2v to 3.6v. Internal reference voltage is 1.24v (per datasheet)
+          // So we're measuring VDD/3 against 1.24v giving us (VDD x 511) / 3.72
+          // or VDD = (ADC * 3.72 / 511). x 1000 to get result in mV.
+          return (a * 3720L) / 511L;
+
+        case FUNC_TEMP:
+          ADCCON3 = 0x0E | 0x30 | 0x00; // Temp, 14-bit, internal voltage reference
+#ifdef SIMULATE_PINS
+          ADCCON1 = 0x80;
+#endif
+          while ((ADCCON1 & 0x80) == 0)
+            ;
+          a = ADCL;
+          a |= ADCH << 8;
+          a = a >> 2;
+          // ADC value @ 24C is 1225. ADC value changes @ 4.5/1C. So ADC at 0C is 1117.
+          // So temp in C is (ADC - 1117) / 4.5 or (2xADC - 2234) / 9.
+          return (2 * a - 2234) / 9;
 
         default:
           goto expr4_error;
