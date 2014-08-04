@@ -548,7 +548,7 @@ static void tokenize(void)
         token = 0x80;
         table = keywords;
         *writepos++ = ch == WS_TAB ? WS_SPACE : ch;
-        if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '(' || ch == '_')
+        if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_')
         {
           for (ch = *readpos; (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '(' || ch == '_'; ch = *++readpos)
           {
