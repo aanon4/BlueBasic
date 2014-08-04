@@ -716,7 +716,7 @@
       <archiveVersion>1</archiveVersion>
       <data>
         <prebuild></prebuild>
-        <postbuild></postbuild>
+        <postbuild>cmd /c "copy /y $PROJ_DIR$\CC2541\Exe\BlueBasic.hex $PROJ_DIR$\..\..\..\..\..\hex\BlueBasic-CC2541.hex"</postbuild>
       </data>
     </settings>
     <settings>
