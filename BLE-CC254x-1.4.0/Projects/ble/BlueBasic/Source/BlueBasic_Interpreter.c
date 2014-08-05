@@ -142,6 +142,10 @@ static const unsigned char keywords[] =
   'P','0','('+0x80,
   'P','1','('+0x80,
   'P','2','('+0x80,
+  'A','N','A','L','O','G','R','E','F','E','R','E','N','C','E'+0x80,
+  'A','N','A','L','O','G','R','E','S','O','L','U','T','I','O','N'+0x80,
+  'I','N','T','E','R','N','A','L'+0x80,
+  'E','X','T','E','R','N','A','L'+0x80,
   'O','N','R','E','A','D'+0x80,
   'O','N','W','R','I','T','E'+0x80,
   'O','N','C','O','N','N','E','C','T'+0x80,
@@ -257,6 +261,10 @@ enum {
   PIN_P0,
   PIN_P1,
   PIN_P2,
+  KW_ANALOGREFERENCE,
+  KW_ANALOGRESOLUTION,
+  KW_INTERNAL,
+  KW_EXTERNAL,
   BLE_ONREAD,
   BLE_ONWRITE,
   BLE_ONCONNECT,
@@ -407,7 +415,10 @@ static unsigned char U0BAUD, U0GCR, U0CSR, U0DBUF;
 static unsigned char U1BAUD, U1GCR, U1CSR, U1DBUF;
 static unsigned char PERCFG;
 #endif
+
 static unsigned char spiChannel;
+static unsigned char analogReference;
+static unsigned char analogResolution = 0x30; // 14-bits
 
 static void pin_write(unsigned char pin, unsigned char val);
 static VAR_TYPE pin_read(unsigned char pin);
@@ -1360,7 +1371,8 @@ interperate:
   case KW_IF:
     if (*txtpos == KW_END)
     {
-      goto execnextline;
+      txtpos++;
+      goto run_next_statement;
     }
     // Fall through
   case KW_ELIF:
@@ -1423,8 +1435,10 @@ interperate:
     goto cmd_detachint;
   case KW_SPI:
     goto cmd_spi;
-  case KW_TRANSFER:
-    goto qwhat;
+  case KW_ANALOGREFERENCE:
+    goto cmd_analogref;
+  case KW_ANALOGRESOLUTION:
+    goto cmd_analogresolution;
   }
 
 // -- Errors -----------------------------------------------------------------
@@ -1498,7 +1512,7 @@ cmd_elif:
     }
     if (val)
     {
-      goto execnextline;
+      goto run_next_statement;
     }
     else
     {
@@ -1519,7 +1533,8 @@ cmd_elif:
             {
               if (!nest)
               {
-                goto execnextline;
+                txtpos += 2;
+                goto run_next_statement;
               }
               nest--;
             }
@@ -1531,7 +1546,8 @@ cmd_elif:
           case KW_ELSE:
             if (!nest)
             {
-              goto execnextline;
+              txtpos++;
+              goto run_next_statement;
             }
             break;
           case KW_ELIF:
@@ -1564,7 +1580,8 @@ cmd_else:
         {
           if (!nest)
           {
-            goto execnextline;
+            txtpos += 2;
+            goto run_next_statement;
           }
           nest--;
         }
@@ -1586,7 +1603,9 @@ forloop:
     txtpos++;
     ignore_blanks();
     if(*txtpos != RELOP_EQ)
+    {
       goto qwhat;
+    }
     txtpos++;
 
     initial = expression();
@@ -2087,7 +2106,6 @@ cmd_dim:
       goto qwhat;
     }
     txtpos++;
-    ignore_blanks();
     size = expression();
     if (error_num)
     {
@@ -2536,6 +2554,7 @@ ble_advert_scan:
       *ble_adptr++ = 2;
       *ble_adptr++ = GAP_ADTYPE_FLAGS;
       *ble_adptr++ = GAP_ADTYPE_FLAGS_LIMITED | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED;
+      txtpos++;
       break;
     case BLE_GENERAL:
       if (ble_adptr + 3 > ble_adbuf + sizeof(ble_adbuf))
@@ -2545,6 +2564,7 @@ ble_advert_scan:
       *ble_adptr++ = 2;
       *ble_adptr++ = GAP_ADTYPE_FLAGS;
       *ble_adptr++ = GAP_ADTYPE_FLAGS_GENERAL | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED;
+      txtpos++;
       break;
     case BLE_NAME:
       {
@@ -2682,6 +2702,7 @@ ble_advert_scan:
         GAPRole_SetParameter(GAPROLE_SCAN_RSP_DATA, ble_adptr - ble_adbuf, ble_adbuf);
       }
       ble_adptr = NULL;
+      txtpos++;
       break;
     default:
       if (ch != SQUOTE && ch != DQUOTE)
@@ -2699,7 +2720,6 @@ ble_advert_scan:
         {
           goto qtoobig;
         }
-        ignore_blanks();
         *ble_adptr++ = ble_uuid_len + 1;
         switch (ble_uuid_len)
         {
@@ -2716,15 +2736,17 @@ ble_advert_scan:
             goto qwhat;
         }
         OS_memcpy(ble_adptr, ble_uuid, ble_uuid_len);
+        ignore_blanks();
         if (*txtpos == BLE_MORE)
         {
           ble_adptr[-1] &= 0xFE;
+          txtpos++;
         }
         ble_adptr += ble_uuid_len;
       }
       break;
   }
-  goto execnextline;
+  goto run_next_statement;
 
 ble_gaprole:
   {
@@ -2736,7 +2758,6 @@ ble_gaprole:
     {
       goto qwhat;
     }
-    ignore_blanks();
     val = (unsigned short)expression();
     if (error_num)
     {
@@ -2756,7 +2777,7 @@ ble_gaprole:
       goto qwhat;
     }
   }
-  goto execnextline;
+  goto run_next_statement;
 
 ble_gap:
   {
@@ -2768,7 +2789,6 @@ ble_gap:
     {
       goto qwhat;
     }
-    ignore_blanks();
     val = (unsigned short)expression();
     if (error_num)
     {
@@ -2780,7 +2800,7 @@ ble_gap:
     }
 
   }
-  goto execnextline;
+  goto run_next_statement;
 
 //
 // SPI <port 0|1|2|3> <mode 0|1|2|3> LSB|MSB <speed>
@@ -2914,7 +2934,47 @@ cmd_spi:
       pin_write(pin, 1);
     }
   }
-  goto execnextline;
+  goto run_next_statement;
+
+//
+// ANALOGREFERENCE INTERNAL|EXTERNAL
+//
+cmd_analogref:
+  switch (*txtpos)
+  {
+    case KW_INTERNAL:
+      analogReference = 0x00;
+      break;
+    case KW_EXTERNAL:
+      analogReference = 0x40;
+      break;
+    default:
+      goto qwhat;
+  }
+  txtpos++;
+  goto run_next_statement;
+
+cmd_analogresolution:
+  val = expression();
+  switch (val)
+  {
+    case 8:
+      analogResolution = 0x00;
+      break;
+    case 10:
+      analogResolution = 0x10;
+      break;
+    case 12:
+      analogResolution = 0x20;
+      break;
+    case 14:
+      analogResolution = 0x30;
+      break;
+    default:
+      goto qwhat;
+  }
+  analogResolution = val;
+  goto run_next_statement;
 }
 
 //
@@ -2991,7 +3051,7 @@ VAR_TYPE pin_read(unsigned char pin)
     case 0:
       if (APCFG & (1 << minor))
       {
-        ADCCON3 = minor | 0x30 | 0x00; // 14-bit, internal voltage reference
+        ADCCON3 = minor | analogResolution | analogReference;
 #ifdef SIMULATE_PINS
         ADCCON1 = 0x80;
 #endif
@@ -2999,7 +3059,7 @@ VAR_TYPE pin_read(unsigned char pin)
           ;
         minor = ADCL;
         minor |= ADCH << 8;
-        return minor >> 2;
+        return minor >> (8 - (analogResolution / 8));
       }
       return (P0 >> minor) & 1;
     case 1:
@@ -3205,7 +3265,6 @@ done:
             goto error;
           }
           txtpos++;
-          ignore_blanks();
           linenum = expression();
           if (error_num)
           {
