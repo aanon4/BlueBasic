@@ -410,6 +410,7 @@ static unsigned char PERCFG;
 static unsigned char spiChannel;
 
 static void pin_write(unsigned char pin, unsigned char val);
+static VAR_TYPE pin_read(unsigned char pin);
 static unsigned char pin_parse(void);
 #define PIN_MAJOR(P)  ((P) >> 4)
 #define PIN_MINOR(P)  ((P) & 15)
@@ -850,43 +851,17 @@ static VAR_TYPE expr4(void)
     // Is it an input pin?
     if (ch >= PIN_P0 && ch <= PIN_P2)
     {
-      a = expression();
-      if (*txtpos != ')' || error_num || a < 0 || a > 7)
+      txtpos--;
+      a = pin_parse();
+      if (error_num)
       {
         goto expr4_error;
       }
-      txtpos++;
-      if (ch == PIN_P0)
-      {
-        if (APCFG & (1 << a))
-        {
-          ADCCON3 = a | 0x30 | 0x00; // 14-bit, internal voltage reference
-#ifdef SIMULATE_PINS
-          ADCCON1 = 0x80;
-#endif
-          while ((ADCCON1 & 0x80) == 0)
-            ;
-          a = ADCL;
-          a |= ADCH << 8;
-          return a >> 2;
-        }
-        else
-        {
-          return (P0 >> a) & 1;
-        }
-      }
-      else if (ch == PIN_P1)
-      {
-        return (P1 >> a) & 1;
-      }
-      else
-      {
-        return (P2 >> a) & 1;
-      }
+      return pin_read(a);
     }
 
     // 0x... hex literal
-    if (ch == FUNC_HEX)
+    else if (ch == FUNC_HEX)
     {
       a = parse_int(8, 16);
       error_num = ERROR_OK; // Okay to stop parsing early
@@ -894,13 +869,13 @@ static VAR_TYPE expr4(void)
     }
     
     // Is it a constant?
-    if (ch >= CO_TRUE && ch < CO_TRUE + sizeof(constantmap) / VAR_SIZE)
+    else if (ch >= CO_TRUE && ch < CO_TRUE + sizeof(constantmap) / VAR_SIZE)
     {
       return constantmap[ch - CO_TRUE];
     }
 
     // Is it a no-arg function?
-    if (*txtpos == ')')
+    else if (*txtpos == ')')
     {
       txtpos++;
       switch (ch)
@@ -2990,17 +2965,47 @@ void pin_write(unsigned char pin, unsigned char val)
 {
   unsigned char bit = 1 << PIN_MINOR(pin);
 
-  if (PIN_MAJOR(pin) == 0)
+  switch (PIN_MAJOR(pin))
   {
-    P0 = (P0 & ~bit) | (val ? bit : 0);
+    case 0:
+      P0 = (P0 & ~bit) | (val ? bit : 0);
+      break;
+    case 1:
+      P1 = (P1 & ~bit) | (val ? bit : 0);
+      break;
+    default:
+      P2 = (P2 & ~bit) | (val ? bit : 0);
+      break;
   }
-  else if (PIN_MAJOR(pin) == 1)
+}
+
+//
+// Read pin
+//
+VAR_TYPE pin_read(unsigned char pin)
+{
+  VAR_TYPE minor = PIN_MINOR(pin);
+
+  switch (PIN_MAJOR(pin))
   {
-    P1 = (P1 & ~bit) | (val ? bit : 0);
-  }
-  else
-  {
-    P2 = (P2 & ~bit) | (val ? bit : 0);
+    case 0:
+      if (APCFG & (1 << minor))
+      {
+        ADCCON3 = minor | 0x30 | 0x00; // 14-bit, internal voltage reference
+#ifdef SIMULATE_PINS
+        ADCCON1 = 0x80;
+#endif
+        while ((ADCCON1 & 0x80) == 0)
+          ;
+        minor = ADCL;
+        minor |= ADCH << 8;
+        return minor >> 2;
+      }
+      return (P0 >> minor) & 1;
+    case 1:
+      return (P1 >> minor) & 1;
+    default:
+      return (P2 >> minor) & 1;
   }
 }
 
