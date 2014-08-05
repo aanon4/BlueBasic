@@ -56,9 +56,7 @@ enum
   ERROR_DIV0,
   ERROR_OOM,
   ERROR_TOOBIG,
-#ifdef ENABLE_PINS
   ERROR_BADPIN,
-#endif
 };
 static unsigned char error_num;
 
@@ -70,9 +68,7 @@ static const char* const error_msgs[] =
   "Divide by zero",
   "Out of memory",
   "Too big",
-#ifdef ENABLE_PINS
   "Bad pin",
-#endif
 };
 
 static const char initmsg[]           = "BlueBasic " kVersion;
@@ -112,9 +108,6 @@ static const unsigned char keywords[] =
   'R','N','D','('+0x80,
   'M','I','L','L','I','S','('+0x80,
   'B','A','T','T','E','R','Y','('+0x80,
-#if 0 // NOT YET
-  'T','E','M','P','('+0x80,
-#endif
   'A','U','T','O','R','U','N'+0x80,
   '>','='+0x80,
   '<','>'+0x80,
@@ -135,7 +128,6 @@ static const unsigned char keywords[] =
   '^'+0x80,
   'D','S','A','V','E'+0x80,
   'D','L','O','A','D'+0x80,
-#ifdef ENABLE_PINS
   // I/O pin support
   'P','I','N','M','O','D','E'+0x80,
   'A','T','T','A','C','H','I','N','T','E','R','R','U','P','T'+0x80,
@@ -150,18 +142,14 @@ static const unsigned char keywords[] =
   'P','0','('+0x80,
   'P','1','('+0x80,
   'P','2','('+0x80,
-#endif // ENABLE_PINS
-#ifdef ENABLE_BLE
   'O','N','R','E','A','D'+0x80,
   'O','N','W','R','I','T','E'+0x80,
   'O','N','C','O','N','N','E','C','T'+0x80,
-#endif // ENABLE_BLE
   // Constants BEGIN - keep them together
   'T','R','U','E'+0x80,
   'F','A','L','S','E'+0x80,
   'O','N'+0x80,
   'O','F','F'+0x80,
-#ifdef ENABLE_BLE
   // Constants for GAPRole_SetParameter
   'A','D','V','E','R','T','_','E','N','A','B','L','E','D'+0x80,
   'M','I','N','_','C','O','N','N','_','I','N','T','E','R','V','A','L'+0x80,
@@ -173,9 +161,7 @@ static const unsigned char keywords[] =
   'L','I','M','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','A','X'+0x80,
   'G','E','N','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','I','N'+0x80,
   'G','E','N','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','A','X'+0x80,
-#endif // ENABLE_BLE
   // Constants END
-#ifdef ENABLE_BLE
   // BLE support
   'G','A','T','T'+0x80,
   'S','E','R','V','I','C','E'+0x80,
@@ -196,7 +182,6 @@ static const unsigned char keywords[] =
   'G','A','P','R','O','L','E'+0x80,
   'G','A','P','('+0x80,
   'G','A','P'+0x80,
-#endif // ENABLE_BLE
   0
 };
 
@@ -234,9 +219,6 @@ enum {
   FUNC_RND,
   FUNC_MILLIS,
   FUNC_BATTERY,
-#if 0
-  FUNC_TEMP,
-#endif
   KW_AUTORUN,
   RELOP_GE,
   RELOP_NE,
@@ -257,7 +239,6 @@ enum {
   OP_XOR,
   KW_DSAVE,
   KW_DLOAD,
-#ifdef ENABLE_PINS
   KW_PINMODE,
   KW_ATTACHINTERRUPT,
   KW_DETACHINTERRUPT,
@@ -268,18 +249,16 @@ enum {
   PM_OUTPUT,
   PM_RISING,
   PM_FALLING,
-  PIN_P0, PIN_P1, PIN_P2,
-#endif
-#ifdef ENABLE_BLE
+  PIN_P0,
+  PIN_P1,
+  PIN_P2,
   BLE_ONREAD,
   BLE_ONWRITE,
   BLE_ONCONNECT,
-#endif
   CO_TRUE,
   CO_FALSE,
   CO_ON,
   CO_OFF,
-#ifdef ENABLE_BLE
   CO_ADVERT_ENABLED,
   CO_MIN_CONN_INTERVAL,
   CO_MAX_CONN_INTERVAL,
@@ -308,7 +287,6 @@ enum {
   BLE_GAPROLE,
   BLE_FUNC_GAP,
   BLE_GAP,
-#endif
 };
 
 // Interpreter exit statuses
@@ -354,9 +332,7 @@ typedef struct stack_variable_frame {
   char type;
   char name;
   char oflags;
-#ifdef ENABLE_BLE
   struct gatt_variable_ref* ble;
-#endif
   // .... bytes ...
 } stack_variable_frame;
 
@@ -365,9 +341,7 @@ enum {
   STACK_FOR_FLAG = 'F',
   STACK_VARIABLE_FLAG = 'V',
   STACK_EVENT_FLAG = 'E',
-#ifdef ENABLE_BLE
   STACK_SERVICE_FLAG = 'S',
-#endif
   STACK_VARIABLE_NORMAL = 'N'
 };
 
@@ -401,7 +375,6 @@ static const unsigned short constantmap[] =
   0, // FALSE
   1, // ON
   0, // OFF
-#ifdef ENABLE_BLE
   GAPROLE_ADVERT_ENABLED,
   GAPROLE_MIN_CONN_INTERVAL,
   GAPROLE_MAX_CONN_INTERVAL,
@@ -411,10 +384,8 @@ static const unsigned short constantmap[] =
   TGAP_LIM_DISC_ADV_INT_MAX,
   TGAP_GEN_DISC_ADV_INT_MIN,
   TGAP_GEN_DISC_ADV_INT_MAX,
-#endif
 };
 
-#ifdef ENABLE_PINS
 #ifdef SIMULATE_PINS
 static unsigned char P0DIR, P1DIR, P2DIR;
 static unsigned char P0SEL, P1SEL, P2SEL;
@@ -427,11 +398,7 @@ static unsigned char IEN1, IEN2;
 
 static unsigned short parse_pin(void);
 
-#endif
-
 static VAR_TYPE expression(void);
-
-#ifdef ENABLE_BLE
 
 unsigned char  ble_adbuf[31];
 unsigned char* ble_adptr;
@@ -477,8 +444,6 @@ static const gattServiceCBs_t ble_service_callbacks =
   ble_write_callback,
   NULL
 };
-
-#endif
 
 //
 // Skip whitespace
@@ -830,9 +795,7 @@ static unsigned char* get_variable_frame(char name, stack_variable_frame** frame
     normal.header.frame_type = STACK_VARIABLE_NORMAL;
     normal.type = VAR_INT;
     normal.name = name;
-#ifdef ENABLE_BLE
     normal.ble = NULL;
-#endif
     *frame = &normal;
   }
   return (unsigned char*)VARIABLE_INT_ADDR(name);
@@ -868,7 +831,6 @@ static VAR_TYPE expr4(void)
   // Is it a function?
   else if (ch >= 0x80)
   {
-#ifdef ENABLE_PINS
     // Is it an input pin?
     if (ch >= PIN_P0 && ch <= PIN_P2)
     {
@@ -906,7 +868,6 @@ static VAR_TYPE expr4(void)
         return (P2 >> a) & 1;
       }
     }
-#endif
 
     // 0x... hex literal
     if (ch == FUNC_HEX)
@@ -986,7 +947,6 @@ static VAR_TYPE expr4(void)
       case FUNC_RND:
         return OS_rand() % a;
 
-#ifdef ENABLE_BLE
       case BLE_FUNC_GAPROLE:
         {
           unsigned short v = 0;
@@ -995,7 +955,6 @@ static VAR_TYPE expr4(void)
         }
       case BLE_FUNC_GAP:
         return GAP_GetParamValue((unsigned short)a);
-#endif
     }
   }
 
@@ -1361,13 +1320,11 @@ interperate:
     txtpos--;
     goto assignment;
   }
-#if ENABLE_PINS
   if (table_index >= PIN_P0 && table_index <= PIN_P2)
   {
     txtpos--;
     goto assignment;
   }
-#endif
   else switch(table_index)
   {
   default:
@@ -1392,7 +1349,6 @@ interperate:
     program_end = program_start;
     // Fall through
   case KW_RUN:
-#ifdef ENABLE_BLE
     while (sp < variables_begin)
     {
       if (((stack_header*)sp)->frame_type == STACK_SERVICE_FLAG)
@@ -1402,9 +1358,6 @@ interperate:
       }
       sp += ((stack_header*)sp)->frame_size;
     }
-#else
-    sp = variables_begin;
-#endif
     current_line = program_start;
     goto execline;
   case KW_NEXT:
@@ -1457,7 +1410,6 @@ interperate:
     goto cmd_delay;
   case KW_AUTORUN:
     goto cmd_autorun;
-#if ENABLE_BLE
   case BLE_GATT:
     goto ble_gatt;
   case BLE_ADVERT:
@@ -1470,15 +1422,12 @@ interperate:
     goto ble_gaprole;
   case BLE_GAP:
     goto ble_gap;
-#endif
-#if ENABLE_PINS
   case KW_PINMODE:
     goto cmd_pinmode;
   case KW_ATTACHINTERRUPT:
     goto cmd_attachint;
   case KW_DETACHINTERRUPT:
     goto cmd_detachint;
-#endif
   }
 
 // -- Errors -----------------------------------------------------------------
@@ -1498,11 +1447,9 @@ qtoobig:
   error_num = ERROR_TOOBIG;
   goto execnextline;
   
-#if ENABLE_PINS
 qbadpin:
   error_num = ERROR_BADPIN;
   goto execnextline;
-#endif
 
 // ---------------------------------------------------------------------------
 
@@ -1795,14 +1742,12 @@ gosub_return:
           VARIABLE_FLAGS_SET(f->name, f->oflags);
         }
         break;
-#ifdef ENABLE_BLE
       case STACK_SERVICE_FLAG:
         {
           gattAttribute_t* attr;
           GATTServApp_DeregisterService(((stack_service_frame*)sp)->attrs[0].handle, &attr);
         }
         break;
-#endif
       default:
         goto qoom;
     }
@@ -1822,7 +1767,6 @@ assignment:
     unsigned char* ptr;
     VAR_TYPE idx;
 
-#if ENABLE_PINS
     // Are we setting an output pin?
     var = *txtpos;
     if (var >= PIN_P0 && var <= PIN_P2)
@@ -1858,7 +1802,6 @@ assignment:
       }
       goto run_next_statement;
     }
-#endif
 
     if (*txtpos < 'A' || *txtpos > 'Z')
     {
@@ -1916,12 +1859,10 @@ assignment:
         }
         ptr[idx] = (unsigned char)val;
 var_done:
-#ifdef ENABLE_BLE
         if (frame->ble)
         {
           ble_notify_assign(frame->ble);
         }
-#endif
         goto run_next_statement;
 
       default:
@@ -2186,9 +2127,7 @@ cmd_dim:
     f->type = VAR_DIM_BYTE;
     f->name = name;
     f->oflags = VARIABLE_FLAGS_GET(name);
-#ifdef ENABLE_BLE
     f->ble = NULL;
-#endif
     VARIABLE_FLAGS_SET(name, VAR_VARIABLE);
     OS_memset(sp + sizeof(stack_variable_frame), 0, size);
   }
@@ -2280,7 +2219,6 @@ cmd_autorun:
   }
   goto run_next_statement;
 
-#if ENABLE_PINS
 cmd_pinmode:
   {
     unsigned short pin;
@@ -2512,9 +2450,6 @@ cmd_detachint:
     goto run_next_statement;
   }
 
-#endif
-
-#ifdef ENABLE_BLE
   unsigned char ch;
 ble_gatt:
   switch(*txtpos++)
@@ -2855,10 +2790,7 @@ ble_gap:
 
   }
   goto execnextline;
-#endif
 }
-
-#ifdef ENABLE_PINS
 
 //
 // Parse the immediate text into a PIN value.
@@ -2899,9 +2831,6 @@ badpin:
   error_num = ERROR_BADPIN;
   return 0;
 }
-#endif
-
-#ifdef ENABLE_BLE
 
 //
 // Build a new BLE service and register it with the system
@@ -3440,5 +3369,3 @@ void ble_connection_status(unsigned short connHandle, unsigned char changeType)
     }
   }
 }
-
-#endif

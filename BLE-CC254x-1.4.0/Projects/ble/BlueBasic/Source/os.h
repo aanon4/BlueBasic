@@ -15,8 +15,6 @@
 #include <memory.h>
 #include <time.h>
 
-#define ENABLE_BLE  1
-#define ENABLE_PINS 1
 #define  SIMULATE_PINS 1
 
 #define OS_init()
@@ -160,8 +158,6 @@ extern unsigned short GAP_GetParamValue(unsigned short param);
 #include "linkdb.h"
 
 #define TARGET_CC254X   1
-#define ENABLE_BLE      1
-#define ENABLE_PINS     1
 #define ENABLE_DEBUG_INTERFACE  1
 #define ENABLE_BLE_CONSOLE  1
 

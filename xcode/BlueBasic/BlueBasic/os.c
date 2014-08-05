@@ -185,8 +185,6 @@ char OS_timer_start(unsigned char id, unsigned long timeout, unsigned char repea
   return 1;
 }
 
-#ifdef ENABLE_BLE
-
 // -- BLE placeholders
 
 unsigned char GATTServApp_RegisterService(gattAttribute_t* attributes, unsigned short count, const void* callbacks)
@@ -239,6 +237,3 @@ unsigned short GAP_GetParamValue(unsigned short param)
 {
   return 0;
 }
-
-#endif // ENABLE_BLE
-
