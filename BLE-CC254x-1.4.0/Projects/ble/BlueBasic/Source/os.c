@@ -233,7 +233,6 @@ void OS_init(void)
 #ifndef ENABLE_BLE_CONSOLE
   OS_openserial();
 #endif
-  osal_snv_init();
 }
 
 short OS_file_open(unsigned char chan, unsigned char rw)
