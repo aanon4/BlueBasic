@@ -182,6 +182,11 @@ static const unsigned char keywords[] =
   'G','A','P','R','O','L','E'+0x80,
   'G','A','P','('+0x80,
   'G','A','P'+0x80,
+  // SPI support
+  'S','P','I'+0x80,
+  'T','R','A','N','S','F','E','R'+0x80,
+  'M','S','B'+0x80,
+  'L','S','B'+0x80,
   0
 };
 
@@ -287,6 +292,10 @@ enum {
   BLE_GAPROLE,
   BLE_FUNC_GAP,
   BLE_GAP,
+  KW_SPI,
+  KW_TRANSFER,
+  KW_MSB,
+  KW_LSB,
 };
 
 // Interpreter exit statuses
@@ -394,9 +403,16 @@ static unsigned char P0, P1, P2;
 static unsigned char APCFG, ADCH, ADCL, ADCCON1, ADCCON3;
 static unsigned char PICTL, P0IEN, P1IEN, P2IEN;
 static unsigned char IEN1, IEN2;
+static unsigned char U0BAUD, U0GCR, U0CSR, U0DBUF;
+static unsigned char U1BAUD, U1GCR, U1CSR, U1DBUF;
+static unsigned char PERCFG;
 #endif
+static unsigned char spiChannel;
 
-static unsigned short parse_pin(void);
+static void pin_write(unsigned char pin, unsigned char val);
+static unsigned char pin_parse(void);
+#define PIN_MAJOR(P)  ((P) >> 4)
+#define PIN_MINOR(P)  ((P) & 15)
 
 static VAR_TYPE expression(void);
 
@@ -1119,6 +1135,8 @@ static VAR_TYPE expression(void)
 {
   VAR_TYPE a;
 
+  ignore_blanks();
+
   a = expr1();
 
   for (;;)
@@ -1428,6 +1446,10 @@ interperate:
     goto cmd_attachint;
   case KW_DETACHINTERRUPT:
     goto cmd_detachint;
+  case KW_SPI:
+    goto cmd_spi;
+  case KW_TRANSFER:
+    goto qwhat;
   }
 
 // -- Errors -----------------------------------------------------------------
@@ -1771,35 +1793,26 @@ assignment:
     var = *txtpos;
     if (var >= PIN_P0 && var <= PIN_P2)
     {
-      VAR_TYPE pin;
-
-      txtpos++;
-      pin = expression();
-      if (error_num || *txtpos != ')' || pin < 0 || pin > 7)
+      unsigned char pin;
+      
+      pin = pin_parse();
+      if (error_num)
       {
         goto qwhat;
       }
-      pin = 1 << pin;
-      txtpos++;
       ignore_blanks();
       if (*txtpos != RELOP_EQ)
+      {
         goto qwhat;
+      }
       txtpos++;
       val = expression();
-      if (error_num || *txtpos != NL)
+      if (error_num)
+      {
         goto qwhat;
-      if (var < PIN_P1)
-      {
-        P0 = (P0 & ~pin) | (val ? pin : 0);
       }
-      else if (var < PIN_P2)
-      {
-        P1 = (P1 & ~pin) | (val ? pin : 0);
-      }
-      else
-      {
-        P2 = (P2 & ~pin) | (val ? pin : 0);
-      }
+      pin_write(pin, val);
+
       goto run_next_statement;
     }
 
@@ -2221,17 +2234,17 @@ cmd_autorun:
 
 cmd_pinmode:
   {
-    unsigned short pin;
+    unsigned char pin;
     unsigned char pinMode;
     unsigned char dbit;
     
-    pin = parse_pin();
+    pin = pin_parse();
     if (error_num)
     {
       goto qwhat;
     }
 
-    dbit = 1 << (pin & 0xFF);
+    dbit = 1 << PIN_MINOR(pin);
 
     ignore_blanks();
     pinMode = *txtpos++;
@@ -2256,7 +2269,7 @@ cmd_pinmode:
       goto qwhat;
     }
     
-    if (pin < 0x008) // PIN_P0
+    if (PIN_MAJOR(pin) == 0) // PIN_P0
     {
       P0SEL &= ~dbit;
       APCFG &= ~dbit;
@@ -2279,7 +2292,7 @@ cmd_pinmode:
           break;
       }
     }
-    else if (pin < 0x108) // PIN_P1
+    else if (PIN_MAJOR(pin) == 1) // PIN_P1
     {
       P1SEL &= ~dbit;
       P1DIR = (P1DIR & ~dbit) | (pinMode == PM_OUTPUT ? dbit : 0);
@@ -2336,12 +2349,12 @@ cmd_attachint:
     unsigned char falling = 0;
     unsigned char i;
     
-    pin = parse_pin();
+    pin = pin_parse();
     if (error_num)
     {
       goto qwhat;
     }
-    if (pin >= 0x204)
+    if (PIN_MAJOR(pin) == 2 && PIN_MINOR(pin) >= 4)
     {
       goto qbadpin;
     }
@@ -2374,24 +2387,27 @@ cmd_attachint:
       goto qbadpin;
     }
 
-    i = 1 << (pin & 7);
-    if (pin < 0x008)
+    i = 1 << PIN_MINOR(pin);
+    if (PIN_MAJOR(pin) == 0)
     {
       PICTL = (PICTL & 0x01) | falling;
       P0IEN |= i;
       IEN1 |= 1 << 5;
     }
-    else if (pin < 0x104)
+    else if (PIN_MAJOR(pin) == 1)
     {
-      PICTL = (PICTL & 0x02) | (falling << 1);
-      P1IEN |= i;
-      IEN2 |= 1 << 4;
-    }
-    else if (pin < 0x108)
-    {
-      PICTL = (PICTL & 0x04) | (falling << 2);
-      P1IEN |= i;
-      IEN2 |= 1 << 4;
+      if (PIN_MINOR(pin) < 4)
+      {
+        PICTL = (PICTL & 0x02) | (falling << 1);
+        P1IEN |= i;
+        IEN2 |= 1 << 4;
+      }
+      else
+      {
+        PICTL = (PICTL & 0x04) | (falling << 2);
+        P1IEN |= i;
+        IEN2 |= 1 << 4;
+      }
     }
     else
     {
@@ -2411,14 +2427,14 @@ cmd_detachint:
     unsigned short pin;
     unsigned char i;
     
-    pin = parse_pin();
+    pin = pin_parse();
     if (error_num)
     {
       goto qwhat;
     }
     
-    i = ~(1 << (pin & 7));
-    if (pin < 0x008)
+    i = ~(1 << PIN_MINOR(pin));
+    if (PIN_MAJOR(pin) == 0)
     {
       P0IEN &= i;
       if (P0IEN == 0)
@@ -2426,7 +2442,7 @@ cmd_detachint:
         IEN1 &= ~(1 << 5);
       }
     }
-    else if (pin < 0x108)
+    else if (PIN_MAJOR(pin) == 1)
     {
       P1IEN &= i;
       if (P1IEN == 0)
@@ -2434,7 +2450,7 @@ cmd_detachint:
         IEN2 &= ~(1 << 4);
       }
     }
-    else if (pin < 0x208)
+    else
     {
       P2IEN &= i;
       if (P2IEN == 0)
@@ -2790,13 +2806,147 @@ ble_gap:
 
   }
   goto execnextline;
+
+//
+// SPI <port 0|1|2|3> <mode 0|1|2|3> LSB|MSB <speed>
+//  or
+// SPI TRANSFER Px(y) <array>
+//
+cmd_spi:
+  {
+    if (*txtpos != KW_TRANSFER)
+    {
+      // Setup
+      unsigned char port;
+      unsigned char mode;
+      unsigned char msblsb;
+      unsigned char speed;
+
+      port = expression();
+      if (error_num || port > 3)
+      {
+        goto qwhat;
+      }
+      mode = expression();
+      if (error_num || mode > 3)
+      {
+        goto qwhat;
+      }
+      msblsb = *txtpos;
+      if (msblsb != KW_MSB && msblsb != KW_LSB)
+      {
+        goto qwhat;
+      }
+      txtpos++;
+      speed = expression();
+      if (error_num)
+      {
+        goto qwhat;
+      }
+
+      // Arduino compatible
+      if (mode < 2)
+      {
+        mode = 1 - mode;
+      }
+      mode = (mode << 6) | (msblsb == KW_MSB ? 0x20 : 0x00);
+      switch (speed)
+      {
+        case 1: // E == 15, M = 0
+          mode |= 15;
+          break;
+        case 2: // E = 16
+          mode |= 16;
+          break;
+        case 4: // E = 17
+          mode |= 17;
+          break;
+        default:
+          goto qwhat;
+      }
+      
+      if ((port & 2) == 0)
+      {
+        spiChannel = 0;
+        PERCFG = (PERCFG & 0xFE) | (port & 1);
+        U0BAUD = 0;
+        U0GCR = mode;
+        U0CSR = 0xE0; // SPI mode, recv enable, SPI master
+      }
+      else
+      {
+        spiChannel = 1;
+        PERCFG = (PERCFG & 0xFD) | ((port & 1) << 1);
+        U1BAUD = 0;
+        U1GCR = mode;
+        U1CSR = 0xE0;
+      }
+    }
+    else
+    {
+      // Transfer
+      unsigned char pin;
+      stack_variable_frame* vframe;
+      unsigned char* ptr;
+      unsigned short len;
+      
+      txtpos++;
+      pin = pin_parse();
+      if (error_num)
+      {
+        goto qwhat;
+      }
+      ignore_blanks();
+      ch = *txtpos;
+      if (ch < 'A' || ch > 'Z')
+      {
+        goto qwhat;
+      }
+      ptr = get_variable_frame(ch, &vframe);
+      if (vframe->type != VAR_DIM_BYTE)
+      {
+        goto qwhat;
+      }
+
+      // .. transfer ..
+      pin_write(pin, 0);
+      if (spiChannel == 0)
+      {
+        for (len = vframe->header.frame_size - sizeof(stack_variable_frame); len > 0; len--, ptr++)
+        {
+          U0DBUF = *ptr;
+#ifdef SIMULATE_PINS
+          U0CSR |= 0x02;
+#endif
+          while ((U0CSR & 0x02) == 0)
+            ;
+          *ptr = U0DBUF;
+        }
+      }
+      else
+      {
+        for (len = vframe->header.frame_size - sizeof(stack_variable_frame); len > 0; len--, ptr++)
+        {
+          U1DBUF = *ptr;
+#ifdef SIMULATE_PINS
+          U1CSR |= 0x02;
+#endif
+          while ((U1CSR & 0x02) == 0)
+            ;
+          *ptr = U1DBUF;
+        }
+      }
+      pin_write(pin, 1);
+    }
+  }
+  goto execnextline;
 }
 
 //
 // Parse the immediate text into a PIN value.
 // Pins are of the form PX(Y) and are returned as 0xXY
 //
-static unsigned short parse_pin(void)
+static unsigned char pin_parse(void)
 {
   unsigned char major;
   unsigned char minor;
@@ -2804,6 +2954,7 @@ static unsigned short parse_pin(void)
   major = *txtpos++;
   if (major < PIN_P0 || major > PIN_P2)
   {
+    txtpos--;
     goto badpin;
   }
   minor = expression();
@@ -2826,10 +2977,31 @@ static unsigned short parse_pin(void)
   }
 #endif
 #endif
-  return ((major - PIN_P0) << 8) | minor;
+  return ((major - PIN_P0) << 4) | minor;
 badpin:
   error_num = ERROR_BADPIN;
   return 0;
+}
+
+//
+// Write pin
+//
+void pin_write(unsigned char pin, unsigned char val)
+{
+  unsigned char bit = 1 << PIN_MINOR(pin);
+
+  if (PIN_MAJOR(pin) == 0)
+  {
+    P0 = (P0 & ~bit) | (val ? bit : 0);
+  }
+  else if (PIN_MAJOR(pin) == 1)
+  {
+    P1 = (P1 & ~bit) | (val ? bit : 0);
+  }
+  else
+  {
+    P2 = (P2 & ~bit) | (val ? bit : 0);
+  }
 }
 
 //
