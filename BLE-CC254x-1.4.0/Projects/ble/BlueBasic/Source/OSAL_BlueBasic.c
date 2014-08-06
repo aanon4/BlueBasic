@@ -95,7 +95,9 @@ const pTaskEventHandlerFn tasksArr[] =
   GATT_ProcessEvent,                                                // task 6
   SM_ProcessEvent,                                                  // task 7
   GAPRole_ProcessEvent,                                             // task 8
+#ifdef FEATURE_GAPBONDMANAGER
   GAPBondMgr_ProcessEvent,                                          // task 9
+#endif
   GATTServApp_ProcessEvent,                                         // task 10
   BlueBasic_ProcessEvent                                            // task 11
 };
@@ -152,7 +154,10 @@ void osalInitTasks( void )
 
   /* Profiles */
   GAPRole_Init( taskID++ );
+
+#ifdef FEATURE_GAPBONDMANAGER
   GAPBondMgr_Init( taskID++ );
+#endif
 
   GATTServApp_Init( taskID++ );
 

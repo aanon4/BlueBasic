@@ -1066,10 +1066,10 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
             
             osal_start_timerEx( gapRole_TaskID, START_CONN_UPDATE_EVT, timeout*1000 );
           }
-
+#ifdef FEATURE_GAPBONDMANAGER
           // Notify the Bond Manager to the connection
           VOID GAPBondMgr_LinkEst( pPkt->devAddrType, pPkt->devAddr, pPkt->connectionHandle, GAP_PROFILE_PERIPHERAL );
-          
+#endif         
           // Set enabler to FALSE; device will become discoverable again when
           // this value gets set to TRUE
           gapRole_AdvEnabled = FALSE;          
@@ -1094,8 +1094,9 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
     case GAP_LINK_TERMINATED_EVENT:
       {
         gapTerminateLinkEvent_t *pPkt = (gapTerminateLinkEvent_t *)pMsg;
-
+#ifdef FEATURE_GAPBONDMANAGER
         VOID GAPBondMgr_ProcessGAPMsg( (gapEventHdr_t *)pMsg );
+#endif
         osal_memset( gapRole_ConnectedDevAddr, 0, B_ADDR_LEN );
 
         // Erase connection information

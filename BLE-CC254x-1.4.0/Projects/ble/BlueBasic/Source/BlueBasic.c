@@ -176,7 +176,7 @@ static CONST uint8 consoleAdvert[] =
 {
   0x02, GAP_ADTYPE_FLAGS, GAP_ADTYPE_FLAGS_GENERAL|GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED,
   0x11, GAP_ADTYPE_128BIT_MORE, CONSOLE_PROFILE_SERV_UUID,
-  0x08, GAP_ADTYPE_LOCAL_NAME_COMPLETE, 'B', 'l', 'u', 'e', 'B', 'e', 'e'
+  0x09, GAP_ADTYPE_LOCAL_NAME_COMPLETE, 'B', 'l', 'u', 'B', 'a', 's', 'i', 'c'
 };
 
 #endif
@@ -197,12 +197,14 @@ static gapRolesCBs_t blueBasic_PeripheralCBs =
   NULL                            // When a valid RSSI is read from controller (not used by application)
 };
 
+#ifdef FEATURE_GAPBONDMANAGER
 // GAP Bond Manager Callbacks
 static gapBondCBs_t blueBasic_BondMgrCBs =
 {
   NULL,                     // Passcode callback (not used by application)
   NULL                      // Pairing / Bonding state Callback (not used by application)
 };
+#endif
 
 // GAP Link callback
 static void blueBasic_HandleConnStatusCB(uint16 connHandle, uint8 changeType);
@@ -275,7 +277,7 @@ void BlueBasic_Init( uint8 task_id )
     GAP_SetParamValue( TGAP_GEN_DISC_ADV_INT_MAX, advInt );
   }
 
-#if 0
+#ifdef FEATURE_GAPBONDMANAGER
   // Setup the GAP Bond Manager
   {
     uint32 passkey = 0; // passkey "000000"
@@ -348,10 +350,11 @@ uint16 BlueBasic_ProcessEvent( uint8 task_id, uint16 events )
   {
     // Start the Device
     VOID GAPRole_StartDevice( &blueBasic_PeripheralCBs );
-
+    
+#ifdef FEATURE_GAPBONDMANAGER
     // Start Bond Manager
     VOID GAPBondMgr_Register( &blueBasic_BondMgrCBs );
-
+#endif
     // Start monitoring links
     VOID linkDB_Register( blueBasic_HandleConnStatusCB );
 

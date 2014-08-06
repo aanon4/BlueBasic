@@ -6700,9 +6700,15 @@
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\Profiles\Roles\gapbondmgr.c</name>
+      <excluded>
+        <configuration>CC2540</configuration>
+      </excluded>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\Profiles\Roles\gapbondmgr.h</name>
+      <excluded>
+        <configuration>CC2540</configuration>
+      </excluded>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\Include\gapgattserver.h</name>
