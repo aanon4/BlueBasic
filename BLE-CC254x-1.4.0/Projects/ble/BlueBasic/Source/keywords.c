@@ -26,7 +26,6 @@ struct keyword
   { "TO", "KW_TO" },
   { "STEP", "KW_STEP" },
   { "PRINT", "KW_PRINT" },
-  { "STOP", "KW_STOP" },
   { "REBOOT", "KW_REBOOT" },
   { "MEM", "KW_MEM" },
   { "DIM", "KW_DIM" },
@@ -149,7 +148,7 @@ static int cmp(const void* a, const void* b)
   return strcmp(ka->keyword, kb->keyword);
 }
 
-main()
+int main()
 {
   int i;
   int j;

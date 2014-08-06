@@ -77,7 +77,6 @@ static const unsigned char keywords_5[] =
   'S','L','A','V','E','_','L','A','T','E','N','C','Y',CO_SLAVE_LATENCY,
   'S','P','I',KW_SPI,
   'S','T','E','P',KW_STEP,
-  'S','T','O','P',KW_STOP,
   0
 };
 static const unsigned char keywords_6[] =
