@@ -150,19 +150,6 @@ enum
   BLE_ONREAD,
   BLE_ONWRITE,
   BLE_ONCONNECT,
-  CO_TRUE,
-  CO_FALSE,
-  CO_ON,
-  CO_OFF,
-  CO_ADVERT_ENABLED,
-  CO_MIN_CONN_INTERVAL,
-  CO_MAX_CONN_INTERVAL,
-  CO_SLAVE_LATENCY,
-  CO_TIMEOUT_MULTIPLIER,
-  CO_LIM_DISC_INT_MIN,
-  CO_LIM_DISC_INT_MAX,
-  CO_GEN_DISC_INT_MIN,
-  CO_GEN_DISC_INT_MAX,
   BLE_GATT,
   BLE_SERVICE,
   BLE_CHARACTERISTIC,
@@ -186,6 +173,21 @@ enum
   KW_TRANSFER,
   KW_MSB,
   KW_LSB,
+  // Constants start here
+  CO_TRUE,
+  CO_FALSE,
+  CO_ON,
+  CO_OFF,
+  CO_ADVERT_ENABLED,
+  CO_MIN_CONN_INTERVAL,
+  CO_MAX_CONN_INTERVAL,
+  CO_SLAVE_LATENCY,
+  CO_TIMEOUT_MULTIPLIER,
+  CO_LIM_DISC_INT_MIN,
+  CO_LIM_DISC_INT_MAX,
+  CO_GEN_DISC_INT_MIN,
+  CO_GEN_DISC_INT_MAX,
+  // Constants finish here
 };
 
 #include "keyword_tables.h"
@@ -466,6 +468,9 @@ not_found:
   }
 }
 
+//
+// Print a number (base 10)
+//
 void printnum(VAR_TYPE num)
 {
   VAR_TYPE size = 10;
@@ -526,6 +531,9 @@ static short find_quoted_string(void)
   return i;
 }
 
+//
+// Print the string between quotation marks.
+//
 static unsigned char print_quoted_string(void)
 {
   short i = find_quoted_string();
@@ -546,6 +554,9 @@ static unsigned char print_quoted_string(void)
   }
 }
 
+//
+// Print a message + newline
+//
 void printmsg(const char *msg)
 {
   while (*msg != 0)
@@ -555,17 +566,20 @@ void printmsg(const char *msg)
   OS_putchar(NL);
 }
 
+//
+// Find the line nearest the given linenum.
+//
 static unsigned char* findline(void)
 {
   unsigned char *line;
+
   for (line = program_start; ; line += line[sizeof(LINENUM)])
   {
-    if(line == program_end)
+    if (line == program_end)
     {
       return line;
     }
-
-    if(((LINENUM *)line)[0] >= linenum)
+    else if (*(LINENUM*)line >= linenum)
     {
       return line;
     }
@@ -599,6 +613,7 @@ static void printline(unsigned char indent)
     }
     else
     {
+      // Decode the token (which is a bit non-trival and slow)
       const unsigned char* begin;
       const unsigned char* ptr;
       const unsigned char** k;
@@ -669,7 +684,7 @@ static VAR_TYPE parse_int(unsigned char maxlen, unsigned char base)
     }
     else
     {
-    error:
+error:
       error_num = ERROR_EXPRESSION;
       txtpos--;
       break;
@@ -872,7 +887,7 @@ static VAR_TYPE expr4(void)
       }
       txtpos++;
       a = expression();
-      if(*txtpos != ')' || error_num)
+      if (*txtpos != ')' || error_num)
       {
         goto expr4_error;
       }
@@ -907,7 +922,10 @@ static VAR_TYPE expr4(void)
   }
 
 expr4_error:
-  error_num = ERROR_EXPRESSION;
+  if (!error_num)
+  {
+    error_num = ERROR_EXPRESSION;
+  }
   return 0;
 
 }
@@ -921,7 +939,9 @@ static VAR_TYPE expr3(void)
   for (;;)
   {
     if (error_num)
+    {
       return a;
+    }
     switch (*txtpos++)
     {
       default:
@@ -953,14 +973,20 @@ static VAR_TYPE expr2(void)
   VAR_TYPE a;
 
   if(*txtpos == OP_SUB || *txtpos == OP_ADD)
+  {
     a = 0;
+  }
   else
+  {
     a = expr3();
+  }
 
   for (;;)
   {
     if (error_num)
+    {
       return a;
+    }
     switch (*txtpos++)
     {
       default:
@@ -985,7 +1011,9 @@ static VAR_TYPE expr1(void)
   for (;;)
   {
     if (error_num)
+    {
       return a;
+    }
     switch(*txtpos++)
     {
       default:
@@ -1026,7 +1054,9 @@ static VAR_TYPE expression(void)
   for (;;)
   {
     if (error_num)
+    {
       return a;
+    }
     switch (*txtpos++)
     {
       default:
@@ -1286,7 +1316,7 @@ interperate:
     current_line = findline();
     goto execline;
   case KW_GOSUB:
-    goto gosub;
+    goto cmd_gosub;
   case KW_RETURN:
     goto gosub_return;
   case KW_REM:
@@ -1298,8 +1328,7 @@ interperate:
   case KW_REBOOT:
     OS_reboot();
   case KW_END:
-  case KW_STOP:
-    if(txtpos[0] != NL)
+    if (txtpos[0] != NL)
     {
       goto qwhat;
     }
@@ -1398,7 +1427,6 @@ execline:
 // --- Commands --------------------------------------------------------------
 
 cmd_elif:
-  
     if (current_line == NULL)
     {
       return IX_PROMPT;
@@ -1565,16 +1593,19 @@ forloop:
   }
   goto qwhat;
 
-gosub:
-  linenum = expression();
-  if (!error_num && *txtpos == NL)
+cmd_gosub:
   {
     stack_gosub_frame *f;
+
+    linenum = expression();
+    if (error_num || *txtpos != NL)
+    {
+      goto qwhat;
+    }
     if (sp + sizeof(stack_gosub_frame) < program_end)
     {
       goto qoom;
     }
-
     sp -= sizeof(stack_gosub_frame);
     f = (stack_gosub_frame *)sp;
     f->header.frame_type = STACK_GOSUB_FLAG;
@@ -1582,9 +1613,8 @@ gosub:
     f->txtpos = txtpos;
     f->current_line = current_line;
     current_line = findline();
-    goto execline;
   }
-  goto qwhat;
+  goto execline;
   
 next:
   // Find the variable name
