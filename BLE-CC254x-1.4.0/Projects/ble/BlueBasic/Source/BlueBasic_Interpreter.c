@@ -74,130 +74,12 @@ static const char* const error_msgs[] =
 static const char initmsg[]           = "BlueBasic " kVersion;
 static const char memorymsg[]         = " bytes free.";
 
-/***********************************************************/
-// Keyword table and constants - the last character has 0x80 added to it
-static const unsigned char keywords[] =
-{
-  'L','I','S','T'+0x80,
-  'L','O','A','D'+0x80,
-  'N','E','W'+0x80,
-  'R','U','N'+0x80,
-  'S','A','V','E'+0x80,
-  'N','E','X','T'+0x80,
-  'L','E','T'+0x80,
-  'I','F'+0x80,
-  'E','L','S','E'+0x80,
-  'E','L','I','F'+0x80,
-  'G','O','T','O'+0x80,
-  'G','O','S','U','B'+0x80,
-  'R','E','T','U','R','N'+0x80,
-  'R','E','M'+0x80,
-  'F','O','R'+0x80,
-  'T','O'+0x80,
-  'S','T','E','P'+0x80,
-  'P','R','I','N','T'+0x80,
-  'S','T','O','P'+0x80,
-  'R','E','B','O','O','T'+0x80,
-  'M','E','M'+0x80,
-  'D','I','M'+0x80,
-  'E','N','D'+0x80,
-  'T','I','M','E','R'+0x80,
-  'R','E','P','E','A','T'+0x80,
-  'D','E','L','A','Y'+0x80,
-  'A','B','S','('+0x80,
-  'R','N','D','('+0x80,
-  'M','I','L','L','I','S','('+0x80,
-  'B','A','T','T','E','R','Y','('+0x80,
-  'A','U','T','O','R','U','N'+0x80,
-  '>','='+0x80,
-  '<','>'+0x80,
-  '>'+0x80,
-  '=','='+0x80,
-  '='+0x80,
-  '<','='+0x80,
-  '<'+0x80,
-  '!','='+0x80,
-  '0','X'+0x80,
-  '+'+0x80,
-  '-'+0x80,
-  '*'+0x80,
-  '/'+0x80,
-  '%'+0x80,
-  '&'+0x80,
-  '|'+0x80,
-  '^'+0x80,
-  'D','S','A','V','E'+0x80,
-  'D','L','O','A','D'+0x80,
-  // I/O pin support
-  'P','I','N','M','O','D','E'+0x80,
-  'A','T','T','A','C','H','I','N','T','E','R','R','U','P','T'+0x80,
-  'D','E','T','A','C','H','I','N','T','E','R','R','U','P','T'+0x80,
-  'P','U','L','L','U','P'+0x80,
-  'P','U','L','L','D','O','W','N'+0x80,
-  'I','N','P','U','T'+0x80,
-  'A','D','C'+0x80,
-  'O','U','T','P','U','T'+0x80,
-  'R','I','S','I','N','G'+0x80,
-  'F','A','L','L','I','N','G'+0x80,
-  'P','0','('+0x80,
-  'P','1','('+0x80,
-  'P','2','('+0x80,
-  'A','N','A','L','O','G','R','E','F','E','R','E','N','C','E'+0x80,
-  'A','N','A','L','O','G','R','E','S','O','L','U','T','I','O','N'+0x80,
-  'I','N','T','E','R','N','A','L'+0x80,
-  'E','X','T','E','R','N','A','L'+0x80,
-  'O','N','R','E','A','D'+0x80,
-  'O','N','W','R','I','T','E'+0x80,
-  'O','N','C','O','N','N','E','C','T'+0x80,
-  // Constants BEGIN - keep them together
-  'T','R','U','E'+0x80,
-  'F','A','L','S','E'+0x80,
-  'O','N'+0x80,
-  'O','F','F'+0x80,
-  // Constants for GAPRole_SetParameter
-  'A','D','V','E','R','T','_','E','N','A','B','L','E','D'+0x80,
-  'M','I','N','_','C','O','N','N','_','I','N','T','E','R','V','A','L'+0x80,
-  'M','A','X','_','C','O','N','N','_','I','N','T','E','R','V','A','L'+0x80,
-  'S','L','A','V','E','_','L','A','T','E','N','C','Y'+0x80,
-  'T','I','M','E','O','U','T','_','M','U','L','T','I','P','L','I','E','R'+0x80,
-  // Constants for GAP_SetParamValue
-  'L','I','M','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','I','N'+0x80,
-  'L','I','M','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','A','X'+0x80,
-  'G','E','N','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','I','N'+0x80,
-  'G','E','N','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','A','X'+0x80,
-  // Constants END
-  // BLE support
-  'G','A','T','T'+0x80,
-  'S','E','R','V','I','C','E'+0x80,
-  'C','H','A','R','A','C','T','E','R','I','S','T','I','C'+0x80,
-  'R','E','A','D'+0x80,
-  'W','R','I','T','E','N','O','R','S','P'+0x80,
-  'W','R','I','T','E'+0x80,
-  'N','O','T','I','F','Y'+0x80,
-  'I','N','D','I','C','A','T','E'+0x80,
-  'A','D','V','E','R','T'+0x80,
-  'S','C','A','N'+0x80,
-  'G','E','N','E','R','A','L'+0x80,
-  'L','I','M','I','T','E','D'+0x80,
-  'M','O','R','E'+0x80,
-  'N','A','M','E'+0x80,
-  'C','U','S','T','O','M'+0x80,
-  'G','A','P','R','O','L','E','('+0x80,
-  'G','A','P','R','O','L','E'+0x80,
-  'G','A','P','('+0x80,
-  'G','A','P'+0x80,
-  // SPI support
-  'S','P','I'+0x80,
-  'T','R','A','N','S','F','E','R'+0x80,
-  'M','S','B'+0x80,
-  'L','S','B'+0x80,
-  0
-};
 
 // Start enum at 128 so we get instant token values.
 // By moving the command list to an enum, we can easily remove sections
 // above and below simultaneously to selectively obliterate functionality.
-enum {
+enum
+{
   KW_LIST = 0x80,
   KW_LOAD,
   KW_NEW,
@@ -305,6 +187,9 @@ enum {
   KW_MSB,
   KW_LSB,
 };
+
+#include "keyword_tables.h"
+
 
 // Interpreter exit statuses
 enum {
@@ -491,98 +376,93 @@ static void ignore_blanks(void)
 //
 static void tokenize(void)
 {
-  const unsigned char* table = keywords;
-  unsigned char token = 0x80;
-  unsigned char quote = 0;
-  unsigned char lastch = 0;
-  unsigned char* writepos = txtpos;
-  unsigned char* scanpos = txtpos;
-  unsigned char* readpos = scanpos;
+  unsigned char c;
+  unsigned char* writepos;
+  unsigned char* readpos;
+  unsigned char* scanpos;
+  const unsigned char* table;
+  
+  writepos = txtpos;
+  scanpos = txtpos;
   for (;;)
   {
-    unsigned char ch = *readpos++;
-    if (ch == NL && scanpos == readpos - 1)
+    readpos = scanpos;
+    table = KEYWORD_TABLE(readpos);
+    for (;;)
     {
-      // Remove any trailing white space. There can only be 0 or 1 since we already reduced them
-      if (writepos > txtpos && writepos[-1] == WS_SPACE)
+      c = *readpos;
+      if (c == SQUOTE || c == DQUOTE)
       {
-        writepos--;
-      }
-      *writepos = NL;
-      return;
-    }
-    else if (quote)
-    {
-      if (ch == quote)
-      {
-        quote = 0;
+        *writepos++ = c;
+        readpos++;
+        while ((*writepos++ = *readpos++) != c)
+          ;
         scanpos = readpos;
+        break;
       }
-      *writepos++ = ch;
-    }
-    // Keep quotes "as is"
-    else if (quote == 0 && (ch == SQUOTE || ch == DQUOTE))
-    {
-      quote = ch;
-      *writepos++ = ch;
-    }
-    // Reduce whitespaces down to a single whitespace
-    else if ((ch == WS_SPACE || ch == WS_TAB) && lastch == WS_SPACE)
-    {
-      // Skip extra whitespace
-      scanpos = readpos;
-    }
-    else
-    {
-      unsigned char tch = *table;
-      if (tch == 0)
-      {
-        // No matching keyword. Advance to next possible keyword start
-        token = 0x80;
-        table = keywords;
-        *writepos++ = ch == WS_TAB ? WS_SPACE : ch;
-        if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_')
-        {
-          for (ch = *readpos; (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '(' || ch == '_'; ch = *++readpos)
-          {
-            *writepos++ = ch;
-          }
-          ch = 0;
-        }
-        scanpos = readpos;
-      }
-      // Token is matching
-      else if (ch == tch)
+      while (c == *table)
       {
         table++;
+        c = *++readpos;
       }
-      // Matching token found.
-      else if ((ch | 0x80) == tch)
+      if (*table >= 0x80)
       {
-        // Remove any whitespace proceeding the token
+        // Match found
         if (writepos > txtpos && writepos[-1] == WS_SPACE)
         {
           writepos--;
         }
-        *writepos++ = token;
-        // Skip any whitespace that follows
-        for (ch = *readpos; ch == WS_SPACE || ch == WS_TAB; ch = *++readpos)
-          ;
-        token = 0x80;
-        table = keywords;
+        *writepos++ = *table;
+        // Skip whitespace
+        while (c = *readpos, c == WS_SPACE || c == WS_TAB)
+        {
+          readpos++;
+        }
         scanpos = readpos;
+        break;
       }
       else
       {
-        // No match - advance to the next token and reset
+        // No match found
+        if (c < *table && (c != WS_SPACE && c != WS_TAB && c != NL))
+        {
+          goto not_found;
+        }
+        // Move to next possibility
         while (*table++ < 0x80)
           ;
+        if (*table == 0)
+        {
+not_found:
+          // Not found
+          // Advance until next likely token start
+          c = *scanpos;
+          while (c >= 'A' && c <= 'Z')
+          {
+            *writepos++ = c;
+            c = *++scanpos;
+          }
+          if (c == WS_TAB || c == WS_SPACE)
+          {
+            if (writepos > txtpos && writepos[-1] != WS_SPACE)
+            {
+              *writepos++ = WS_SPACE;
+            }
+          }
+          else
+          {
+            *writepos++ = c;
+          }
+          if (c == NL)
+          {
+            return;
+          }
+          scanpos++;
+          break;
+        }
         readpos = scanpos;
-        ch = 0;
-        token++;
       }
     }
-    lastch = ch == WS_TAB ? WS_SPACE : ch;
   }
 }
 
@@ -719,28 +599,46 @@ static void printline(unsigned char indent)
     }
     else
     {
-      const unsigned char* table = keywords;
-      for (; c > 0x80; c--)
+      const unsigned char* begin;
+      const unsigned char* ptr;
+      const unsigned char** k;
+
+      for (k = keywords; *k; k++)
       {
-        while (*table++ < 0x80)
-          ;
-      }
-      if (lc != WS_SPACE)
-      {
-        OS_putchar(WS_SPACE);
-      }
-      for (c = *table++; c < 0x80; c = *table++)
-      {
-        OS_putchar(c);
-      }
-      c &= 0x7F;
-      OS_putchar(c);
-      if (c != '(')
-      {
-        OS_putchar(WS_SPACE);
-        c = WS_SPACE;
+        begin = *k;
+        ptr = begin;
+        while (*ptr != 0)
+        {
+          while (*ptr < 0x80)
+          {
+            ptr++;
+          }
+          if (*ptr != c)
+          {
+            begin = ++ptr;
+          }
+          else
+          {
+            if (lc != WS_SPACE)
+            {
+              OS_putchar(WS_SPACE);
+            }
+            for (c = *begin++; c < 0x80; c = *begin++)
+            {
+              OS_putchar(c);
+            }
+            c = begin[-2];
+            if (c != '(')
+            {
+              OS_putchar(WS_SPACE);
+              c = WS_SPACE;
+            }
+            goto found;
+          }
+        }
       }
     }
+found:
     lc = c;
   }
   OS_putchar(NL);
