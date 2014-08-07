@@ -306,8 +306,12 @@ void BlueBasic_Init( uint8 task_id )
   // is halted
 #ifndef ENABLE_BLE_CONSOLE
   // See: http://e2e.ti.com/support/wireless_connectivity/f/538/p/169944/668822.aspx#664740
-  HCI_EXT_ClkDivOnHaltCmd( HCI_EXT_ENABLE_CLK_DIVIDE_ON_HALT );
+  HCI_EXT_ClkDivOnHaltCmd(HCI_EXT_ENABLE_CLK_DIVIDE_ON_HALT);
 #endif
+
+  // Startup with low power settings
+  HCI_EXT_SetTxPowerCmd(LL_EXT_TX_POWER_MINUS_6_DBM);
+  HCI_EXT_SetRxGainCmd(HCI_EXT_RX_GAIN_STD);
 
   // Setup a delayed profile startup
   osal_set_event( blueBasic_TaskID, BLUEBASIC_START_DEVICE_EVT );
@@ -432,10 +436,6 @@ uint16 BlueBasic_ProcessEvent( uint8 task_id, uint16 events )
  */
 static void peripheralStateNotificationCB( gaprole_States_t newState )
 {
-#ifdef PLUS_BROADCASTER
-  static uint8 first_conn_flag = 0;
-#endif // PLUS_BROADCASTER
-
   switch ( newState )
   {
     case GAPROLE_STARTED:

@@ -99,6 +99,11 @@ extern char OS_timer_start(unsigned char id, unsigned long timeout, unsigned cha
 #define GAP_DEVICE_NAME_LEN                   21
 #define GGS_DEVICE_NAME_ATT                   0
 
+#define HCI_EXT_TX_POWER_MINUS_23_DBM         0
+#define HCI_EXT_TX_POWER_MINUS_6_DBM          1
+#define HCI_EXT_TX_POWER_0_DBM                2
+#define HCI_EXT_TX_POWER_4_DBM                3
+
 #define LINKDB_STATUS_UPDATE_NEW              0
 #define LINKDB_STATUS_UPDATE_REMOVED          1
 #define LINKDB_STATUS_UPDATE_STATEFLAGS       2
@@ -143,6 +148,8 @@ extern unsigned char GAPRole_GetParameter(unsigned short param, void* addr);
 extern unsigned char GGS_SetParameter(unsigned short param, unsigned char len, void* addr);
 extern unsigned char GAP_SetParamValue(unsigned short param, unsigned short value);
 extern unsigned short GAP_GetParamValue(unsigned short param);
+extern unsigned char HCI_EXT_SetTxPowerCmd(unsigned char power);
+extern unsigned char HCI_EXT_SetRxGainCmd(unsigned char gain);
 
 #else /* __APPLE__ --------------------------------------------------------------------------- */
 
@@ -156,6 +163,7 @@ extern unsigned short GAP_GetParamValue(unsigned short param);
 #include "gap.h"
 #include "peripheral.h"
 #include "linkdb.h"
+#include "hci.h"
 
 #define TARGET_CC254X   1
 #define ENABLE_DEBUG_INTERFACE  1

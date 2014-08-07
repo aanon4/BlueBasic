@@ -113,6 +113,8 @@ struct keyword
   { "TRANSFER", "KW_TRANSFER" },
   { "MSB", "KW_MSB" },
   { "LSB", "KW_LSB" },
+  { "TXPOWER", "BLE_TXPOWER" },
+  { "RXGAIN", "BLE_RXGAIN" },
 };
 
 #define	NR_TABLES	13
@@ -156,7 +158,7 @@ int main()
 
   for (i = 0; i < sizeof(keywords) / sizeof(struct keyword); i++)
   {
-    int hash = keywords[i].keyword[0] % NR_TABLES;
+    int hash = (keywords[i].keyword[0]) % NR_TABLES;
     for (j = 0; ; j++)
     {
       if (keyword_tables[hash][j].keyword == NULL)

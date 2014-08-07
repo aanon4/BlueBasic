@@ -173,6 +173,8 @@ enum
   KW_TRANSFER,
   KW_MSB,
   KW_LSB,
+  BLE_TXPOWER,
+  BLE_RXGAIN,
   // Constants start here
   CO_TRUE,
   CO_FALSE,
@@ -1354,6 +1356,10 @@ interperate:
     goto ble_gaprole;
   case BLE_GAP:
     goto ble_gap;
+  case BLE_TXPOWER:
+    goto ble_txpower;
+  case BLE_RXGAIN:
+    goto ble_rxgain;
   case KW_PINMODE:
     goto cmd_pinmode;
   case KW_ATTACHINTERRUPT:
@@ -2710,7 +2716,6 @@ ble_gaprole:
 ble_gap:
   {
     unsigned short param;
-    unsigned short val;
     
     param = (unsigned short)expression();
     if (error_num)
@@ -2728,6 +2733,47 @@ ble_gap:
     }
 
   }
+  goto run_next_statement;
+
+//
+// TXPOWER -23|-6|0|4
+//
+ble_txpower:
+  val = expression();
+  if (error_num)
+  {
+    goto qwhat;
+  }
+  switch (val)
+  {
+    case -23:
+      val = HCI_EXT_TX_POWER_MINUS_23_DBM;
+      break;
+    case -6:
+      val = HCI_EXT_TX_POWER_MINUS_6_DBM;
+      break;
+    case 0:
+      val = HCI_EXT_TX_POWER_0_DBM;
+      break;
+    case 4:
+      val = HCI_EXT_TX_POWER_4_DBM;
+      break;
+    default:
+      goto qwhat;
+  }
+  HCI_EXT_SetTxPowerCmd(val);
+  goto run_next_statement;
+  
+//
+// RXGAIN ON|OFF
+//
+ble_rxgain:
+  val = expression();
+  if (error_num || val < 0 || val > 1)
+  {
+    goto qwhat;
+  }
+  HCI_EXT_SetRxGainCmd(val);
   goto run_next_statement;
 
 //

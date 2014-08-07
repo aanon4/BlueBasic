@@ -1,0 +1,5 @@
+#! /bin/sh
+rm -f a.out
+gcc keywords.c
+./a.out > keyword_tables.h
+rm -f a.out

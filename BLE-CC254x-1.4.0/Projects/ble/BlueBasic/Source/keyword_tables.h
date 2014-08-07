@@ -64,6 +64,7 @@ static const unsigned char keywords_4[] =
   'R','I','S','I','N','G',PM_RISING,
   'R','N','D','(',FUNC_RND,
   'R','U','N',KW_RUN,
+  'R','X','G','A','I','N',BLE_RXGAIN,
   0
 };
 static const unsigned char keywords_5[] =
@@ -97,6 +98,7 @@ static const unsigned char keywords_6[] =
   'T','O',KW_TO,
   'T','R','A','N','S','F','E','R',KW_TRANSFER,
   'T','R','U','E',CO_TRUE,
+  'T','X','P','O','W','E','R',BLE_TXPOWER,
   0
 };
 static const unsigned char keywords_7[] =

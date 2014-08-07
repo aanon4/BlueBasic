@@ -237,3 +237,13 @@ unsigned short GAP_GetParamValue(unsigned short param)
 {
   return 0;
 }
+
+unsigned char HCI_EXT_SetTxPowerCmd(unsigned char power)
+{
+  return SUCCESS;
+}
+
+unsigned char HCI_EXT_SetRxGainCmd(unsigned char gain)
+{
+  return SUCCESS;
+}
