@@ -18,6 +18,8 @@ struct
   unsigned short lineno;
 } timers[OS_MAX_TIMER];
 
+os_discover_t blueBasic_discover;
+
 static char alarmfire;
 static FILE* filep;
 static unsigned char* bstart;
@@ -244,6 +246,11 @@ unsigned char HCI_EXT_SetTxPowerCmd(unsigned char power)
 }
 
 unsigned char HCI_EXT_SetRxGainCmd(unsigned char gain)
+{
+  return SUCCESS;
+}
+
+unsigned char GAPObserverRole_StartDiscovery(unsigned char mode, unsigned char active, unsigned char whitelist)
 {
   return SUCCESS;
 }

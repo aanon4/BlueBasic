@@ -19,6 +19,7 @@ static const unsigned char keywords_1[] =
   'B','A','T','T','E','R','Y','(',FUNC_BATTERY,
   'O','F','F',CO_OFF,
   'O','N','C','O','N','N','E','C','T',BLE_ONCONNECT,
+  'O','N','D','I','S','C','O','V','E','R',BLE_ONDISCOVER,
   'O','N','R','E','A','D',BLE_ONREAD,
   'O','N','W','R','I','T','E',BLE_ONWRITE,
   'O','N',CO_ON,
@@ -137,6 +138,7 @@ static const unsigned char keywords_10[] =
 static const unsigned char keywords_11[] =
 {
   '%',OP_REM,
+  'L','E','N','(',FUNC_LEN,
   'L','E','T',KW_LET,
   'L','I','M','I','T','E','D',BLE_LIMITED,
   'L','I','M','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','A','X',CO_LIM_DISC_INT_MAX,

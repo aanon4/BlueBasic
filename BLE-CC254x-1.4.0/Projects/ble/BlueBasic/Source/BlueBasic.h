@@ -18,11 +18,6 @@ extern "C"
  * CONSTANTS
  */
 
-
-// Task Events
-#define BLUEBASIC_START_DEVICE_EVT                              0x0001
-#define BLUEBASIC_CONNECTION_EVENT                              0x0002
-
 /*********************************************************************
  * MACROS
  */

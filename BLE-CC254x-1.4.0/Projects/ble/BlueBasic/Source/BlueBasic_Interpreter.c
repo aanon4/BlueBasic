@@ -107,6 +107,7 @@ enum
   KW_REPEAT,
   KW_DELAY,
   FUNC_ABS,
+  FUNC_LEN,
   FUNC_RND,
   FUNC_MILLIS,
   FUNC_BATTERY,
@@ -150,6 +151,7 @@ enum
   BLE_ONREAD,
   BLE_ONWRITE,
   BLE_ONCONNECT,
+  BLE_ONDISCOVER,
   BLE_GATT,
   BLE_SERVICE,
   BLE_CHARACTERISTIC,
@@ -744,6 +746,37 @@ static unsigned char* get_variable_frame(char name, stack_variable_frame** frame
   return (unsigned char*)VARIABLE_INT_ADDR(name);
 }
 
+//
+// Create an array
+//
+void create_dim(unsigned char name, VAR_TYPE size, unsigned char* data)
+{
+  if(sp - sizeof(stack_variable_frame) - size < program_end)
+  {
+    error_num = ERROR_OOM;
+  }
+  else
+  {
+    sp -= sizeof(stack_variable_frame) + size;
+    stack_variable_frame *f = (stack_variable_frame *)sp;
+    f->header.frame_type = STACK_VARIABLE_FLAG;
+    f->header.frame_size = sizeof(stack_variable_frame) + size;
+    f->type = VAR_DIM_BYTE;
+    f->name = name;
+    f->oflags = VARIABLE_FLAGS_GET(name);
+    f->ble = NULL;
+    VARIABLE_FLAGS_SET(name, VAR_VARIABLE);
+    if (data)
+    {
+      OS_memcpy(sp + sizeof(stack_variable_frame), data, size);
+    }
+    else
+    {
+      OS_memset(sp + sizeof(stack_variable_frame), 0, size);
+    }
+  }
+}
+
 // -------------------------------------------------------------------------------------------
 //
 // Expression evaluator
@@ -843,6 +876,22 @@ static VAR_TYPE expr4(void)
         default:
           goto expr4_error;
       }
+    }
+    
+    else if (ch == FUNC_LEN)
+    {
+      ch = *txtpos;
+      if (ch >= 'A' && ch <= 'Z' && txtpos[1] == ')')
+      {
+        stack_variable_frame* frame;
+        txtpos += 2;
+        get_variable_frame(ch, &frame);
+        if (frame->type == VAR_DIM_BYTE)
+        {
+          return frame->header.frame_size - sizeof(stack_variable_frame);
+        }
+      }
+      goto expr4_error;
     }
 
     // Assume it's a function with an argument
@@ -1048,6 +1097,12 @@ static VAR_TYPE expr1(void)
 static VAR_TYPE expression(void)
 {
   VAR_TYPE a;
+
+  // Immediately stop parsing if we errored.
+  if (error_num)
+  {
+    return 0;
+  }
 
   ignore_blanks();
 
@@ -1348,10 +1403,10 @@ interperate:
     goto ble_gatt;
   case BLE_ADVERT:
     ble_isadvert = 1;
-    goto ble_advert_scan;
+    goto ble_advert;
   case BLE_SCAN:
     ble_isadvert = 0;
-    goto ble_advert_scan;
+    goto ble_scan;
   case BLE_GAPROLE:
     goto ble_gaprole;
   case BLE_GAP:
@@ -2051,25 +2106,11 @@ cmd_dim:
       goto qwhat;
     }
     txtpos++;
-    // Check that we are at the end of the statement
-    if (*txtpos != NL)
+    create_dim(name, size, NULL);
+    if (error_num)
     {
       goto qwhat;
     }
-    if(sp - sizeof(stack_variable_frame) - size < program_end)
-    {
-      goto qoom;
-    }
-    sp -= sizeof(stack_variable_frame) + size;
-    stack_variable_frame *f = (stack_variable_frame *)sp;
-    f->header.frame_type = STACK_VARIABLE_FLAG;
-    f->header.frame_size = sizeof(stack_variable_frame) + size;
-    f->type = VAR_DIM_BYTE;
-    f->name = name;
-    f->oflags = VARIABLE_FLAGS_GET(name);
-    f->ble = NULL;
-    VARIABLE_FLAGS_SET(name, VAR_VARIABLE);
-    OS_memset(sp + sizeof(stack_variable_frame), 0, size);
   }
   goto run_next_statement;
 
@@ -2472,7 +2513,78 @@ value_done:
   }
   goto execnextline;
 
-ble_advert_scan:
+//
+// SCAN <time> LIMITED|GENERAL <active> <duplicates> ONDISCOVER GOSUB <linenum>
+//  or
+// SCAN LIMITED|GENERAL|NAME "..."|CUSTOM "..."|END
+//
+ble_scan:
+  if (*txtpos < 0x80)
+  {
+    unsigned char active;
+    unsigned char dups;
+    unsigned char mode = 0;
+
+    val = expression();
+    if (error_num)
+    {
+      goto qwhat;
+    }
+
+    ignore_blanks();
+    switch (*txtpos)
+    {
+      case BLE_GENERAL:
+        mode |= 1;
+        txtpos++;
+        if (*txtpos == BLE_LIMITED)
+        {
+          mode |= 2;
+          txtpos++;
+        }
+        break;
+      case BLE_LIMITED:
+        mode |= 2;
+        if (*txtpos == BLE_GENERAL)
+        {
+          mode |= 1;
+          txtpos++;
+        }
+
+        break;
+      default:
+        goto qwhat;
+    }
+
+    active = expression();
+    dups = expression();
+    if (error_num)
+    {
+      goto qwhat;
+    }
+
+    ignore_blanks();
+    if (txtpos[0] != BLE_ONDISCOVER || txtpos[1] != KW_GOSUB)
+    {
+      goto qwhat;
+    }
+    
+    txtpos += 2;
+    linenum = expression();
+    if (error_num)
+    {
+      goto qwhat;
+    }
+    blueBasic_discover.linenum = linenum;
+    GAP_SetParamValue(TGAP_GEN_DISC_SCAN, val);
+    GAP_SetParamValue(TGAP_LIM_DISC_SCAN, val);
+    GAP_SetParamValue(TGAP_FILTER_ADV_REPORTS, !dups);
+    GAPObserverRole_StartDiscovery(mode, !!active, 0);
+    goto execnextline;
+  }
+  // Fall through ...
+
+ble_advert:
   if (!ble_adptr)
   {
     ble_adptr = ble_adbuf;
@@ -3579,3 +3691,26 @@ void ble_connection_status(unsigned short connHandle, unsigned char changeType)
     }
   }
 }
+
+#ifdef TARGET_CC254X
+
+extern void interpreter_devicefound(unsigned char addtype, unsigned char* address, signed char rssi, unsigned char eventtype, unsigned char len, unsigned char* data)
+{
+  if (blueBasic_discover.linenum)
+  {
+    unsigned char* osp = sp;
+    error_num = ERROR_OK;
+    VARIABLE_INT_SET('A', addtype);
+    VARIABLE_INT_SET('R', rssi);
+    VARIABLE_INT_SET('E', eventtype);
+    create_dim('B', 8, address);
+    create_dim('V', len, data);
+    if (!error_num)
+    {
+      interpreter_run(blueBasic_discover.linenum, 1);
+    }
+    sp = osp;
+  }
+}
+
+#endif // TARGET_CC254X

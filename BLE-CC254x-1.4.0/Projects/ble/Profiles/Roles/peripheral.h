@@ -143,12 +143,18 @@ typedef void (*gapRolesStateNotify_t)( gaprole_States_t newState );
 typedef void (*gapRolesRssiRead_t)( int8 newRSSI );
 
 /**
+ * Callback when a device is discovered.
+ */
+typedef void (*gapRolesDeviceFound_t)(gapDeviceInfoEvent_t* device);
+
+/**
  * Callback structure - must be setup by the application and used when gapRoles_StartDevice() is called.
  */
 typedef struct
 {
   gapRolesStateNotify_t    pfnStateChange;  //!< Whenever the device changes state
   gapRolesRssiRead_t       pfnRssiRead;     //!< When a valid RSSI is read from controller
+  gapRolesDeviceFound_t    pfnDeviceFound;  //!< Forward raw events
 } gapRolesCBs_t;
 
 /*-------------------------------------------------------------------

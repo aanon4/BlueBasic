@@ -26,6 +26,7 @@
 
 /* Begin PBXFileReference section */
 		2233458D19920FC200B2141A /* keyword_tables.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = keyword_tables.h; path = "../../../BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Source/keyword_tables.h"; sourceTree = "<group>"; };
+		2233458E199440C800B2141A /* blescan10.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = blescan10.test; sourceTree = "<group>"; };
 		226D1CF919837AB2006B289B /* blescan01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = blescan01.test; sourceTree = "<group>"; };
 		226D1CFA1983845A006B289B /* parsehex01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = parsehex01.test; sourceTree = "<group>"; };
 		226D1CFB19846B80006B289B /* if01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = if01.test; sourceTree = "<group>"; };
@@ -102,6 +103,7 @@
 				22BC370C197CEE7E00828C73 /* bleadvert05.test */,
 				22BC370D197CF78000828C73 /* example01.test */,
 				226D1CF919837AB2006B289B /* blescan01.test */,
+				2233458E199440C800B2141A /* blescan10.test */,
 				226D1CFA1983845A006B289B /* parsehex01.test */,
 				226D1CFB19846B80006B289B /* if01.test */,
 				226D1CFC19846DED006B289B /* if02.test */,

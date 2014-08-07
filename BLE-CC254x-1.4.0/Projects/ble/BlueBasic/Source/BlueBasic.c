@@ -59,6 +59,7 @@
 #include "devinfoservice.h"
 #include "linkdb.h"
 
+#include "observer.h"
 #include "peripheral.h"
 
 #include "gapbondmgr.h"
@@ -184,7 +185,7 @@ static CONST uint8 consoleAdvert[] =
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
-static void peripheralStateNotificationCB( gaprole_States_t newState );
+static void blueBasic_deviceFound( gapDeviceInfoEvent_t* device );
 
 /*********************************************************************
  * PROFILE CALLBACKS
@@ -193,11 +194,12 @@ static void peripheralStateNotificationCB( gaprole_States_t newState );
 // GAP Role Callbacks
 static gapRolesCBs_t blueBasic_PeripheralCBs =
 {
-  peripheralStateNotificationCB,  // Profile State Change Callbacks
-  NULL                            // When a valid RSSI is read from controller (not used by application)
+  NULL,                           // Profile State Change Callbacks
+  NULL,                           // When a valid RSSI is read from controller
+  blueBasic_deviceFound           // Device found
 };
 
-#ifdef FEATURE_GAPBONDMANAGER
+#ifdef GAP_BOND_MGR
 // GAP Bond Manager Callbacks
 static gapBondCBs_t blueBasic_BondMgrCBs =
 {
@@ -233,6 +235,7 @@ void BlueBasic_Init( uint8 task_id )
 
   // Setup the GAP
   VOID GAP_SetParamValue( TGAP_CONN_PAUSE_PERIPHERAL, DEFAULT_CONN_PAUSE_PERIPHERAL );
+  VOID GAP_ConfigDeviceAddr(ADDRTYPE_PRIVATE_RESOLVE, NULL);
 
   // Setup the GAP Peripheral Role Profile
   {
@@ -277,7 +280,7 @@ void BlueBasic_Init( uint8 task_id )
     GAP_SetParamValue( TGAP_GEN_DISC_ADV_INT_MAX, advInt );
   }
 
-#ifdef FEATURE_GAPBONDMANAGER
+#ifdef GAP_BOND_MGR
   // Setup the GAP Bond Manager
   {
     uint32 passkey = 0; // passkey "000000"
@@ -355,7 +358,7 @@ uint16 BlueBasic_ProcessEvent( uint8 task_id, uint16 events )
     // Start the Device
     VOID GAPRole_StartDevice( &blueBasic_PeripheralCBs );
     
-#ifdef FEATURE_GAPBONDMANAGER
+#ifdef GAP_BOND_MGR
     // Start Bond Manager
     VOID GAPBondMgr_Register( &blueBasic_BondMgrCBs );
 #endif
@@ -425,55 +428,9 @@ uint16 BlueBasic_ProcessEvent( uint8 task_id, uint16 events )
   return 0;
 }
 
-/*********************************************************************
- * @fn      peripheralStateNotificationCB
- *
- * @brief   Notification from the profile of a state change.
- *
- * @param   newState - new state
- *
- * @return  none
- */
-static void peripheralStateNotificationCB( gaprole_States_t newState )
+static void blueBasic_deviceFound( gapDeviceInfoEvent_t* device )
 {
-  switch ( newState )
-  {
-    case GAPROLE_STARTED:
-      {
-        uint8 ownAddress[B_ADDR_LEN];
-        uint8 systemId[DEVINFO_SYSTEM_ID_LEN];
-
-        GAP_ConfigDeviceAddr(ADDRTYPE_PRIVATE_RESOLVE, NULL);
-
-        GAPRole_GetParameter(GAPROLE_BD_ADDR, ownAddress);
-
-        // use 6 bytes of device address for 8 bytes of system ID value
-        systemId[0] = ownAddress[0];
-        systemId[1] = ownAddress[1];
-        systemId[2] = ownAddress[2];
-
-        // set middle bytes to zero
-        systemId[4] = 0x00;
-        systemId[3] = 0x00;
-
-        // shift three bytes up
-        systemId[7] = ownAddress[5];
-        systemId[6] = ownAddress[4];
-        systemId[5] = ownAddress[3];
-
-        DevInfo_SetParameter(DEVINFO_SYSTEM_ID, DEVINFO_SYSTEM_ID_LEN, systemId);
-      }
-      break;
-
-#if ENABLE_BLE_CONSOLE
-    case GAPROLE_CONNECTED:
-      HCI_EXT_ConnEventNoticeCmd(blueBasic_TaskID, BLUEBASIC_CONNECTION_EVENT);
-      break;
-#endif // ENABLE_BLE_CONSOLE
-
-    default:
-      break;
-  }
+  interpreter_devicefound(device->addrType, device->addr, device->rssi, device->eventType, device->dataLen, device->pEvtData);
 }
 
 static void blueBasic_HandleConnStatusCB(uint16 connHandle, uint8 changeType)

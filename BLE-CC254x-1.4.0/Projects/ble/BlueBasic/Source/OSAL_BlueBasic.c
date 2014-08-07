@@ -71,6 +71,7 @@
 #include "gattservapp.h"
 
 /* Profiles */
+#include "observer.h"
 #include "peripheral.h"
 
 
@@ -95,7 +96,7 @@ const pTaskEventHandlerFn tasksArr[] =
   GATT_ProcessEvent,                                                // task 6
   SM_ProcessEvent,                                                  // task 7
   GAPRole_ProcessEvent,                                             // task 8
-#ifdef FEATURE_GAPBONDMANAGER
+#ifdef GAP_BOND_MGR
   GAPBondMgr_ProcessEvent,                                          // task 9
 #endif
   GATTServApp_ProcessEvent,                                         // task 10
@@ -155,7 +156,7 @@ void osalInitTasks( void )
   /* Profiles */
   GAPRole_Init( taskID++ );
 
-#ifdef FEATURE_GAPBONDMANAGER
+#ifdef GAP_BOND_MGR
   GAPBondMgr_Init( taskID++ );
 #endif
 

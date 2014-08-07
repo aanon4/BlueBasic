@@ -1,5 +1,5 @@
 /**************************************************************************************************
-  Filename:       peripheral.c
+  Filename:       peripheralObserver.c
   Revised:        $Date: 2013-09-23 08:15:44 -0700 (Mon, 23 Sep 2013) $
   Revision:       $Revision: 35416 $
 
@@ -50,8 +50,12 @@
 #include "gatt.h"
 #include "osal_snv.h"
 
+#include "observer.h"
 #include "peripheral.h"
 #include "gapbondmgr.h"
+#include "devinfoservice.h"
+   
+#include "os.h"
 
 /*********************************************************************
  * MACROS
@@ -87,6 +91,8 @@
 #define MAX_TIMEOUT_MULTIPLIER        0x0c80
 
 #define MAX_TIMEOUT_VALUE             0xFFFF
+   
+#define DEFAULT_SCAN_RESULTS          8
 
 /*********************************************************************
  * TYPEDEFS
@@ -110,6 +116,7 @@
 static uint8 gapRole_TaskID;   // Task ID for internal task/event processing
 
 static gaprole_States_t gapRole_state;
+static uint8 gapObserverRoleMaxScanRes = DEFAULT_SCAN_RESULTS;
 
 /*********************************************************************
  * Profile Parameters - reference GAPROLE_PROFILE_PARAMETERS for
@@ -479,6 +486,18 @@ bStatus_t GAPRole_SetParameter( uint16 param, uint8 len, void *pValue )
           }
         }
         break;
+ 
+    case GAPOBSERVERROLE_MAX_SCAN_RES:
+      if ( len == sizeof ( uint8 ) )
+      {
+        gapObserverRoleMaxScanRes = *((uint8*)pValue);
+      }
+      else
+      {
+        ret = bleInvalidRange;
+      }
+      break;
+
   
     default:
       // The param value isn't part of this profile, try the GAP.
@@ -609,6 +628,10 @@ bStatus_t GAPRole_GetParameter( uint16 param, void *pValue )
     case GAPROLE_STATE:
       *((uint8*)pValue) = gapRole_state;
       break;
+
+    case GAPOBSERVERROLE_MAX_SCAN_RES:
+      *((uint8*)pValue) = gapObserverRoleMaxScanRes;
+      break;
     
     default:
       // The param value isn't part of this profile, try the GAP.
@@ -702,7 +725,7 @@ void GAPRole_Init( uint8 task_id )
   GAP_RegisterForHCIMsgs( gapRole_TaskID );
 
   // Initialize the Profile Advertising and Connection Parameters
-  gapRole_profileRole = GAP_PROFILE_PERIPHERAL;
+  gapRole_profileRole = GAP_PROFILE_PERIPHERAL|GAP_PROFILE_OBSERVER;
   VOID osal_memset( gapRole_IRK, 0, KEYLEN );
   VOID osal_memset( gapRole_SRK, 0, KEYLEN );
   gapRole_signCounter = 0;
@@ -912,6 +935,7 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
   {
     case GAP_DEVICE_INIT_DONE_EVENT:
       {
+        uint8 systemId[DEVINFO_SYSTEM_ID_LEN];
         gapDeviceInitDoneEvent_t *pPkt = (gapDeviceInitDoneEvent_t *)pMsg;
         bStatus_t stat = pPkt->hdr.status;
 
@@ -923,12 +947,24 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
 
           // Save off the information
           VOID osal_memcpy( gapRole_bdAddr, pPkt->devAddr, B_ADDR_LEN );
+          // use 6 bytes of device address for 8 bytes of system ID value
+          systemId[0] = gapRole_bdAddr[0];
+          systemId[1] = gapRole_bdAddr[1];
+          systemId[2] = gapRole_bdAddr[2];
+          // set middle bytes to zero
+          systemId[4] = 0x00;
+          systemId[3] = 0x00;
+          // shift three bytes up
+          systemId[7] = gapRole_bdAddr[5];
+          systemId[6] = gapRole_bdAddr[4];
+          systemId[5] = gapRole_bdAddr[3];
+          DevInfo_SetParameter(DEVINFO_SYSTEM_ID, DEVINFO_SYSTEM_ID_LEN, systemId);
 
           gapRole_state = GAPROLE_STARTED;
 
           // Update the advertising data
           stat = GAP_UpdateAdvertisingData( gapRole_TaskID,
-                              TRUE, gapRole_AdvertDataLen, gapRole_AdvertData );
+                              TRUE, gapRole_AdvertDataLen, gapRole_AdvertData ); 
         }
 
         if ( stat != SUCCESS )
@@ -1052,6 +1088,10 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
             VOID osal_start_timerEx( gapRole_TaskID, RSSI_READ_EVT, gapRole_RSSIReadRate );
           }
 
+#if ENABLE_BLE_CONSOLE
+          HCI_EXT_ConnEventNoticeCmd(blueBasic_TaskID, BLUEBASIC_CONNECTION_EVENT);
+#endif // ENABLE_BLE_CONSOLE
+
           // Store connection information
           gapRole_ConnInterval = pPkt->connInterval;
           gapRole_ConnSlaveLatency = pPkt->connLatency;
@@ -1165,6 +1205,13 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
         }
       }
       break;
+ 
+    case GAP_DEVICE_INFO_EVENT:
+      if (pGapRoles_AppCGs && pGapRoles_AppCGs->pfnDeviceFound)
+      {
+        pGapRoles_AppCGs->pfnDeviceFound((gapDeviceInfoEvent_t *) pMsg);
+      }
+      break;
 
     default:
       break;
@@ -1192,10 +1239,14 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
  */
 static void gapRole_SetupGAP( void )
 {
-  VOID GAP_DeviceInit( gapRole_TaskID,
-          gapRole_profileRole, 0,
-          gapRole_IRK, gapRole_SRK,
-          &gapRole_signCounter );
+  VOID GAP_DeviceInit(
+          gapRole_TaskID,
+          gapRole_profileRole,
+          gapObserverRoleMaxScanRes,
+          gapRole_IRK,
+          gapRole_SRK,
+          &gapRole_signCounter
+  );
 }
 
 /*********************************************************************
@@ -1313,6 +1364,34 @@ bStatus_t GAPRole_SendUpdateParam( uint16 minConnInterval, uint16 maxConnInterva
 
   return ( bleInvalidRange );
 }
+
+/**
+ * @brief   Start a device discovery scan.
+ *
+ * Public function defined in observer.h.
+ */
+bStatus_t GAPObserverRole_StartDiscovery( uint8 mode, uint8 activeScan, uint8 whiteList )
+{
+  gapDevDiscReq_t params;
+
+  params.taskID = gapRole_TaskID;
+  params.mode = mode;
+  params.activeScan = activeScan;
+  params.whiteList = whiteList;
+
+  return GAP_DeviceDiscoveryRequest( &params );
+}
+
+/**
+ * @brief   Cancel a device discovery scan.
+ *
+ * Public function defined in observer.h.
+ */
+bStatus_t GAPObserverRole_CancelDiscovery( void )
+{
+  return GAP_DeviceDiscoveryCancel( gapRole_TaskID );
+}
+
 
 /*********************************************************************
 *********************************************************************/

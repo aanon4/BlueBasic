@@ -21,6 +21,7 @@ extern uint8 blueBasic_TaskID;
 
 os_interrupt_t blueBasic_interrupts[OS_MAX_INTERRUPT];
 os_timer_t blueBasic_timers[OS_MAX_TIMER];
+os_discover_t blueBasic_discover;
 
 struct program_header
 {

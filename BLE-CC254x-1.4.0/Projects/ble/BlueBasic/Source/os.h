@@ -91,10 +91,14 @@ extern char OS_timer_start(unsigned char id, unsigned long timeout, unsigned cha
 #define GAPROLE_MAX_CONN_INTERVAL             0x312
 #define GAPROLE_SLAVE_LATENCY                 0x313
 #define GAPROLE_TIMEOUT_MULTIPLIER            0x314
+
+#define TGAP_GEN_DISC_SCAN                    2
+#define TGAP_LIM_DISC_SCAN                    3
 #define TGAP_LIM_DISC_ADV_INT_MIN             6
 #define TGAP_LIM_DISC_ADV_INT_MAX             7
 #define TGAP_GEN_DISC_ADV_INT_MIN             8
 #define TGAP_GEN_DISC_ADV_INT_MAX             9
+#define TGAP_FILTER_ADV_REPORTS               35
 
 #define GAP_DEVICE_NAME_LEN                   21
 #define GGS_DEVICE_NAME_ATT                   0
@@ -150,6 +154,7 @@ extern unsigned char GAP_SetParamValue(unsigned short param, unsigned short valu
 extern unsigned short GAP_GetParamValue(unsigned short param);
 extern unsigned char HCI_EXT_SetTxPowerCmd(unsigned char power);
 extern unsigned char HCI_EXT_SetRxGainCmd(unsigned char gain);
+extern unsigned char GAPObserverRole_StartDiscovery(unsigned char mode, unsigned char active, unsigned char whitelist);
 
 #else /* __APPLE__ --------------------------------------------------------------------------- */
 
@@ -161,6 +166,7 @@ extern unsigned char HCI_EXT_SetRxGainCmd(unsigned char gain);
 #include "gapgattserver.h"
 #include "OnBoard.h"
 #include "gap.h"
+#include "observer.h"
 #include "peripheral.h"
 #include "linkdb.h"
 #include "hci.h"
@@ -174,6 +180,9 @@ extern unsigned char blueBasic_TaskID;
 #define OS_UART_PORT           HAL_UART_PORT_1
 #define OS_UART_BAUDRATE       HAL_UART_BR_115200
 
+// Task Events
+#define BLUEBASIC_START_DEVICE_EVT 0x0001
+#define BLUEBASIC_CONNECTION_EVENT 0x0002
 #define BLUEBASIC_INPUT_AVAILABLE 0x0004
 #define OS_MAX_TIMER              4
 #define DELAY_TIMER               3
@@ -228,7 +237,15 @@ extern char OS_interrupt_detach(unsigned char pin);
 extern void OS_autorun_set(unsigned char autorun);
 extern char OS_autorun_get(void);
 
+extern void interpreter_devicefound(unsigned char addtype, unsigned char* address, signed char rssi, unsigned char eventtype, unsigned char len, unsigned char* data);
+
 #endif /* __APPLE__ */
+
+typedef struct
+{
+  unsigned short linenum;
+} os_discover_t;
+extern os_discover_t blueBasic_discover;
 
 extern void interpreter_setup(void);
 extern void interpreter_banner(void);
