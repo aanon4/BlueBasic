@@ -452,8 +452,17 @@ static void blueBasic_HandleConnStatusCB(uint16 connHandle, uint8 changeType)
 
 uint8 ble_console_write(uint8 ch)
 {
+  static char entered;
+  
   if (ble_console_enabled)
   {
+    if (entered && io.writelen >= sizeof(io.write))
+    {
+      io.write[sizeof(io.write) - 1] = '*';
+      return 0;
+    }
+    entered = 1;
+
     while (io.writelen >= sizeof(io.write))
     {
       osal_run_system();
@@ -466,6 +475,8 @@ uint8 ble_console_write(uint8 ch)
       io.writepending = 1;
       GATTServApp_ProcessCharCfg(consoleProfileCharCfg, io.write, FALSE, consoleProfile, GATT_NUM_ATTRS(consoleProfile), INVALID_TASK_ID);
     }
+ 
+    entered = 0;
   }
   return 1;
 }
