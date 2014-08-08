@@ -155,6 +155,7 @@ extern unsigned short GAP_GetParamValue(unsigned short param);
 extern unsigned char HCI_EXT_SetTxPowerCmd(unsigned char power);
 extern unsigned char HCI_EXT_SetRxGainCmd(unsigned char gain);
 extern unsigned char GAPObserverRole_StartDiscovery(unsigned char mode, unsigned char active, unsigned char whitelist);
+extern unsigned char GAPObserverRole_CancelDiscovery(void);
 
 #else /* __APPLE__ --------------------------------------------------------------------------- */
 

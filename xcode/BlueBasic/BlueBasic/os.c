@@ -254,3 +254,8 @@ unsigned char GAPObserverRole_StartDiscovery(unsigned char mode, unsigned char a
 {
   return SUCCESS;
 }
+
+unsigned char GAPObserverRole_CancelDiscovery(void)
+{
+  return SUCCESS;
+}

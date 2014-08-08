@@ -2579,6 +2579,7 @@ ble_scan:
     GAP_SetParamValue(TGAP_GEN_DISC_SCAN, val);
     GAP_SetParamValue(TGAP_LIM_DISC_SCAN, val);
     GAP_SetParamValue(TGAP_FILTER_ADV_REPORTS, !dups);
+    GAPObserverRole_CancelDiscovery();
     GAPObserverRole_StartDiscovery(mode, !!active, 0);
     goto execnextline;
   }
@@ -2925,11 +2926,6 @@ cmd_spi:
         goto qwhat;
       }
 
-      // Arduino compatible
-      if (mode < 2)
-      {
-        mode = 1 - mode;
-      }
       mode = (mode << 6) | (msblsb == KW_MSB ? 0x20 : 0x00);
       switch (speed)
       {
@@ -2949,18 +2945,34 @@ cmd_spi:
       if ((port & 2) == 0)
       {
         spiChannel = 0;
+        if ((port & 1) == 0)
+        {
+          P0SEL |= 0x2C;
+        }
+        else
+        {
+          P1SEL |= 0x2C;
+        }
         PERCFG = (PERCFG & 0xFE) | (port & 1);
         U0BAUD = 0;
         U0GCR = mode;
-        U0CSR = 0xE0; // SPI mode, recv enable, SPI master
+        U0CSR = 0x00; // SPI mode, recv enable, SPI master
       }
       else
       {
         spiChannel = 1;
+        if ((port & 1) == 0)
+        {
+          P0SEL |= 0x38;
+        }
+        else
+        {
+          P1SEL |= 0xE0;
+        }
         PERCFG = (PERCFG & 0xFD) | ((port & 1) << 1);
         U1BAUD = 0;
         U1GCR = mode;
-        U1CSR = 0xE0;
+        U1CSR = 0x00;
       }
     }
     else
@@ -2988,6 +3000,7 @@ cmd_spi:
       {
         goto qwhat;
       }
+      txtpos++;
 
       // .. transfer ..
       pin_write(pin, 0);
@@ -2995,11 +3008,12 @@ cmd_spi:
       {
         for (len = vframe->header.frame_size - sizeof(stack_variable_frame); len > 0; len--, ptr++)
         {
+          U0CSR &= 0xF9; // Clear flags
           U0DBUF = *ptr;
 #ifdef SIMULATE_PINS
           U0CSR |= 0x02;
 #endif
-          while ((U0CSR & 0x02) == 0)
+          while ((U0CSR & 0x02) != 0x02)
             ;
           *ptr = U0DBUF;
         }
@@ -3008,11 +3022,12 @@ cmd_spi:
       {
         for (len = vframe->header.frame_size - sizeof(stack_variable_frame); len > 0; len--, ptr++)
         {
+          U1CSR &= 0xF9;
           U1DBUF = *ptr;
 #ifdef SIMULATE_PINS
           U1CSR |= 0x02;
 #endif
-          while ((U1CSR & 0x02) == 0)
+          while ((U1CSR & 0x02) != 0x02)
             ;
           *ptr = U1DBUF;
         }
