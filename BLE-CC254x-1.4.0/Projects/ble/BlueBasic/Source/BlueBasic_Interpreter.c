@@ -167,16 +167,12 @@ enum
   BLE_MORE,
   BLE_NAME,
   BLE_CUSTOM,
-  BLE_FUNC_GAPROLE,
-  BLE_GAPROLE,
-  BLE_FUNC_GAP,
-  BLE_GAP,
+  BLE_FUNC_BTGET,
+  BLE_BTSET,
   KW_SPI,
   KW_TRANSFER,
   KW_MSB,
   KW_LSB,
-  BLE_TXPOWER,
-  BLE_RXGAIN,
   // Constants start here
   CO_TRUE,
   CO_FALSE,
@@ -191,6 +187,8 @@ enum
   CO_LIM_DISC_INT_MAX,
   CO_GEN_DISC_INT_MIN,
   CO_GEN_DISC_INT_MAX,
+  CO_TXPOWER,
+  CO_RXGAIN,
   // Constants finish here
 };
 
@@ -277,21 +275,23 @@ static unsigned char vname;
 #define VARIABLE_FLAGS_SET(F,V) do { vname = (F) - 'A'; unsigned char* v = variables_begin + 26 * VAR_SIZE + vname / 8; *v = (*v & (255 - (1 << (vname % 8)))) | ((V) << (vname % 8)); } while(0)
 
 // Constant map (so far all constants are <= 16 bits)
-static const unsigned short constantmap[] =
+static const VAR_TYPE constantmap[] =
 {
   1, // TRUE
   0, // FALSE
   1, // ON
   0, // OFF
-  GAPROLE_ADVERT_ENABLED,
-  GAPROLE_MIN_CONN_INTERVAL,
-  GAPROLE_MAX_CONN_INTERVAL,
-  GAPROLE_SLAVE_LATENCY,
-  GAPROLE_TIMEOUT_MULTIPLIER,
+  BLE_ADVERT_ENABLED,
+  BLE_MIN_CONN_INTERVAL,
+  BLE_MAX_CONN_INTERVAL,
+  BLE_SLAVE_LATENCY,
+  BLE_TIMEOUT_MULTIPLIER,
   TGAP_LIM_DISC_ADV_INT_MIN,
   TGAP_LIM_DISC_ADV_INT_MAX,
   TGAP_GEN_DISC_ADV_INT_MIN,
   TGAP_GEN_DISC_ADV_INT_MAX,
+  BLE_TXPOWER,
+  BLE_RXGAIN,
 };
 
 #ifdef SIMULATE_PINS
@@ -913,14 +913,19 @@ static VAR_TYPE expr4(void)
       case FUNC_RND:
         return OS_rand() % a;
 
-      case BLE_FUNC_GAPROLE:
+      case BLE_FUNC_BTGET:
+      {
+        if (a & 0x8000)
         {
-          unsigned short v = 0;
-          GAPRole_GetParameter((unsigned short)a, &v);
+          goto expr4_error; // Not supported
+        }
+        else
+        {
+          VAR_TYPE v;
+          GAPRole_GetParameter(a, (unsigned long*)&v, 0, NULL);
           return v;
         }
-      case BLE_FUNC_GAP:
-        return GAP_GetParamValue((unsigned short)a);
+      }
     }
   }
 
@@ -1407,14 +1412,8 @@ interperate:
   case BLE_SCAN:
     ble_isadvert = 0;
     goto ble_scan;
-  case BLE_GAPROLE:
-    goto ble_gaprole;
-  case BLE_GAP:
-    goto ble_gap;
-  case BLE_TXPOWER:
-    goto ble_txpower;
-  case BLE_RXGAIN:
-    goto ble_rxgain;
+  case BLE_BTSET:
+    goto cmd_btset;
   case KW_PINMODE:
     goto cmd_pinmode;
   case KW_ATTACHINTERRUPT:
@@ -2576,9 +2575,9 @@ ble_scan:
       goto qwhat;
     }
     blueBasic_discover.linenum = linenum;
-    GAP_SetParamValue(TGAP_GEN_DISC_SCAN, val);
-    GAP_SetParamValue(TGAP_LIM_DISC_SCAN, val);
-    GAP_SetParamValue(TGAP_FILTER_ADV_REPORTS, !dups);
+    GAPRole_SetParameter(TGAP_GEN_DISC_SCAN, val, 0, NULL);
+    GAPRole_SetParameter(TGAP_LIM_DISC_SCAN, val, 0, NULL);
+    GAPRole_SetParameter(TGAP_FILTER_ADV_REPORTS, !dups, 0, NULL);
     GAPObserverRole_CancelDiscovery();
     GAPObserverRole_StartDiscovery(mode, !!active, 0);
     goto execnextline;
@@ -2740,13 +2739,12 @@ ble_advert:
       }
       if (ble_isadvert)
       {
-        GAPRole_SetParameter(GAPROLE_ADVERT_DATA, ble_adptr - ble_adbuf, ble_adbuf);
-        ch = 1;
-        GAPRole_SetParameter(GAPROLE_ADVERT_ENABLED, sizeof(ch), &ch);
+        GAPRole_SetParameter(_GAPROLE(BLE_ADVERT_DATA), 0, ble_adptr - ble_adbuf, ble_adbuf);
+        GAPRole_SetParameter(_GAPROLE(BLE_ADVERT_ENABLED), 1, 0, NULL);
       }
       else
       {
-        GAPRole_SetParameter(GAPROLE_SCAN_RSP_DATA, ble_adptr - ble_adbuf, ble_adbuf);
+        GAPRole_SetParameter(_GAPROLE(BLE_SCAN_RSP_DATA), 0, ble_adptr - ble_adbuf, ble_adbuf);
       }
       ble_adptr = NULL;
       txtpos++;
@@ -2795,98 +2793,47 @@ ble_advert:
   }
   goto run_next_statement;
 
-ble_gaprole:
+//
+// BTSET <paramater> <value>|<array>
+//
+cmd_btset:
   {
     unsigned short param;
-    unsigned short val;
+    unsigned char* ptr;
 
     param = (unsigned short)expression();
     if (error_num)
     {
       goto qwhat;
     }
-    val = (unsigned short)expression();
-    if (error_num)
+    // Expects an array
+    if (param & 0x8000)
     {
-      goto qwhat;
+      stack_variable_frame* vframe;
+      ptr = get_variable_frame(*txtpos, &vframe);
+      if (vframe->type != VAR_DIM_BYTE)
+      {
+        goto qwhat;
+      }
+      if (GAPRole_SetParameter(_GAPROLE(param), 0, vframe->header.frame_size - sizeof(stack_variable_frame), ptr) != SUCCESS)
+      {
+        goto qwhat;
+      }
     }
-    switch (param)
+    // Expects an int
+    else
     {
-      case GAPROLE_ADVERT_ENABLED:
-        ch = GAPRole_SetParameter(param, sizeof(char), &val);
-        break;
-      default:
-        ch = GAPRole_SetParameter(param, sizeof(short), &val);
-        break;
-    }
-    if (ch != SUCCESS)
-    {
-      goto qwhat;
+      val = expression();
+      if (error_num)
+      {
+        goto qwhat;
+      }
+      if (GAPRole_SetParameter(_GAPROLE(param), val, 0, NULL) != SUCCESS)
+      {
+        goto qwhat;
+      }
     }
   }
-  goto run_next_statement;
-
-ble_gap:
-  {
-    unsigned short param;
-    
-    param = (unsigned short)expression();
-    if (error_num)
-    {
-      goto qwhat;
-    }
-    val = (unsigned short)expression();
-    if (error_num)
-    {
-      goto qwhat;
-    }
-    if (GAP_SetParamValue(param, val) != SUCCESS)
-    {
-      goto qwhat;
-    }
-
-  }
-  goto run_next_statement;
-
-//
-// TXPOWER -23|-6|0|4
-//
-ble_txpower:
-  val = expression();
-  if (error_num)
-  {
-    goto qwhat;
-  }
-  switch (val)
-  {
-    case -23:
-      val = HCI_EXT_TX_POWER_MINUS_23_DBM;
-      break;
-    case -6:
-      val = HCI_EXT_TX_POWER_MINUS_6_DBM;
-      break;
-    case 0:
-      val = HCI_EXT_TX_POWER_0_DBM;
-      break;
-    case 4:
-      val = HCI_EXT_TX_POWER_4_DBM;
-      break;
-    default:
-      goto qwhat;
-  }
-  HCI_EXT_SetTxPowerCmd(val);
-  goto run_next_statement;
-  
-//
-// RXGAIN ON|OFF
-//
-ble_rxgain:
-  val = expression();
-  if (error_num || val < 0 || val > 1)
-  {
-    goto qwhat;
-  }
-  HCI_EXT_SetRxGainCmd(val);
   goto run_next_statement;
 
 //
@@ -2905,12 +2852,8 @@ cmd_spi:
       unsigned char speed;
 
       port = expression();
-      if (error_num || port > 3)
-      {
-        goto qwhat;
-      }
       mode = expression();
-      if (error_num || mode > 3)
+      if (error_num || port > 3 || mode > 3)
       {
         goto qwhat;
       }

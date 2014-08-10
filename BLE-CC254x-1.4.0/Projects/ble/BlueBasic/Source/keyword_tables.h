@@ -17,6 +17,8 @@ static const unsigned char keywords_0[] =
 static const unsigned char keywords_1[] =
 {
   'B','A','T','T','E','R','Y','(',FUNC_BATTERY,
+  'B','T','G','E','T','(',BLE_FUNC_BTGET,
+  'B','T','S','E','T',BLE_BTSET,
   'O','F','F',CO_OFF,
   'O','N','C','O','N','N','E','C','T',BLE_ONCONNECT,
   'O','N','D','I','S','C','O','V','E','R',BLE_ONDISCOVER,
@@ -65,7 +67,7 @@ static const unsigned char keywords_4[] =
   'R','I','S','I','N','G',PM_RISING,
   'R','N','D','(',FUNC_RND,
   'R','U','N',KW_RUN,
-  'R','X','G','A','I','N',BLE_RXGAIN,
+  'R','X','G','A','I','N',CO_RXGAIN,
   0
 };
 static const unsigned char keywords_5[] =
@@ -84,10 +86,6 @@ static const unsigned char keywords_5[] =
 static const unsigned char keywords_6[] =
 {
   '-',OP_SUB,
-  'G','A','P','(',BLE_FUNC_GAP,
-  'G','A','P','R','O','L','E','(',BLE_FUNC_GAPROLE,
-  'G','A','P','R','O','L','E',BLE_GAPROLE,
-  'G','A','P',BLE_GAP,
   'G','A','T','T',BLE_GATT,
   'G','E','N','E','R','A','L',BLE_GENERAL,
   'G','E','N','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','A','X',CO_GEN_DISC_INT_MAX,
@@ -99,7 +97,7 @@ static const unsigned char keywords_6[] =
   'T','O',KW_TO,
   'T','R','A','N','S','F','E','R',KW_TRANSFER,
   'T','R','U','E',CO_TRUE,
-  'T','X','P','O','W','E','R',BLE_TXPOWER,
+  'T','X','P','O','W','E','R',CO_TXPOWER,
   0
 };
 static const unsigned char keywords_7[] =

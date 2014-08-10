@@ -6725,7 +6725,7 @@
       <name>$PROJ_DIR$\..\..\Include\gapgattserver.h</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\..\..\Components\ble\host\gatt_uuid.c</name>
+      <name>$PROJ_DIR$\..\..\..\..\COMPONENTS\ble\host\gatt_uuid.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\Include\gattservapp.h</name>

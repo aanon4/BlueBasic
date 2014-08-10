@@ -257,17 +257,17 @@ void BlueBasic_Init( uint8 task_id )
     uint16 desired_conn_timeout = DEFAULT_DESIRED_CONN_TIMEOUT;
 
     // Set the GAP Role Parameters
-    GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof( uint8 ), &initial_advertising_enable );
+    GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, initial_advertising_enable, 0, NULL );
 #ifdef ENABLE_BLE_CONSOLE
-    GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof(consoleAdvert), (void*)consoleAdvert );
+    GAPRole_SetParameter( GAPROLE_ADVERT_DATA, 0, sizeof(consoleAdvert), (void*)consoleAdvert );
 #endif
-    GAPRole_SetParameter( GAPROLE_ADVERT_OFF_TIME, sizeof( uint16 ), &gapRole_AdvertOffTime );
+    GAPRole_SetParameter( GAPROLE_ADVERT_OFF_TIME, gapRole_AdvertOffTime, 0, NULL );
 
-    GAPRole_SetParameter( GAPROLE_PARAM_UPDATE_ENABLE, sizeof( uint8 ), &enable_update_request );
-    GAPRole_SetParameter( GAPROLE_MIN_CONN_INTERVAL, sizeof( uint16 ), &desired_min_interval );
-    GAPRole_SetParameter( GAPROLE_MAX_CONN_INTERVAL, sizeof( uint16 ), &desired_max_interval );
-    GAPRole_SetParameter( GAPROLE_SLAVE_LATENCY, sizeof( uint16 ), &desired_slave_latency );
-    GAPRole_SetParameter( GAPROLE_TIMEOUT_MULTIPLIER, sizeof( uint16 ), &desired_conn_timeout );
+    GAPRole_SetParameter( GAPROLE_PARAM_UPDATE_ENABLE,enable_update_request, 0, NULL );
+    GAPRole_SetParameter( GAPROLE_MIN_CONN_INTERVAL, desired_min_interval, 0, NULL );
+    GAPRole_SetParameter( GAPROLE_MAX_CONN_INTERVAL, desired_max_interval, 0, NULL );
+    GAPRole_SetParameter( GAPROLE_SLAVE_LATENCY, desired_slave_latency, 0, NULL );
+    GAPRole_SetParameter( GAPROLE_TIMEOUT_MULTIPLIER, desired_conn_timeout, 0, NULL );
   }
 
   // Set advertising interval
@@ -312,8 +312,8 @@ void BlueBasic_Init( uint8 task_id )
   HCI_EXT_ClkDivOnHaltCmd(HCI_EXT_ENABLE_CLK_DIVIDE_ON_HALT);
 #endif
 
-  // Startup with low power settings
-  HCI_EXT_SetTxPowerCmd(LL_EXT_TX_POWER_MINUS_6_DBM);
+  // Startup with standard power settings
+  HCI_EXT_SetTxPowerCmd(HCI_EXT_TX_POWER_0_DBM);
   HCI_EXT_SetRxGainCmd(HCI_EXT_RX_GAIN_STD);
 
   // Setup a delayed profile startup

@@ -198,11 +198,233 @@ static void gapRole_startConnUpdate( uint8 handleFailure );
  *
  * Public function defined in peripheral.h.
  */
-bStatus_t GAPRole_SetParameter( uint16 param, uint8 len, void *pValue )
+bStatus_t GAPRole_SetParameter( uint16 param, uint32 val, uint8 len, void *pValue )
 {
   bStatus_t ret = SUCCESS;
-  switch ( param )
+ 
+  if (len == 0)
   {
+    switch ( param )
+    {
+      case GAPROLE_SIGNCOUNTER:
+        gapRole_signCounter = val;
+        break;
+
+      case GAPROLE_ADVERT_ENABLED:
+        {
+          uint8 oldAdvEnabled = gapRole_AdvEnabled;
+          gapRole_AdvEnabled = val;
+
+          if ( (oldAdvEnabled) && (gapRole_AdvEnabled == FALSE) )
+          {
+            // Turn off Advertising
+            if ( ( gapRole_state == GAPROLE_ADVERTISING ) 
+                || ( gapRole_state == GAPROLE_CONNECTED_ADV )
+                || ( gapRole_state == GAPROLE_WAITING_AFTER_TIMEOUT ) )
+            {
+              VOID GAP_EndDiscoverable( gapRole_TaskID );
+            }
+          }
+          else if ( (oldAdvEnabled == FALSE) && (gapRole_AdvEnabled) )
+          {
+            // Turn on Advertising
+            if ( (gapRole_state == GAPROLE_STARTED)
+                || (gapRole_state == GAPROLE_WAITING)
+                || (gapRole_state == GAPROLE_CONNECTED)
+                || (gapRole_state == GAPROLE_WAITING_AFTER_TIMEOUT) )
+            {
+              VOID osal_set_event( gapRole_TaskID, START_ADVERTISING_EVT );
+            }
+          }
+        }
+        break;
+
+      case GAPROLE_ADVERT_OFF_TIME:
+        gapRole_AdvertOffTime = val;
+        break;
+      
+      case GAPROLE_ADV_EVENT_TYPE:
+        if ( val <= GAP_ADTYPE_ADV_LDC_DIRECT_IND )
+        {
+          gapRole_AdvEventType = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
+
+      case GAPROLE_ADV_DIRECT_TYPE:
+        if ( val <= ADDRTYPE_PRIVATE_RESOLVE )
+        {
+          gapRole_AdvDirectType = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
+   
+        
+      case GAPROLE_ADV_CHANNEL_MAP:
+        if ( val <= 0x07 )
+        {
+          gapRole_AdvChanMap = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
+
+      case GAPROLE_ADV_FILTER_POLICY:
+        if ( val <= GAP_FILTER_POLICY_WHITE )
+        {
+          gapRole_AdvFilterPolicy = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
+
+      case GAPROLE_RSSI_READ_RATE:
+        {
+          gapRole_RSSIReadRate = val;
+
+          if ( gapRole_RSSIReadRate && gapRole_state == GAPROLE_CONNECTED )
+          {
+            // Start the RSSI Reads
+            VOID osal_start_timerEx( gapRole_TaskID, RSSI_READ_EVT, gapRole_RSSIReadRate );
+          }
+        }
+        break;
+
+      case GAPROLE_PARAM_UPDATE_ENABLE:
+        gapRole_ParamUpdateEnable = val ? TRUE : FALSE;
+        break;
+
+      case GAPROLE_MIN_CONN_INTERVAL:
+        if ( val >= MIN_CONN_INTERVAL && val <= MAX_CONN_INTERVAL )
+        {
+          gapRole_MinConnInterval = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
+
+      case GAPROLE_MAX_CONN_INTERVAL:
+        if ( val >= MIN_CONN_INTERVAL && val <= MAX_CONN_INTERVAL )
+        {
+          gapRole_MaxConnInterval = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
+
+      case GAPROLE_SLAVE_LATENCY:
+        if ( val < MAX_SLAVE_LATENCY )
+        {
+          gapRole_SlaveLatency = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
+
+      case GAPROLE_TIMEOUT_MULTIPLIER:
+        if ( val >= MIN_TIMEOUT_MULTIPLIER && val <= MAX_TIMEOUT_MULTIPLIER )
+        {
+          gapRole_TimeoutMultiplier = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
+
+      case GAPROLE_PARAM_UPDATE_REQ:
+          {
+            if ( val )
+            {
+              // Make sure we don't send an L2CAP Connection Parameter Update Request
+              // command within TGAP(conn_param_timeout) of an L2CAP Connection Parameter
+              // Update Response being received.
+              if ( osal_get_timeoutEx( gapRole_TaskID, CONN_PARAM_TIMEOUT_EVT ) == 0 )
+              {             
+                // Start connection update procedure
+                gapRole_startConnUpdate( GAPROLE_NO_ACTION );
+                
+                // Connection update requested by app, cancel such pending procedure (if active)
+                VOID osal_stop_timerEx( gapRole_TaskID, START_CONN_UPDATE_EVT );
+              }
+              else
+              {
+                ret = blePending;
+              }
+            }
+            else
+            {
+              ret = bleInvalidRange;
+            }
+          }
+          break;
+   
+      case GAPOBSERVERROLE_MAX_SCAN_RES:
+        gapObserverRoleMaxScanRes = val;
+        break;
+
+      case HCI_EXT_SETTXPOWER:
+        switch ((int32)val)
+        {
+          case -23:
+            HCI_EXT_SetTxPowerCmd(HCI_EXT_TX_POWER_MINUS_23_DBM);
+            break;
+          case -6:
+            HCI_EXT_SetTxPowerCmd(HCI_EXT_TX_POWER_MINUS_6_DBM);
+            break;
+          case 0:
+            HCI_EXT_SetTxPowerCmd(HCI_EXT_TX_POWER_0_DBM);
+            break;
+          case 4:
+            HCI_EXT_SetTxPowerCmd(HCI_EXT_TX_POWER_4_DBM);
+            break;
+          default:
+            ret = bleInvalidRange;
+            break;
+        }
+        break;
+ 
+      case HCI_EXT_SETRXGAIN:
+        HCI_EXT_SetRxGainCmd(val ? TRUE : FALSE);
+        break;
+    
+      default:
+        // The param value isn't part of this profile, try the GAP.
+        if ( param < TGAP_PARAMID_MAX )
+        {
+          ret = GAP_SetParamValue( param, (uint16)val );
+        }
+        else
+        {
+          ret = INVALIDPARAMETER;
+        }
+        break;
+    }
+  }
+  else
+  {
+    switch ( param )
+    {
+    default:
+      ret = INVALIDPARAMETER;
+      break;
+
     case GAPROLE_IRK:
       if ( len == KEYLEN )
       {
@@ -218,62 +440,6 @@ bStatus_t GAPRole_SetParameter( uint16 param, uint8 len, void *pValue )
       if ( len == KEYLEN )
       {
         VOID osal_memcpy( gapRole_SRK, pValue, KEYLEN ) ;
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-    case GAPROLE_SIGNCOUNTER:
-      if ( len == sizeof ( uint32 ) )
-      {
-        gapRole_signCounter = *((uint32*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-    case GAPROLE_ADVERT_ENABLED:
-      if ( len == sizeof( uint8 ) )
-      {
-        uint8 oldAdvEnabled = gapRole_AdvEnabled;
-        gapRole_AdvEnabled = *((uint8*)pValue);
-
-        if ( (oldAdvEnabled) && (gapRole_AdvEnabled == FALSE) )
-        {
-          // Turn off Advertising
-          if ( ( gapRole_state == GAPROLE_ADVERTISING ) 
-              || ( gapRole_state == GAPROLE_CONNECTED_ADV )
-              || ( gapRole_state == GAPROLE_WAITING_AFTER_TIMEOUT ) )
-          {
-            VOID GAP_EndDiscoverable( gapRole_TaskID );
-          }
-        }
-        else if ( (oldAdvEnabled == FALSE) && (gapRole_AdvEnabled) )
-        {
-          // Turn on Advertising
-          if ( (gapRole_state == GAPROLE_STARTED)
-              || (gapRole_state == GAPROLE_WAITING)
-              || (gapRole_state == GAPROLE_CONNECTED)
-              || (gapRole_state == GAPROLE_WAITING_AFTER_TIMEOUT) )
-          {
-            VOID osal_set_event( gapRole_TaskID, START_ADVERTISING_EVT );
-          }
-        }
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-    case GAPROLE_ADVERT_OFF_TIME:
-      if ( len == sizeof ( uint16 ) )
-      {
-        gapRole_AdvertOffTime = *((uint16*)pValue);
       }
       else
       {
@@ -315,28 +481,6 @@ bStatus_t GAPRole_SetParameter( uint16 param, uint8 len, void *pValue )
       }
       break;
 
-    case GAPROLE_ADV_EVENT_TYPE:
-      if ( (len == sizeof ( uint8 )) && (*((uint8*)pValue) <= GAP_ADTYPE_ADV_LDC_DIRECT_IND) )
-      {
-        gapRole_AdvEventType = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-    case GAPROLE_ADV_DIRECT_TYPE:
-      if ( (len == sizeof ( uint8 )) && (*((uint8*)pValue) <= ADDRTYPE_PRIVATE_RESOLVE) )
-      {
-        gapRole_AdvDirectType = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
     case GAPROLE_ADV_DIRECT_ADDR:
       if ( len == B_ADDR_LEN )
       {
@@ -347,169 +491,7 @@ bStatus_t GAPRole_SetParameter( uint16 param, uint8 len, void *pValue )
         ret = bleInvalidRange;
       }
       break;
-
-    case GAPROLE_ADV_CHANNEL_MAP:
-      if ( (len == sizeof ( uint8 )) && (*((uint8*)pValue) <= 0x07) )
-      {
-        gapRole_AdvChanMap = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-    case GAPROLE_ADV_FILTER_POLICY:
-      if ( (len == sizeof ( uint8 )) && (*((uint8*)pValue) <= GAP_FILTER_POLICY_WHITE) )
-      {
-        gapRole_AdvFilterPolicy = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-    case GAPROLE_RSSI_READ_RATE:
-      if ( len == sizeof ( uint16 ) )
-      {
-        gapRole_RSSIReadRate = *((uint16*)pValue);
-
-        if ( (gapRole_RSSIReadRate) && (gapRole_state == GAPROLE_CONNECTED) )
-        {
-          // Start the RSSI Reads
-          VOID osal_start_timerEx( gapRole_TaskID, RSSI_READ_EVT, gapRole_RSSIReadRate );
-        }
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-    case GAPROLE_PARAM_UPDATE_ENABLE:
-      if ( (len == sizeof ( uint8 )) && (*((uint8*)pValue) <= TRUE) )
-      {
-        gapRole_ParamUpdateEnable = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-    case GAPROLE_MIN_CONN_INTERVAL:
-      {
-        uint16 newInterval = *((uint16*)pValue);
-        if (   len == sizeof ( uint16 )           &&
-             ( newInterval >= MIN_CONN_INTERVAL ) &&
-             ( newInterval <= MAX_CONN_INTERVAL ) )
-        {
-          gapRole_MinConnInterval = newInterval;
-        }
-        else
-        {
-          ret = bleInvalidRange;
-        }
-      }
-      break;
-
-    case GAPROLE_MAX_CONN_INTERVAL:
-      {
-        uint16 newInterval = *((uint16*)pValue);
-        if (   len == sizeof ( uint16 )          &&
-             ( newInterval >= MIN_CONN_INTERVAL) &&
-             ( newInterval <= MAX_CONN_INTERVAL) )
-        {
-          gapRole_MaxConnInterval = newInterval;
-        }
-        else
-        {
-          ret = bleInvalidRange;
-        }
-      }
-      break;
-
-    case GAPROLE_SLAVE_LATENCY:
-      {
-        uint16 latency = *((uint16*)pValue);
-        if ( len == sizeof ( uint16 ) && (latency < MAX_SLAVE_LATENCY) )
-        {
-          gapRole_SlaveLatency = latency;
-        }
-        else
-        {
-          ret = bleInvalidRange;
-        }
-      }
-      break;
-
-    case GAPROLE_TIMEOUT_MULTIPLIER:
-      {
-        uint16 newTimeout = *((uint16*)pValue);
-        if ( len == sizeof ( uint16 )
-            && (newTimeout >= MIN_TIMEOUT_MULTIPLIER) && (newTimeout <= MAX_TIMEOUT_MULTIPLIER) )
-        {
-          gapRole_TimeoutMultiplier = newTimeout;
-        }
-        else
-        {
-          ret = bleInvalidRange;
-        }
-      }
-      break;
-
-      case GAPROLE_PARAM_UPDATE_REQ:
-        {
-          uint8 req = *((uint8*)pValue);
-          if ( len == sizeof ( uint8 ) && (req == TRUE) )
-          {
-            // Make sure we don't send an L2CAP Connection Parameter Update Request
-            // command within TGAP(conn_param_timeout) of an L2CAP Connection Parameter
-            // Update Response being received.
-            if ( osal_get_timeoutEx( gapRole_TaskID, CONN_PARAM_TIMEOUT_EVT ) == 0 )
-            {             
-              // Start connection update procedure
-              gapRole_startConnUpdate( GAPROLE_NO_ACTION );
-              
-              // Connection update requested by app, cancel such pending procedure (if active)
-              VOID osal_stop_timerEx( gapRole_TaskID, START_CONN_UPDATE_EVT );
-            }
-            else
-            {
-              ret = blePending;
-            }
-          }
-          else
-          {
-            ret = bleInvalidRange;
-          }
-        }
-        break;
- 
-    case GAPOBSERVERROLE_MAX_SCAN_RES:
-      if ( len == sizeof ( uint8 ) )
-      {
-        gapObserverRoleMaxScanRes = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-  
-    default:
-      // The param value isn't part of this profile, try the GAP.
-      if ( (param < TGAP_PARAMID_MAX) && (len == sizeof ( uint16 )) )
-      {
-        ret = GAP_SetParamValue( param, *((uint16*)pValue) );
-      }
-      else
-      {
-        ret = INVALIDPARAMETER;
-      }
-      break;
+    }
   }
 
   return ( ret );
@@ -520,130 +502,155 @@ bStatus_t GAPRole_SetParameter( uint16 param, uint8 len, void *pValue )
  *
  * Public function defined in peripheral.h.
  */
-bStatus_t GAPRole_GetParameter( uint16 param, void *pValue )
+bStatus_t GAPRole_GetParameter( uint16 param, uint32* pSimpleValue, uint8 len, void *pLongValue )
 {
   bStatus_t ret = SUCCESS;
-  switch ( param )
+
+  if ( pSimpleValue  )
   {
-    case GAPROLE_PROFILEROLE:
-      *((uint8*)pValue) = gapRole_profileRole;
-      break;
+    switch ( param )
+    {
+      case GAPROLE_PROFILEROLE:
+        *pSimpleValue = gapRole_profileRole;
+        break;
 
-    case GAPROLE_IRK:
-      VOID osal_memcpy( pValue, gapRole_IRK, KEYLEN ) ;
-      break;
+      case GAPROLE_SIGNCOUNTER:
+        *pSimpleValue = gapRole_signCounter;
+        break;
 
-    case GAPROLE_SRK:
-      VOID osal_memcpy( pValue, gapRole_SRK, KEYLEN ) ;
-      break;
+      case GAPROLE_ADVERT_ENABLED:
+        *pSimpleValue = gapRole_AdvEnabled;
+        break;
 
-    case GAPROLE_SIGNCOUNTER:
-      *((uint32*)pValue) = gapRole_signCounter;
-      break;
+      case GAPROLE_ADVERT_OFF_TIME:
+        *pSimpleValue = gapRole_AdvertOffTime;
+        break;
 
-    case GAPROLE_BD_ADDR:
-      VOID osal_memcpy( pValue, gapRole_bdAddr, B_ADDR_LEN ) ;
-      break;
+      case GAPROLE_ADV_EVENT_TYPE:
+        *pSimpleValue = gapRole_AdvEventType;
+        break;
 
-    case GAPROLE_ADVERT_ENABLED:
-      *((uint8*)pValue) = gapRole_AdvEnabled;
-      break;
+      case GAPROLE_ADV_DIRECT_TYPE:
+        *pSimpleValue = gapRole_AdvDirectType;
+        break;
 
-    case GAPROLE_ADVERT_OFF_TIME:
-      *((uint16*)pValue) = gapRole_AdvertOffTime;
-      break;
+      case GAPROLE_ADV_CHANNEL_MAP:
+        *pSimpleValue = gapRole_AdvChanMap;
+        break;
 
-    case GAPROLE_ADVERT_DATA:
-      VOID osal_memcpy( pValue , gapRole_AdvertData, gapRole_AdvertDataLen );
-      break;
+      case GAPROLE_ADV_FILTER_POLICY:
+        *pSimpleValue = gapRole_AdvFilterPolicy;
+        break;
 
-    case GAPROLE_SCAN_RSP_DATA:
-      VOID osal_memcpy( pValue, gapRole_ScanRspData, gapRole_ScanRspDataLen ) ;
-      break;
+      case GAPROLE_CONNHANDLE:
+        *pSimpleValue = gapRole_ConnectionHandle;
+        break;
 
-    case GAPROLE_ADV_EVENT_TYPE:
-      *((uint8*)pValue) = gapRole_AdvEventType;
-      break;
+      case GAPROLE_RSSI_READ_RATE:
+        *pSimpleValue = gapRole_RSSIReadRate;
+        break;
 
-    case GAPROLE_ADV_DIRECT_TYPE:
-      *((uint8*)pValue) = gapRole_AdvDirectType;
-      break;
+      case GAPROLE_PARAM_UPDATE_ENABLE:
+        *pSimpleValue = gapRole_ParamUpdateEnable;
+        break;
 
-    case GAPROLE_ADV_DIRECT_ADDR:
-      VOID osal_memcpy( pValue, gapRole_AdvDirectAddr, B_ADDR_LEN ) ;
-      break;
+      case GAPROLE_MIN_CONN_INTERVAL:
+        *pSimpleValue = gapRole_MinConnInterval;
+        break;
 
-    case GAPROLE_ADV_CHANNEL_MAP:
-      *((uint8*)pValue) = gapRole_AdvChanMap;
-      break;
+      case GAPROLE_MAX_CONN_INTERVAL:
+        *pSimpleValue = gapRole_MaxConnInterval;
+        break;
 
-    case GAPROLE_ADV_FILTER_POLICY:
-      *((uint8*)pValue) = gapRole_AdvFilterPolicy;
-      break;
+      case GAPROLE_SLAVE_LATENCY:
+        *pSimpleValue = gapRole_SlaveLatency;
+        break;
 
-    case GAPROLE_CONNHANDLE:
-      *((uint16*)pValue) = gapRole_ConnectionHandle;
-      break;
+      case GAPROLE_TIMEOUT_MULTIPLIER:
+        *pSimpleValue = gapRole_TimeoutMultiplier;
+        break;
 
-    case GAPROLE_RSSI_READ_RATE:
-      *((uint16*)pValue) = gapRole_RSSIReadRate;
-      break;
+      case GAPROLE_CONN_INTERVAL:
+        *pSimpleValue = gapRole_ConnInterval;
+        break;
 
-    case GAPROLE_PARAM_UPDATE_ENABLE:
-      *((uint16*)pValue) = gapRole_ParamUpdateEnable;
-      break;
+      case GAPROLE_CONN_LATENCY:
+        *pSimpleValue = gapRole_ConnSlaveLatency;
+        break;
 
-    case GAPROLE_MIN_CONN_INTERVAL:
-      *((uint16*)pValue) = gapRole_MinConnInterval;
-      break;
+      case GAPROLE_CONN_TIMEOUT:
+        *pSimpleValue = gapRole_ConnTimeout;
+        break;
 
-    case GAPROLE_MAX_CONN_INTERVAL:
-      *((uint16*)pValue) = gapRole_MaxConnInterval;
-      break;
+      case GAPROLE_STATE:
+        *pSimpleValue = gapRole_state;
+        break;
 
-    case GAPROLE_SLAVE_LATENCY:
-      *((uint16*)pValue) = gapRole_SlaveLatency;
-      break;
+      case GAPOBSERVERROLE_MAX_SCAN_RES:
+        *pSimpleValue = gapObserverRoleMaxScanRes;
+        break;
+      
+      default:
+        // The param value isn't part of this profile, try the GAP.
+        if ( param < TGAP_PARAMID_MAX )
+        {
+          *pSimpleValue = GAP_GetParamValue( param );
+        }
+        else
+        {
+          ret = INVALIDPARAMETER;
+        }
+        break;
+    }
+  }
+  else
+  {
 
-    case GAPROLE_TIMEOUT_MULTIPLIER:
-      *((uint16*)pValue) = gapRole_TimeoutMultiplier;
-      break;
+#define _CHECK_AND_COPY(D, L) \
+    if ( len < (L) ) \
+    { \
+      ret = bleInvalidRange; \
+    } \
+    else \
+    { \
+      VOID osal_memset( pLongValue, 0, len ); \
+      VOID osal_memcpy( pLongValue, (D), (L) ); \
+    }
 
-    case GAPROLE_CONN_BD_ADDR:
-      VOID osal_memcpy( pValue, gapRole_ConnectedDevAddr, B_ADDR_LEN ) ;
-      break;
+    switch ( param )
+    {
+      case GAPROLE_IRK:
+        _CHECK_AND_COPY( gapRole_IRK, KEYLEN )
+        break;
 
-    case GAPROLE_CONN_INTERVAL:
-      *((uint16*)pValue) = gapRole_ConnInterval;
-      break;
+      case GAPROLE_BD_ADDR:
+        _CHECK_AND_COPY( gapRole_bdAddr, B_ADDR_LEN )
+        break;
 
-    case GAPROLE_CONN_LATENCY:
-      *((uint16*)pValue) = gapRole_ConnSlaveLatency;
-      break;
+      case GAPROLE_ADVERT_DATA:
+        _CHECK_AND_COPY( gapRole_AdvertData, gapRole_AdvertDataLen )
+        break;
 
-    case GAPROLE_CONN_TIMEOUT:
-      *((uint16*)pValue) = gapRole_ConnTimeout;
-      break;
+      case GAPROLE_SCAN_RSP_DATA:
+        _CHECK_AND_COPY( gapRole_ScanRspData, gapRole_ScanRspDataLen ) ;
+        break;
 
-    case GAPROLE_STATE:
-      *((uint8*)pValue) = gapRole_state;
-      break;
+      case GAPROLE_ADV_DIRECT_ADDR:
+        _CHECK_AND_COPY( gapRole_AdvDirectAddr, B_ADDR_LEN ) ;
+        break;
 
-    case GAPOBSERVERROLE_MAX_SCAN_RES:
-      *((uint8*)pValue) = gapObserverRoleMaxScanRes;
-      break;
-    
-    default:
-      // The param value isn't part of this profile, try the GAP.
-      if ( param < TGAP_PARAMID_MAX )
-      {
-        *((uint16*)pValue) = GAP_GetParamValue( param );
-      }
-      else
-      {
+      case GAPROLE_SRK:
+        _CHECK_AND_COPY( gapRole_SRK, KEYLEN ) ;
+        break;
+
+      case GAPROLE_CONN_BD_ADDR:
+        _CHECK_AND_COPY( gapRole_ConnectedDevAddr, B_ADDR_LEN ) ;
+        break;
+   
+      default:
         ret = INVALIDPARAMETER;
-      }
-      break;
+        break;
+    }
   }
 
   return ( ret );

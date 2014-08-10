@@ -214,30 +214,27 @@ unsigned char GATTServApp_ProcessCCCWriteReq(unsigned short handle, gattAttribut
   return SUCCESS;
 }
 
-unsigned char GAPRole_SetParameter(unsigned short param, unsigned char len, void* addr)
+unsigned char GAPRole_SetParameter(unsigned short param, unsigned long val, unsigned char len, void* addr)
 {
   return SUCCESS;
 }
 
-unsigned char GAPRole_GetParameter(unsigned short param, void* addr)
+unsigned char GAPRole_GetParameter(unsigned short param, unsigned long* shortValue, unsigned char len, void* longValue)
 {
-  *(unsigned short*)addr = 0;
+  if (shortValue)
+  {
+    *(unsigned short*)shortValue = 0;
+  }
+  else
+  {
+    memset(longValue, 0, len);
+  }
   return SUCCESS;
 }
 
 unsigned char GGS_SetParameter(unsigned short param, unsigned char len, void* addr)
 {
   return SUCCESS;
-}
-
-unsigned char GAP_SetParamValue(unsigned short param, unsigned short value)
-{
-  return SUCCESS;
-}
-
-unsigned short GAP_GetParamValue(unsigned short param)
-{
-  return 0;
 }
 
 unsigned char HCI_EXT_SetTxPowerCmd(unsigned char power)

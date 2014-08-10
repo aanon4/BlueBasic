@@ -85,6 +85,9 @@ extern "C"
 #define GAPROLE_PARAM_UPDATE_REQ    0x319  //!< Slave Connection Parameter Update Request. Write. Size is uint8. If TRUE then connection parameter update request is sent.
 #define GAPROLE_STATE               0x31A  //!< Reading this parameter will return GAP Peripheral Role State. Read Only. Size is uint8.
 /** @} End GAPROLE_PROFILE_PARAMETERS */
+   
+#define HCI_EXT_SETRXGAIN           0xF00
+#define HCI_EXT_SETTXPOWER          0xF01
 
 /*-------------------------------------------------------------------
  * TYPEDEFS
@@ -176,15 +179,13 @@ typedef struct
  *        "pValue" field must point to a "uint16".
  *
  * @param       param - Profile parameter ID: @ref GAPROLE_PROFILE_PARAMETERS
+ * @param       value - value if it's simple
  * @param       len - length of data to write
- * @param       pValue - pointer to data to write.  This is dependent on
- *          the parameter ID and WILL be cast to the appropriate
- *          data type (example: data type of uint16 will be cast to
- *          uint16 pointer).
+ * @param       pValue - pointer to data to write if value is not simple.
  *
  * @return      SUCCESS or INVALIDPARAMETER (invalid paramID)
  */
-extern bStatus_t GAPRole_SetParameter( uint16 param, uint8 len, void *pValue );
+extern bStatus_t GAPRole_SetParameter( uint16 param, uint32 value, uint8 len, void *pValue );
 
 /**
  * @brief       Get a GAP Role parameter.
@@ -194,14 +195,13 @@ extern bStatus_t GAPRole_SetParameter( uint16 param, uint8 len, void *pValue );
  *        "pValue" field must point to a "uint16".
  *
  * @param       param - Profile parameter ID: @ref GAPROLE_PROFILE_PARAMETERS
- * @param       pValue - pointer to location to get the value.  This is dependent on
- *          the parameter ID and WILL be cast to the appropriate
- *          data type (example: data type of uint16 will be cast to
- *          uint16 pointer).
+ * @param       pSimpleValue - pointer to location for simple 32-bit value.
+ * @param       len - Length of store for long value.
+ * @param       pLongValue - pointer to location to store the value if long.
  *
  * @return      SUCCESS or INVALIDPARAMETER (invalid paramID)
  */
-extern bStatus_t GAPRole_GetParameter( uint16 param, void *pValue );
+extern bStatus_t GAPRole_GetParameter( uint16 param, uint32* pSimpleValue, uint8 len, void *pLongValue );
 
 /**
  * @brief       Does the device initialization.  Only call this function once.

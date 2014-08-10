@@ -107,16 +107,14 @@ struct keyword
   { "MORE", "BLE_MORE" },
   { "NAME", "BLE_NAME" },
   { "CUSTOM", "BLE_CUSTOM" },
-  { "GAPROLE(", "BLE_FUNC_GAPROLE" },
-  { "GAPROLE", "BLE_GAPROLE" },
-  { "GAP(", "BLE_FUNC_GAP" },
-  { "GAP", "BLE_GAP" },
+  { "BTGET(", "BLE_FUNC_BTGET" },
+  { "BTSET", "BLE_BTSET" },
   { "SPI", "KW_SPI" },
   { "TRANSFER", "KW_TRANSFER" },
   { "MSB", "KW_MSB" },
   { "LSB", "KW_LSB" },
-  { "TXPOWER", "BLE_TXPOWER" },
-  { "RXGAIN", "BLE_RXGAIN" },
+  { "TXPOWER", "CO_TXPOWER" },
+  { "RXGAIN", "CO_RXGAIN" },
 };
 
 #define	NR_TABLES	13
