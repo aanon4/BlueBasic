@@ -270,6 +270,8 @@ typedef struct
 } os_discover_t;
 extern os_discover_t blueBasic_discover;
 
+#define LINKDB_STATUS_UPDATE_RSSI 16
+
 extern void interpreter_setup(void);
 extern void interpreter_banner(void);
 extern void interpreter_loop(void);

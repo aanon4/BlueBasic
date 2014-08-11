@@ -85,7 +85,7 @@ extern "C"
 #define GAPROLE_PARAM_UPDATE_REQ    0x319  //!< Slave Connection Parameter Update Request. Write. Size is uint8. If TRUE then connection parameter update request is sent.
 #define GAPROLE_STATE               0x31A  //!< Reading this parameter will return GAP Peripheral Role State. Read Only. Size is uint8.
 /** @} End GAPROLE_PROFILE_PARAMETERS */
-   
+
 #define HCI_EXT_SETRXGAIN           0xF00
 #define HCI_EXT_SETTXPOWER          0xF01
 
@@ -157,7 +157,7 @@ typedef struct
 {
   gapRolesStateNotify_t    pfnStateChange;  //!< Whenever the device changes state
   gapRolesRssiRead_t       pfnRssiRead;     //!< When a valid RSSI is read from controller
-  gapRolesDeviceFound_t    pfnDeviceFound;  //!< Forward raw events
+  gapRolesDeviceFound_t    pfnDeviceFound;  //!< When a device is found during scanning
 } gapRolesCBs_t;
 
 /*-------------------------------------------------------------------

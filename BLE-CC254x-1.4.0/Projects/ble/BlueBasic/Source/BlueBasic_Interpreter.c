@@ -74,6 +74,9 @@ static const char* const error_msgs[] =
 static const char initmsg[]           = "BlueBasic " kVersion;
 static const char memorymsg[]         = " bytes free.";
 
+#define VAR_TYPE    long int
+#define VAR_SIZE    (4)
+
 
 // Start enum at 128 so we get instant token values.
 // By moving the command list to an enum, we can easily remove sections
@@ -180,20 +183,37 @@ enum
 {
   CO_TRUE = 1,
   CO_FALSE,
-  CO_ON,
-  CO_OFF,
   CO_ADVERT_ENABLED,
   CO_MIN_CONN_INTERVAL,
   CO_MAX_CONN_INTERVAL,
   CO_SLAVE_LATENCY,
   CO_TIMEOUT_MULTIPLIER,
+  CO_DEV_ADDRESS,
+  CO_TXPOWER,
+  CO_RXGAIN,
   CO_LIM_DISC_INT_MIN,
   CO_LIM_DISC_INT_MAX,
   CO_GEN_DISC_INT_MIN,
   CO_GEN_DISC_INT_MAX,
-  CO_TXPOWER,
-  CO_RXGAIN,
 };
+
+// Constant map (so far all constants are <= 16 bits)
+static const VAR_TYPE constantmap[] =
+{
+  1, // TRUE
+  0, // FALSE
+  BLE_ADVERT_ENABLED,
+  BLE_MIN_CONN_INTERVAL,
+  BLE_MAX_CONN_INTERVAL,
+  BLE_SLAVE_LATENCY,
+  BLE_TIMEOUT_MULTIPLIER,
+  BLE_BD_ADDR,
+  BLE_TXPOWER,
+  BLE_RXGAIN,
+  TGAP_LIM_DISC_ADV_INT_MIN,
+  TGAP_LIM_DISC_ADV_INT_MAX,
+  TGAP_GEN_DISC_ADV_INT_MIN,
+  TGAP_GEN_DISC_ADV_INT_MAX,};
 
 #include "keyword_tables.h"
 
@@ -204,9 +224,6 @@ enum {
   IX_PROMPT,
   IX_OUTOFMEMORY
 };
-
-#define VAR_TYPE    long int
-#define VAR_SIZE    (4)
 
 typedef struct
 {
@@ -276,26 +293,6 @@ static unsigned char vname;
 #define VARIABLE_INT_SET(F,V)   (*VARIABLE_INT_ADDR(F) = (V))
 #define VARIABLE_FLAGS_GET(F)   (vname = (F) - 'A', (((*(variables_begin + 26 * VAR_SIZE + vname / 8)) >> (vname % 8)) & 0x01))
 #define VARIABLE_FLAGS_SET(F,V) do { vname = (F) - 'A'; unsigned char* v = variables_begin + 26 * VAR_SIZE + vname / 8; *v = (*v & (255 - (1 << (vname % 8)))) | ((V) << (vname % 8)); } while(0)
-
-// Constant map (so far all constants are <= 16 bits)
-static const VAR_TYPE constantmap[] =
-{
-  1, // TRUE
-  0, // FALSE
-  1, // ON
-  0, // OFF
-  BLE_ADVERT_ENABLED,
-  BLE_MIN_CONN_INTERVAL,
-  BLE_MAX_CONN_INTERVAL,
-  BLE_SLAVE_LATENCY,
-  BLE_TIMEOUT_MULTIPLIER,
-  TGAP_LIM_DISC_ADV_INT_MIN,
-  TGAP_LIM_DISC_ADV_INT_MAX,
-  TGAP_GEN_DISC_ADV_INT_MIN,
-  TGAP_GEN_DISC_ADV_INT_MAX,
-  BLE_TXPOWER,
-  BLE_RXGAIN,
-};
 
 #ifdef SIMULATE_PINS
 static unsigned char P0DIR, P1DIR, P2DIR;
@@ -3624,7 +3621,7 @@ static void ble_notify_assign(gatt_variable_ref* vref)
 // BLE connection management. If the ONCONNECT event was specified when a service
 // was created, we forward any connection changes up to the user code.
 //
-void ble_connection_status(unsigned short connHandle, unsigned char changeType)
+void ble_connection_status(unsigned short connHandle, unsigned char changeType, signed char rssi)
 {
   unsigned char* ptr;
   stack_service_frame* vframe;
@@ -3651,7 +3648,11 @@ void ble_connection_status(unsigned short connHandle, unsigned char changeType)
               f |= j;
             }
           }
-          VARIABLE_INT_SET('F', f);
+          VARIABLE_INT_SET('V', f);
+        }
+        else if (changeType == LINKDB_STATUS_UPDATE_RSSI)
+        {
+          VARIABLE_INT_SET('V', rssi);
         }
         interpreter_run(vframe->connect, 1);
       }

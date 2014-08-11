@@ -123,7 +123,7 @@ uint8 blueBasic_TaskID;   // Task ID for internal task/event processing
 /*********************************************************************
  * EXTERNAL FUNCTIONS
  */
-extern void ble_connection_status(uint16 connHandle, uint8 changeType);
+extern void ble_connection_status(uint16 connHandle, uint8 changeType, int8 rssi);
 
 
 /*********************************************************************
@@ -191,11 +191,15 @@ static void blueBasic_deviceFound( gapDeviceInfoEvent_t* device );
  * PROFILE CALLBACKS
  */
 
+// GAP Link callback
+static void blueBasic_HandleConnStatusCB(uint16 connHandle, uint8 changeType);
+static void blueBasic_RSSIUpdate(int8 rssi);
+
 // GAP Role Callbacks
 static gapRolesCBs_t blueBasic_PeripheralCBs =
 {
   NULL,                           // Profile State Change Callbacks
-  NULL,                           // When a valid RSSI is read from controller
+  blueBasic_RSSIUpdate,           // When a valid RSSI is read from controller
   blueBasic_deviceFound           // Device found
 };
 
@@ -207,9 +211,6 @@ static gapBondCBs_t blueBasic_BondMgrCBs =
   NULL                      // Pairing / Bonding state Callback (not used by application)
 };
 #endif
-
-// GAP Link callback
-static void blueBasic_HandleConnStatusCB(uint16 connHandle, uint8 changeType);
 
 /*********************************************************************
  * PUBLIC FUNCTIONS
@@ -357,7 +358,7 @@ uint16 BlueBasic_ProcessEvent( uint8 task_id, uint16 events )
   {
     // Start the Device
     VOID GAPRole_StartDevice( &blueBasic_PeripheralCBs );
-    
+
 #ifdef GAP_BOND_MGR
     // Start Bond Manager
     VOID GAPBondMgr_Register( &blueBasic_BondMgrCBs );
@@ -445,7 +446,12 @@ static void blueBasic_HandleConnStatusCB(uint16 connHandle, uint8 changeType)
     GATTServApp_InitCharCfg(connHandle, consoleProfileCharCfg);
   }
 #endif
-  ble_connection_status(connHandle, changeType);
+  ble_connection_status(connHandle, changeType, 0);
+}
+
+static void blueBasic_RSSIUpdate(int8 rssi);
+{
+  ble_connection_status(0, LINKDB_STATUS_UPDATE_RSSI, rssi);
 }
 
 #ifdef ENABLE_BLE_CONSOLE
@@ -453,7 +459,7 @@ static void blueBasic_HandleConnStatusCB(uint16 connHandle, uint8 changeType)
 uint8 ble_console_write(uint8 ch)
 {
   static char entered;
-  
+
   if (ble_console_enabled)
   {
     if (entered && io.writelen >= sizeof(io.write))
@@ -475,7 +481,7 @@ uint8 ble_console_write(uint8 ch)
       io.writepending = 1;
       GATTServApp_ProcessCharCfg(consoleProfileCharCfg, io.write, FALSE, consoleProfile, GATT_NUM_ATTRS(consoleProfile), INVALID_TASK_ID);
     }
- 
+
     entered = 0;
   }
   return 1;

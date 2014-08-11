@@ -12,6 +12,7 @@ static const unsigned char keywords_0[] =
   'N','E','W',KW_NEW,
   'N','E','X','T',KW_NEXT,
   'N','O','T','I','F','Y',BLE_NOTIFY,
+  'N','O',KW_CONSTANT,CO_FALSE,
   0
 };
 static const unsigned char keywords_1[] =
@@ -19,12 +20,12 @@ static const unsigned char keywords_1[] =
   'B','A','T','T','E','R','Y','(',FUNC_BATTERY,
   'B','T','G','E','T','(',BLE_FUNC_BTGET,
   'B','T','S','E','T',BLE_BTSET,
-  'O','F','F',KW_CONSTANT,CO_OFF,
+  'O','F','F',KW_CONSTANT,CO_FALSE,
   'O','N','C','O','N','N','E','C','T',BLE_ONCONNECT,
   'O','N','D','I','S','C','O','V','E','R',BLE_ONDISCOVER,
   'O','N','R','E','A','D',BLE_ONREAD,
   'O','N','W','R','I','T','E',BLE_ONWRITE,
-  'O','N',KW_CONSTANT,CO_ON,
+  'O','N',KW_CONSTANT,CO_TRUE,
   'O','U','T','P','U','T',PM_OUTPUT,
   0
 };
@@ -46,6 +47,7 @@ static const unsigned char keywords_3[] =
   '*',OP_MUL,
   'D','E','L','A','Y',KW_DELAY,
   'D','E','T','A','C','H','I','N','T','E','R','R','U','P','T',KW_DETACHINTERRUPT,
+  'D','E','V','_','A','D','D','R','E','S','S',KW_CONSTANT,CO_DEV_ADDRESS,
   'D','I','M',KW_DIM,
   'D','L','O','A','D',KW_DLOAD,
   'D','S','A','V','E',KW_DSAVE,
@@ -144,6 +146,7 @@ static const unsigned char keywords_11[] =
   'L','I','S','T',KW_LIST,
   'L','O','A','D',KW_LOAD,
   'L','S','B',KW_LSB,
+  'Y','E','S',KW_CONSTANT,CO_TRUE,
   0
 };
 static const unsigned char keywords_12[] =
