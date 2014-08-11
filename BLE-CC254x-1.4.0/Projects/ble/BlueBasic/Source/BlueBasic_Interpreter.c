@@ -80,7 +80,8 @@ static const char memorymsg[]         = " bytes free.";
 // above and below simultaneously to selectively obliterate functionality.
 enum
 {
-  KW_LIST = 0x80,
+  KW_CONSTANT = 0x80,
+  KW_LIST,
   KW_LOAD,
   KW_NEW,
   KW_RUN,
@@ -173,8 +174,11 @@ enum
   KW_TRANSFER,
   KW_MSB,
   KW_LSB,
-  // Constants start here
-  CO_TRUE,
+};
+
+enum
+{
+  CO_TRUE = 1,
   CO_FALSE,
   CO_ON,
   CO_OFF,
@@ -189,7 +193,6 @@ enum
   CO_GEN_DISC_INT_MAX,
   CO_TXPOWER,
   CO_RXGAIN,
-  // Constants finish here
 };
 
 #include "keyword_tables.h"
@@ -419,6 +422,10 @@ static void tokenize(void)
           writepos--;
         }
         *writepos++ = *table;
+        if (*table == KW_CONSTANT)
+        {
+          *writepos++ = table[1];
+        }
         // Skip whitespace
         while (c = *readpos, c == WS_SPACE || c == WS_TAB)
         {
@@ -437,6 +444,10 @@ static void tokenize(void)
         // Move to next possibility
         while (*table++ < 0x80)
           ;
+        if (table[-1] == KW_CONSTANT)
+        {
+          table++;
+        }
         if (*table == 0)
         {
 not_found:
@@ -632,12 +643,20 @@ static void printline(unsigned char indent)
           {
             ptr++;
           }
-          if (*ptr != c)
+          if (*ptr != c || (c == KW_CONSTANT && ptr[1] != list_line[0]))
           {
+            if (*ptr == KW_CONSTANT)
+            {
+              ptr++;
+            }
             begin = ++ptr;
           }
           else
           {
+            if (c == KW_CONSTANT)
+            {
+              list_line++;
+            }
             if (lc != WS_SPACE)
             {
               OS_putchar(WS_SPACE);
@@ -828,9 +847,9 @@ static VAR_TYPE expr4(void)
     }
     
     // Is it a constant?
-    else if (ch >= CO_TRUE && ch < CO_TRUE + sizeof(constantmap) / VAR_SIZE)
+    else if (ch == KW_CONSTANT)
     {
-      return constantmap[ch - CO_TRUE];
+      return constantmap[*txtpos++ - CO_TRUE];
     }
 
     // Is it a no-arg function?

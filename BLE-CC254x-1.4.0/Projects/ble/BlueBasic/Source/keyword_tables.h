@@ -2,7 +2,7 @@ static const unsigned char keywords_0[] =
 {
   'A','B','S','(',FUNC_ABS,
   'A','D','C',PM_ADC,
-  'A','D','V','E','R','T','_','E','N','A','B','L','E','D',CO_ADVERT_ENABLED,
+  'A','D','V','E','R','T','_','E','N','A','B','L','E','D',KW_CONSTANT,CO_ADVERT_ENABLED,
   'A','D','V','E','R','T',BLE_ADVERT,
   'A','N','A','L','O','G','R','E','F','E','R','E','N','C','E',KW_ANALOGREFERENCE,
   'A','N','A','L','O','G','R','E','S','O','L','U','T','I','O','N',KW_ANALOGRESOLUTION,
@@ -19,12 +19,12 @@ static const unsigned char keywords_1[] =
   'B','A','T','T','E','R','Y','(',FUNC_BATTERY,
   'B','T','G','E','T','(',BLE_FUNC_BTGET,
   'B','T','S','E','T',BLE_BTSET,
-  'O','F','F',CO_OFF,
+  'O','F','F',KW_CONSTANT,CO_OFF,
   'O','N','C','O','N','N','E','C','T',BLE_ONCONNECT,
   'O','N','D','I','S','C','O','V','E','R',BLE_ONDISCOVER,
   'O','N','R','E','A','D',BLE_ONREAD,
   'O','N','W','R','I','T','E',BLE_ONWRITE,
-  'O','N',CO_ON,
+  'O','N',KW_CONSTANT,CO_ON,
   'O','U','T','P','U','T',PM_OUTPUT,
   0
 };
@@ -67,18 +67,18 @@ static const unsigned char keywords_4[] =
   'R','I','S','I','N','G',PM_RISING,
   'R','N','D','(',FUNC_RND,
   'R','U','N',KW_RUN,
-  'R','X','G','A','I','N',CO_RXGAIN,
+  'R','X','G','A','I','N',KW_CONSTANT,CO_RXGAIN,
   0
 };
 static const unsigned char keywords_5[] =
 {
   'F','A','L','L','I','N','G',PM_FALLING,
-  'F','A','L','S','E',CO_FALSE,
+  'F','A','L','S','E',KW_CONSTANT,CO_FALSE,
   'F','O','R',KW_FOR,
   'S','A','V','E',KW_SAVE,
   'S','C','A','N',BLE_SCAN,
   'S','E','R','V','I','C','E',BLE_SERVICE,
-  'S','L','A','V','E','_','L','A','T','E','N','C','Y',CO_SLAVE_LATENCY,
+  'S','L','A','V','E','_','L','A','T','E','N','C','Y',KW_CONSTANT,CO_SLAVE_LATENCY,
   'S','P','I',KW_SPI,
   'S','T','E','P',KW_STEP,
   0
@@ -88,16 +88,16 @@ static const unsigned char keywords_6[] =
   '-',OP_SUB,
   'G','A','T','T',BLE_GATT,
   'G','E','N','E','R','A','L',BLE_GENERAL,
-  'G','E','N','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','A','X',CO_GEN_DISC_INT_MAX,
-  'G','E','N','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','I','N',CO_GEN_DISC_INT_MIN,
+  'G','E','N','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','A','X',KW_CONSTANT,CO_GEN_DISC_INT_MAX,
+  'G','E','N','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','I','N',KW_CONSTANT,CO_GEN_DISC_INT_MIN,
   'G','O','S','U','B',KW_GOSUB,
   'G','O','T','O',KW_GOTO,
-  'T','I','M','E','O','U','T','_','M','U','L','T','I','P','L','I','E','R',CO_TIMEOUT_MULTIPLIER,
+  'T','I','M','E','O','U','T','_','M','U','L','T','I','P','L','I','E','R',KW_CONSTANT,CO_TIMEOUT_MULTIPLIER,
   'T','I','M','E','R',KW_TIMER,
   'T','O',KW_TO,
   'T','R','A','N','S','F','E','R',KW_TRANSFER,
-  'T','R','U','E',CO_TRUE,
-  'T','X','P','O','W','E','R',CO_TXPOWER,
+  'T','R','U','E',KW_CONSTANT,CO_TRUE,
+  'T','X','P','O','W','E','R',KW_CONSTANT,CO_TXPOWER,
   0
 };
 static const unsigned char keywords_7[] =
@@ -139,8 +139,8 @@ static const unsigned char keywords_11[] =
   'L','E','N','(',FUNC_LEN,
   'L','E','T',KW_LET,
   'L','I','M','I','T','E','D',BLE_LIMITED,
-  'L','I','M','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','A','X',CO_LIM_DISC_INT_MAX,
-  'L','I','M','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','I','N',CO_LIM_DISC_INT_MIN,
+  'L','I','M','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','A','X',KW_CONSTANT,CO_LIM_DISC_INT_MAX,
+  'L','I','M','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','I','N',KW_CONSTANT,CO_LIM_DISC_INT_MIN,
   'L','I','S','T',KW_LIST,
   'L','O','A','D',KW_LOAD,
   'L','S','B',KW_LSB,
@@ -149,10 +149,10 @@ static const unsigned char keywords_11[] =
 static const unsigned char keywords_12[] =
 {
   '&',OP_AND,
-  'M','A','X','_','C','O','N','N','_','I','N','T','E','R','V','A','L',CO_MAX_CONN_INTERVAL,
+  'M','A','X','_','C','O','N','N','_','I','N','T','E','R','V','A','L',KW_CONSTANT,CO_MAX_CONN_INTERVAL,
   'M','E','M',KW_MEM,
   'M','I','L','L','I','S','(',FUNC_MILLIS,
-  'M','I','N','_','C','O','N','N','_','I','N','T','E','R','V','A','L',CO_MIN_CONN_INTERVAL,
+  'M','I','N','_','C','O','N','N','_','I','N','T','E','R','V','A','L',KW_CONSTANT,CO_MIN_CONN_INTERVAL,
   'M','O','R','E',BLE_MORE,
   'M','S','B',KW_MSB,
   0
