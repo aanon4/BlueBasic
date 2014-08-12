@@ -2246,6 +2246,13 @@ cmd_pinmode:
         goto qwhat;
       }
     }
+    else if (pinMode == PM_ADC)
+    {
+      if (PIN_MAJOR(pin) != 0)
+      {
+        goto qwhat;
+      }
+    }
     else if (pinMode != PM_OUTPUT)
     {
       txtpos--;
