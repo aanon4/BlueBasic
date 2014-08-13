@@ -63,6 +63,8 @@
 		22FA2DBF1973315F0049CDB8 /* BlueBasic_Interpreter.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = BlueBasic_Interpreter.c; path = "../../../BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Source/BlueBasic_Interpreter.c"; sourceTree = "<group>"; };
 		22FA2DC2197333170049CDB8 /* os.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = os.h; path = "../../../BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Source/os.h"; sourceTree = "<group>"; };
 		22FA2DC3197335CE0049CDB8 /* os.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = os.c; sourceTree = "<group>"; };
+		22FA500A199BCF8800535BCE /* add03.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = add03.test; sourceTree = "<group>"; };
+		22FA500B199BD02300535BCE /* add04.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = add04.test; sourceTree = "<group>"; };
 		B81A7E5619774A81007DFEC6 /* add10.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = add10.test; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -90,9 +92,11 @@
 				22BC36FF19764D3800828C73 /* assign01.test */,
 				22BC3700197652C200828C73 /* assign02.test */,
 				22BC3701197652DF00828C73 /* assign03.test */,
-				B81A7E5619774A81007DFEC6 /* add10.test */,
 				22BC3702197764CD00828C73 /* add01.test */,
 				22BC3703197764ED00828C73 /* add02.test */,
+				22FA500A199BCF8800535BCE /* add03.test */,
+				22FA500B199BD02300535BCE /* add04.test */,
+				B81A7E5619774A81007DFEC6 /* add10.test */,
 				22BC37041978E0C000828C73 /* bleservice01.test */,
 				22C5B9011985AAA40069D0C7 /* bleservice02.test */,
 				22BC3705197B976300828C73 /* dim01.test */,

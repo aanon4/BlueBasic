@@ -1,0 +1,11 @@
+A=1
+B=10
+PRINT A+B
+.
+A=1
+OK
+B=10
+OK
+PRINT A+B
+11
+OK
