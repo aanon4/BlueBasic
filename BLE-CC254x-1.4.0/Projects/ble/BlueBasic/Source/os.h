@@ -15,6 +15,8 @@
 #include <memory.h>
 #include <time.h>
 
+#define __data
+
 #define  SIMULATE_PINS 1
 
 #define OS_init()

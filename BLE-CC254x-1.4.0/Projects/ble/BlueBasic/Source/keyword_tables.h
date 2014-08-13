@@ -3,7 +3,7 @@ static const unsigned char keywords_0[] =
   'A','B','S','(',FUNC_ABS,
   'A','D','C',PM_ADC,
   'A','D','V','E','R','T','_','E','N','A','B','L','E','D',KW_CONSTANT,CO_ADVERT_ENABLED,
-  'A','D','V','E','R','T',BLE_ADVERT,
+  'A','D','V','E','R','T',KW_ADVERT,
   'A','N','A','L','O','G','R','E','F','E','R','E','N','C','E',KW_ANALOGREFERENCE,
   'A','N','A','L','O','G','R','E','S','O','L','U','T','I','O','N',KW_ANALOGRESOLUTION,
   'A','T','T','A','C','H','I','N','T','E','R','R','U','P','T',KW_ATTACHINTERRUPT,
@@ -19,7 +19,7 @@ static const unsigned char keywords_1[] =
 {
   'B','A','T','T','E','R','Y','(',FUNC_BATTERY,
   'B','T','G','E','T','(',BLE_FUNC_BTGET,
-  'B','T','S','E','T',BLE_BTSET,
+  'B','T','S','E','T',KW_BTSET,
   'O','F','F',KW_CONSTANT,CO_FALSE,
   'O','N','C','O','N','N','E','C','T',BLE_ONCONNECT,
   'O','N','D','I','S','C','O','V','E','R',BLE_ONDISCOVER,
@@ -33,9 +33,9 @@ static const unsigned char keywords_2[] =
 {
   'C','H','A','R','A','C','T','E','R','I','S','T','I','C',BLE_CHARACTERISTIC,
   'C','U','S','T','O','M',BLE_CUSTOM,
-  'P','0','(',PIN_P0,
-  'P','1','(',PIN_P1,
-  'P','2','(',PIN_P2,
+  'P','0','(',KW_PIN_P0,
+  'P','1','(',KW_PIN_P1,
+  'P','2','(',KW_PIN_P2,
   'P','I','N','M','O','D','E',KW_PINMODE,
   'P','R','I','N','T',KW_PRINT,
   'P','U','L','L','D','O','W','N',PM_PULLDOWN,
@@ -61,11 +61,11 @@ static const unsigned char keywords_4[] =
   'E','L','I','F',KW_ELIF,
   'E','L','S','E',KW_ELSE,
   'E','N','D',KW_END,
-  'E','X','T','E','R','N','A','L',KW_EXTERNAL,
+  'E','X','T','E','R','N','A','L',PM_EXTERNAL,
   'R','E','A','D',BLE_READ,
   'R','E','B','O','O','T',KW_REBOOT,
   'R','E','M',KW_REM,
-  'R','E','P','E','A','T',KW_REPEAT,
+  'R','E','P','E','A','T',TI_REPEAT,
   'R','E','T','U','R','N',KW_RETURN,
   'R','I','S','I','N','G',PM_RISING,
   'R','N','D','(',FUNC_RND,
@@ -79,18 +79,19 @@ static const unsigned char keywords_5[] =
   'F','A','L','S','E',KW_CONSTANT,CO_FALSE,
   'F','O','R',KW_FOR,
   'S','A','V','E',KW_SAVE,
-  'S','C','A','N',BLE_SCAN,
+  'S','C','A','N',KW_SCAN,
   'S','E','R','V','I','C','E',BLE_SERVICE,
   'S','L','A','V','E','_','L','A','T','E','N','C','Y',KW_CONSTANT,CO_SLAVE_LATENCY,
-  'S','L','A','V','E',KW_SLAVE,
+  'S','L','A','V','E',SPI_SLAVE,
   'S','P','I',KW_SPI,
-  'S','T','E','P',KW_STEP,
+  'S','T','E','P',ST_STEP,
+  'S','T','O','P',TI_STOP,
   0
 };
 static const unsigned char keywords_6[] =
 {
   '-',OP_SUB,
-  'G','A','T','T',BLE_GATT,
+  'G','A','T','T',KW_GATT,
   'G','E','N','E','R','A','L',BLE_GENERAL,
   'G','E','N','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','A','X',KW_CONSTANT,CO_GEN_DISC_INT_MAX,
   'G','E','N','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','I','N',KW_CONSTANT,CO_GEN_DISC_INT_MIN,
@@ -98,8 +99,8 @@ static const unsigned char keywords_6[] =
   'G','O','T','O',KW_GOTO,
   'T','I','M','E','O','U','T','_','M','U','L','T','I','P','L','I','E','R',KW_CONSTANT,CO_TIMEOUT_MULTIPLIER,
   'T','I','M','E','R',KW_TIMER,
-  'T','O',KW_TO,
-  'T','R','A','N','S','F','E','R',KW_TRANSFER,
+  'T','O',ST_TO,
+  'T','R','A','N','S','F','E','R',SPI_TRANSFER,
   'T','R','U','E',KW_CONSTANT,CO_TRUE,
   'T','X','P','O','W','E','R',KW_CONSTANT,CO_TXPOWER,
   0
@@ -119,7 +120,7 @@ static const unsigned char keywords_8[] =
   'I','F',KW_IF,
   'I','N','D','I','C','A','T','E',BLE_INDICATE,
   'I','N','P','U','T',PM_INPUT,
-  'I','N','T','E','R','N','A','L',KW_INTERNAL,
+  'I','N','T','E','R','N','A','L',PM_INTERNAL,
   0
 };
 static const unsigned char keywords_9[] =
@@ -147,20 +148,20 @@ static const unsigned char keywords_11[] =
   'L','I','M','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','I','N',KW_CONSTANT,CO_LIM_DISC_INT_MIN,
   'L','I','S','T',KW_LIST,
   'L','O','A','D',KW_LOAD,
-  'L','S','B',KW_LSB,
+  'L','S','B',SPI_LSB,
   'Y','E','S',KW_CONSTANT,CO_TRUE,
   0
 };
 static const unsigned char keywords_12[] =
 {
   '&',OP_AND,
-  'M','A','S','T','E','R',KW_MASTER,
+  'M','A','S','T','E','R',SPI_MASTER,
   'M','A','X','_','C','O','N','N','_','I','N','T','E','R','V','A','L',KW_CONSTANT,CO_MAX_CONN_INTERVAL,
   'M','E','M',KW_MEM,
   'M','I','L','L','I','S','(',FUNC_MILLIS,
   'M','I','N','_','C','O','N','N','_','I','N','T','E','R','V','A','L',KW_CONSTANT,CO_MIN_CONN_INTERVAL,
   'M','O','R','E',BLE_MORE,
-  'M','S','B',KW_MSB,
+  'M','S','B',SPI_MSB,
   0
 };
 static const unsigned char* keywords[] =

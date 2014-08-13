@@ -45,9 +45,6 @@
 
 typedef short unsigned LINENUM;
 
-static unsigned char *txtpos;
-static unsigned char *list_line;
-
 enum
 {
   ERROR_OK = 0,
@@ -58,7 +55,6 @@ enum
   ERROR_TOOBIG,
   ERROR_BADPIN,
 };
-static unsigned char error_num;
 
 static const char* const error_msgs[] =
 {
@@ -86,37 +82,55 @@ enum
   KW_CONSTANT = 0x80,
   KW_LIST,
   KW_LOAD,
+  KW_SAVE,
+  KW_DLOAD,
+  KW_DSAVE,
+  KW_MEM,
   KW_NEW,
   KW_RUN,
-  KW_SAVE,
   KW_NEXT,
   KW_LET,
   KW_IF,
-  KW_ELSE,
   KW_ELIF,
+  KW_ELSE,
   KW_GOTO,
   KW_GOSUB,
   KW_RETURN,
   KW_REM,
   KW_FOR,
-  KW_TO,
-  KW_STEP,
   KW_PRINT,
-  KW_STOP,
   KW_REBOOT,
-  KW_MEM,
-  KW_DIM,
   KW_END,
+  KW_DIM,
   KW_TIMER,
-  KW_REPEAT,
   KW_DELAY,
   KW_DELAYMICROSECONDS,
+  KW_AUTORUN,
+  KW_PIN_P0,
+  KW_PIN_P1,
+  KW_PIN_P2,
+  KW_GATT,
+  KW_ADVERT,
+  KW_SCAN,
+  KW_BTSET,
+  KW_PINMODE,
+  KW_ATTACHINTERRUPT,
+  KW_DETACHINTERRUPT,
+  KW_SPI,
+  KW_ANALOGREFERENCE,
+  KW_ANALOGRESOLUTION,
+
+  // -----------------------
+  
+  ST_TO,
+  ST_STEP,
+  TI_STOP,
+  TI_REPEAT,
   FUNC_ABS,
   FUNC_LEN,
   FUNC_RND,
   FUNC_MILLIS,
   FUNC_BATTERY,
-  KW_AUTORUN,
   RELOP_GE,
   RELOP_NE,
   RELOP_GT,
@@ -134,11 +148,6 @@ enum
   OP_AND,
   OP_OR,
   OP_XOR,
-  KW_DSAVE,
-  KW_DLOAD,
-  KW_PINMODE,
-  KW_ATTACHINTERRUPT,
-  KW_DETACHINTERRUPT,
   PM_PULLUP,
   PM_PULLDOWN,
   PM_INPUT,
@@ -146,18 +155,12 @@ enum
   PM_OUTPUT,
   PM_RISING,
   PM_FALLING,
-  PIN_P0,
-  PIN_P1,
-  PIN_P2,
-  KW_ANALOGREFERENCE,
-  KW_ANALOGRESOLUTION,
-  KW_INTERNAL,
-  KW_EXTERNAL,
+  PM_INTERNAL,
+  PM_EXTERNAL,
   BLE_ONREAD,
   BLE_ONWRITE,
   BLE_ONCONNECT,
   BLE_ONDISCOVER,
-  BLE_GATT,
   BLE_SERVICE,
   BLE_CHARACTERISTIC,
   BLE_READ,
@@ -165,21 +168,17 @@ enum
   BLE_WRITE,
   BLE_NOTIFY,
   BLE_INDICATE,
-  BLE_ADVERT,
-  BLE_SCAN,
   BLE_GENERAL,
   BLE_LIMITED,
   BLE_MORE,
   BLE_NAME,
   BLE_CUSTOM,
   BLE_FUNC_BTGET,
-  BLE_BTSET,
-  KW_SPI,
-  KW_TRANSFER,
-  KW_MSB,
-  KW_LSB,
-  KW_MASTER,
-  KW_SLAVE,
+  SPI_TRANSFER,
+  SPI_MSB,
+  SPI_LSB,
+  SPI_MASTER,
+  SPI_SLAVE,
 };
 
 enum
@@ -205,7 +204,7 @@ static const VAR_TYPE constantmap[] =
 {
   1, // TRUE
   0, // FALSE
-  BLE_ADVERT_ENABLED,
+  CO_ADVERT_ENABLED,
   BLE_MIN_CONN_INTERVAL,
   BLE_MAX_CONN_INTERVAL,
   BLE_SLAVE_LATENCY,
@@ -274,12 +273,15 @@ enum {
   STACK_VARIABLE_NORMAL = 'N'
 };
 
-static unsigned char *program_start;
-static unsigned char *program_end;
-static unsigned char *variables_begin;
-static unsigned char *current_line;
-static unsigned char *sp;
-static unsigned char table_index;
+static __data unsigned char* txtpos;
+static __data unsigned char* current_line;
+static __data unsigned char* program_end;
+static __data unsigned char error_num;
+
+static unsigned char* list_line;
+static unsigned char* program_start;
+static unsigned char* variables_begin;
+static unsigned char* sp;
 static LINENUM linenum;
 
 
@@ -409,6 +411,11 @@ static void tokenize(void)
         scanpos = readpos;
         break;
       }
+      else if (c == NL)
+      {
+        *writepos = NL;
+        return;
+      }
       while (c == *table)
       {
         table++;
@@ -437,10 +444,6 @@ static void tokenize(void)
       else
       {
         // No match found
-        if (c < *table && (c != WS_SPACE && c != WS_TAB && c != NL))
-        {
-          goto not_found;
-        }
         // Move to next possibility
         while (*table++ < 0x80)
           ;
@@ -454,27 +457,30 @@ not_found:
           // Not found
           // Advance until next likely token start
           c = *scanpos;
-          while (c >= 'A' && c <= 'Z')
+          if (c >= 'A' && c <= 'Z')
           {
-            *writepos++ = c;
-            c = *++scanpos;
+            do
+            {
+              *writepos++ = c;
+              c = *++scanpos;
+            } while (c >= 'A' && c <= 'Z');
           }
-          if (c == WS_TAB || c == WS_SPACE)
+          else if (c == WS_TAB || c == WS_SPACE)
           {
             if (writepos > txtpos && writepos[-1] != WS_SPACE)
             {
               *writepos++ = WS_SPACE;
             }
+            do
+            {
+              c = *++scanpos;
+            } while (c == WS_SPACE || c == WS_TAB);
           }
           else
           {
             *writepos++ = c;
+            scanpos++;
           }
-          if (c == NL)
-          {
-            return;
-          }
-          scanpos++;
           break;
         }
         readpos = scanpos;
@@ -827,7 +833,7 @@ static VAR_TYPE expr4(void)
   else if (ch >= 0x80)
   {
     // Is it an input pin?
-    if (ch >= PIN_P0 && ch <= PIN_P2)
+    if (ch >= KW_PIN_P0 && ch <= KW_PIN_P2)
     {
       txtpos--;
       a = pin_parse();
@@ -1047,7 +1053,7 @@ static VAR_TYPE expr2(void)
 {
   VAR_TYPE a;
 
-  if(*txtpos == OP_SUB || *txtpos == OP_ADD)
+  if (*txtpos == OP_SUB || *txtpos == OP_ADD)
   {
     a = 0;
   }
@@ -1250,7 +1256,12 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
       f->header.frame_size = sizeof(stack_event_frame);
     }
     current_line = findline();
-    goto execline;
+    txtpos = current_line + sizeof(LINENUM) + sizeof(char);
+    if (txtpos >= program_end)
+    {
+      goto print_error_or_ok;
+    }
+    goto interperate;
   }
 
   txtpos = program_end + sizeof(LINENUM);
@@ -1310,37 +1321,49 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
 
 // -- Commands ---------------------------------------------------------------
 
-run_next_statement:
-  ignore_blanks();
-  if(*txtpos != NL)
-  {
-    goto qwhat;
-  }
-  goto execnextline;
-
 direct:
   current_line = NULL;
   txtpos = program_end + sizeof(LINENUM);
-  if(*txtpos == NL)
+  if (*txtpos == NL)
   {
     return IX_PROMPT;
   }
+  else
+  {
+    goto interperate;
+  }
 
+// ---------------------------------------------------------------------------
+
+execnextline:
+  while (*txtpos != NL)
+  {
+    txtpos++;
+  }
+  // Fall through ...
+  
+run_next_statement:
+  if (*txtpos != NL)
+  {
+    error_num = ERROR_GENERAL;
+    goto print_error_or_ok;
+  }
+  current_line = txtpos + 1;
+  txtpos = current_line + sizeof(LINENUM) + sizeof(char);
+  if (txtpos >= program_end) // Out of lines to run
+  {
+    goto print_error_or_ok;
+  }
 interperate:
-  table_index = *txtpos++;
-  if (table_index < 0x80)
-  {
-    txtpos--;
-    goto assignment;
-  }
-  if (table_index >= PIN_P0 && table_index <= PIN_P2)
-  {
-    txtpos--;
-    goto assignment;
-  }
-  else switch(table_index)
+  switch (*txtpos++)
   {
   default:
+    if (*--txtpos < 0x80)
+    {
+      goto assignment;
+    }
+    break;
+  case KW_CONSTANT:
     goto qwhat;
   case KW_LIST:
     goto list;
@@ -1355,7 +1378,7 @@ interperate:
   case KW_MEM:
     goto mem;
   case KW_NEW:
-    if(txtpos[0] != NL)
+    if (*txtpos != NL)
     {
       goto qwhat;
     }
@@ -1372,7 +1395,12 @@ interperate:
       sp += ((stack_header*)sp)->frame_size;
     }
     current_line = program_start;
-    goto execline;
+    txtpos = program_start + sizeof(LINENUM) + sizeof(char);
+    if (txtpos >= program_end)
+    {
+      goto print_error_or_ok;
+    }
+    goto interperate;
   case KW_NEXT:
     goto next;
   case KW_LET:
@@ -1390,12 +1418,17 @@ interperate:
     goto cmd_else;
   case KW_GOTO:
     linenum = expression();
-    if(error_num || *txtpos != NL)
+    if (error_num || *txtpos != NL)
     {
       goto qwhat;
     }
     current_line = findline();
-    goto execline;
+    txtpos = current_line + sizeof(LINENUM) + sizeof(char);
+    if (txtpos >= program_end)
+    {
+      goto print_error_or_ok;
+    }
+    goto interperate;
   case KW_GOSUB:
     goto cmd_gosub;
   case KW_RETURN:
@@ -1409,12 +1442,11 @@ interperate:
   case KW_REBOOT:
     OS_reboot();
   case KW_END:
-    if (txtpos[0] != NL)
+    if (*txtpos != NL)
     {
       goto qwhat;
     }
-    current_line = program_end;
-    goto execline;
+    goto print_error_or_ok;
   case KW_DIM:
     goto cmd_dim;
   case KW_TIMER:
@@ -1425,15 +1457,20 @@ interperate:
     goto cmd_delaymicroseconds;
   case KW_AUTORUN:
     goto cmd_autorun;
-  case BLE_GATT:
+  case KW_PIN_P0:
+  case KW_PIN_P1:
+  case KW_PIN_P2:
+    txtpos--;
+    goto assignment;
+  case KW_GATT:
     goto ble_gatt;
-  case BLE_ADVERT:
+  case KW_ADVERT:
     ble_isadvert = 1;
     goto ble_advert;
-  case BLE_SCAN:
+  case KW_SCAN:
     ble_isadvert = 0;
     goto ble_scan;
-  case BLE_BTSET:
+  case KW_BTSET:
     goto cmd_btset;
   case KW_PINMODE:
     goto cmd_pinmode;
@@ -1448,62 +1485,42 @@ interperate:
   case KW_ANALOGRESOLUTION:
     goto cmd_analogresolution;
   }
+  goto qwhat;
 
 // -- Errors -----------------------------------------------------------------
   
+qoom:
+  error_num = ERROR_OOM;
+  goto print_error_or_ok;
+  
+qtoobig:
+  error_num = ERROR_TOOBIG;
+  goto print_error_or_ok;
+  
+qbadpin:
+  error_num = ERROR_BADPIN;
+  goto print_error_or_ok;
+
 qwhat:
   if (!error_num)
   {
     error_num = ERROR_GENERAL;
   }
-  goto execnextline;
-  
-qoom:
-  error_num = ERROR_OOM;
-  goto execnextline;
-  
-qtoobig:
-  error_num = ERROR_TOOBIG;
-  goto execnextline;
-  
-qbadpin:
-  error_num = ERROR_BADPIN;
-  goto execnextline;
+  // Fall through ...
 
-// ---------------------------------------------------------------------------
-
-execnextline:
-  if (error_num)
+print_error_or_ok:
+  printmsg(error_msgs[error_num]);
+  if (current_line != NULL && error_num != ERROR_OK)
   {
-    printmsg(error_msgs[error_num]);
-    if (current_line != NULL)
-    {
-      list_line = current_line;
-      OS_putchar('>');
-      OS_putchar('>');
-      OS_putchar(WS_SPACE);
-      printline(1);
-      OS_putchar(NL);
-    }
-    return error_num == ERROR_OOM ? IX_OUTOFMEMORY : IX_PROMPT;
+    list_line = current_line;
+    OS_putchar('>');
+    OS_putchar('>');
+    OS_putchar(WS_SPACE);
+    printline(1);
+    OS_putchar(NL);
   }
-  else if (current_line == NULL) // Processed direct command
-  {
-    printmsg(error_msgs[ERROR_OK]);
-    return IX_PROMPT;
-  }
-  else
-  {
-    current_line += current_line[sizeof(LINENUM)];
-execline:
-    if(current_line == program_end) // Out of lines to run
-    {
-      printmsg(error_msgs[ERROR_OK]);
-      return IX_PROMPT;
-    }
-    txtpos = current_line + sizeof(LINENUM) + sizeof(char);
-    goto interperate;
-  }
+  return error_num == ERROR_OOM ? IX_OUTOFMEMORY : IX_PROMPT;
+  
 
 // --- Commands --------------------------------------------------------------
 
@@ -1621,7 +1638,7 @@ forloop:
       goto qwhat;
     }
 
-    if (*txtpos++ != KW_TO)
+    if (*txtpos++ != ST_TO)
     {
       goto qwhat;
     }
@@ -1632,7 +1649,7 @@ forloop:
       goto qwhat;
     }
 
-    if (*txtpos++ == KW_STEP)
+    if (*txtpos++ == ST_STEP)
     {
       step = expression();
       if (error_num)
@@ -1694,18 +1711,17 @@ cmd_gosub:
     f->txtpos = txtpos;
     f->current_line = current_line;
     current_line = findline();
+    txtpos = current_line + sizeof(LINENUM) + sizeof(char);
+    if (txtpos >= program_end)
+    {
+      goto print_error_or_ok;
+    }
+    goto interperate;
   }
-  goto execline;
   
 next:
   // Find the variable name
-  if (*txtpos < 'A' || *txtpos > 'Z')
-  {
-    goto qwhat;
-  }
-  txtpos++;
-  ignore_blanks();
-  if (*txtpos != NL)
+  if (*txtpos < 'A' || *txtpos > 'Z' || txtpos[1] != NL)
   {
     goto qwhat;
   }
@@ -1717,7 +1733,7 @@ gosub_return:
     switch (((stack_header*)sp)->frame_type)
     {
       case STACK_GOSUB_FLAG:
-        if (table_index == KW_RETURN)
+        if (txtpos[-1] == KW_RETURN)
         {
           stack_gosub_frame *f = (stack_gosub_frame *)sp;
           current_line = f->current_line;
@@ -1728,7 +1744,7 @@ gosub_return:
         // This is not the loop you are looking for... so walk back up the stack
         break;
       case STACK_EVENT_FLAG:
-        if (table_index == KW_RETURN)
+        if (txtpos[-1] == KW_RETURN)
         {
           sp += ((stack_header*)sp)->frame_size;
           return IX_PROMPT;
@@ -1736,11 +1752,11 @@ gosub_return:
         break;
       case STACK_FOR_FLAG:
         // Flag, Var, Final, Step
-        if (table_index == KW_NEXT)
+        if (txtpos[-1] == KW_NEXT)
         {
           stack_for_frame *f = (stack_for_frame *)sp;
           // Is the the variable we are looking for?
-          if (txtpos[-1] == f->for_var)
+          if (*txtpos == f->for_var)
           {
             VAR_TYPE v = VARIABLE_INT_GET(f->for_var) + f->step;
             VARIABLE_INT_SET(f->for_var, v);
@@ -1755,6 +1771,7 @@ gosub_return:
             {
               // We've run to the end of the loop. drop out of the loop, popping the stack
               sp += f->header.frame_size;
+              txtpos++;
             }
             goto run_next_statement;
           }
@@ -1794,7 +1811,7 @@ assignment:
 
     // Are we setting an output pin?
     var = *txtpos;
-    if (var >= PIN_P0 && var <= PIN_P2)
+    if (var >= KW_PIN_P0 && var <= KW_PIN_P2)
     {
       unsigned char pin;
       
@@ -1819,16 +1836,14 @@ assignment:
       goto run_next_statement;
     }
 
-    if (*txtpos < 'A' || *txtpos > 'Z')
+    if (var < 'A' || var > 'Z')
     {
       goto qwhat;
     }
-    var = *txtpos;
-    ptr = get_variable_frame(var, &frame);
-    
     txtpos++;
     ignore_blanks();
-
+    ptr = get_variable_frame(var, &frame);
+    
     switch (frame->type)
     {
       case VAR_INT:
@@ -1995,8 +2010,8 @@ load:
     }
     OS_file_close();
     current_line = program_end;
+    goto print_error_or_ok;
   }
-  goto execline;
 
 //
 // SAVE
@@ -2007,7 +2022,7 @@ save:
   OS_file_write(program_start, program_end - program_start);
   OS_file_close();
   current_line = program_end;
-  goto execline;
+  goto print_error_or_ok;
 
 //
 // DLOAD <1-15> <var>
@@ -2151,7 +2166,7 @@ cmd_timer:
       goto qwhat;
     }
     ignore_blanks();
-    if (*txtpos == KW_STOP)
+    if (*txtpos == TI_STOP)
     {
       txtpos++;
       OS_timer_stop(timer);
@@ -2164,7 +2179,7 @@ cmd_timer:
         goto qwhat;
       }
       ignore_blanks();
-      if (*txtpos == KW_REPEAT)
+      if (*txtpos == TI_REPEAT)
       {
         txtpos++;
         repeat = 1;
@@ -2197,8 +2212,9 @@ cmd_delay:
   {
     goto qwhat;
   }
-  current_line += current_line[sizeof(LINENUM)];
-  OS_timer_start(DELAY_TIMER, val, 0, *(LINENUM*)current_line);
+  while (*txtpos++ != NL)
+    ;
+  OS_timer_start(DELAY_TIMER, val, 0, *(LINENUM*)txtpos);
   return IX_PROMPT;
   
 cmd_delaymicroseconds:
@@ -2269,7 +2285,7 @@ cmd_pinmode:
       goto qwhat;
     }
     
-    if (PIN_MAJOR(pin) == 0) // PIN_P0
+    if (PIN_MAJOR(pin) == 0) // KW_PIN_P0
     {
       P0SEL &= ~dbit;
       APCFG &= ~dbit;
@@ -2292,7 +2308,7 @@ cmd_pinmode:
           break;
       }
     }
-    else if (PIN_MAJOR(pin) == 1) // PIN_P1
+    else if (PIN_MAJOR(pin) == 1) // KW_PIN_P1
     {
       P1SEL &= ~dbit;
       P1DIR = (P1DIR & ~dbit) | (pinMode == PM_OUTPUT ? dbit : 0);
@@ -2471,7 +2487,7 @@ ble_gatt:
   switch(*txtpos++)
   {
     case BLE_SERVICE:
-      servicestart = *(LINENUM*)current_line;
+      servicestart = *(LINENUM*)(txtpos - 5); // <lineno:2> <len:1> GATT:1 SERVICE:1
       servicecount = 1;
       break;
     case BLE_READ:
@@ -2613,7 +2629,7 @@ ble_scan:
     GAPRole_SetParameter(TGAP_FILTER_ADV_REPORTS, !dups, 0, NULL);
     GAPObserverRole_CancelDiscovery();
     GAPObserverRole_StartDiscovery(mode, !!active, 0);
-    goto execnextline;
+    goto run_next_statement;
   }
   // Fall through ...
 
@@ -2876,7 +2892,7 @@ cmd_btset:
 //
 cmd_spi:
   {
-    if (*txtpos == KW_MASTER)
+    if (*txtpos == SPI_MASTER)
     {
       // Setup
       unsigned char port;
@@ -2892,7 +2908,7 @@ cmd_spi:
         goto qwhat;
       }
       msblsb = *txtpos;
-      if (msblsb != KW_MSB && msblsb != KW_LSB)
+      if (msblsb != SPI_MSB && msblsb != SPI_LSB)
       {
         goto qwhat;
       }
@@ -2903,7 +2919,7 @@ cmd_spi:
         goto qwhat;
       }
 
-      mode = (mode << 6) | (msblsb == KW_MSB ? 0x20 : 0x00);
+      mode = (mode << 6) | (msblsb == SPI_MSB ? 0x20 : 0x00);
       switch (speed)
       {
         case 1: // E == 15, M = 0
@@ -2952,7 +2968,7 @@ cmd_spi:
         U1CSR = 0x00;
       }
     }
-    else if (*txtpos == KW_TRANSFER)
+    else if (*txtpos == SPI_TRANSFER)
     {
       // Transfer
       unsigned char pin;
@@ -3024,10 +3040,10 @@ cmd_spi:
 cmd_analogref:
   switch (*txtpos)
   {
-    case KW_INTERNAL:
+    case PM_INTERNAL:
       analogReference = 0x00;
       break;
-    case KW_EXTERNAL:
+    case PM_EXTERNAL:
       analogReference = 0x40;
       break;
     default:
@@ -3069,7 +3085,7 @@ static unsigned char pin_parse(void)
   unsigned char minor;
   
   major = *txtpos++;
-  if (major < PIN_P0 || major > PIN_P2)
+  if (major < KW_PIN_P0 || major > KW_PIN_P2)
   {
     txtpos--;
     goto badpin;
@@ -3081,20 +3097,20 @@ static unsigned char pin_parse(void)
   }
   txtpos++;
 #ifdef ENABLE_DEBUG_INTERFACE
-  if (major == PIN_P2 && (minor == 1 || minor == 2))
+  if (major == KW_PIN_P2 && (minor == 1 || minor == 2))
   {
     goto badpin;
   }
 #endif
 #ifdef OS_UART_PORT
 #if OS_UART_PORT == HAL_UART_PORT_1
-  if (major == PIN_P1 && minor >= 4)
+  if (major == KW_PIN_P1 && minor >= 4)
   {
     goto badpin;
   }
 #endif
 #endif
-  return ((major - PIN_P0) << 4) | minor;
+  return ((major - KW_PIN_P0) << 4) | minor;
 badpin:
   error_num = ERROR_BADPIN;
   return 0;
@@ -3170,6 +3186,7 @@ static char ble_build_service(void)
 
   linenum = servicestart;
   line = findline();
+  txtpos = line + sizeof(LINENUM) + sizeof(char);
 
   origsp = sp;
   // Allocate space on the stack for the service attributes
@@ -3182,10 +3199,8 @@ static char ble_build_service(void)
   
   for (count = 0; count < servicecount; count++)
   {
-    txtpos = line + sizeof(LINENUM) + sizeof(char);
-
     // Ignore all GATT commands (we did them already)
-    if (*txtpos++ != BLE_GATT)
+    if (*txtpos++ != KW_GATT)
     {
       continue;
     }
@@ -3422,6 +3437,7 @@ done:
     }
 
     line += line[sizeof(LINENUM)];
+    txtpos = line + sizeof(LINENUM) + sizeof(char);
   }
 
   // Build a stack header for this service
