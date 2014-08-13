@@ -17,6 +17,8 @@
 #define	FILE_HEADER	0x80
 #define FILE_DATA       0x81
 
+extern void osalTimeUpdate(void);
+
 extern uint8 blueBasic_TaskID;
 
 os_interrupt_t blueBasic_interrupts[OS_MAX_INTERRUPT];
@@ -392,10 +394,15 @@ char OS_interrupt_detach(unsigned char pin)
   return 0;
 }
 
+long OS_millis(void)
+{
+  osalTimeUpdate();
+  return osal_GetSystemClock();
+}
+
 #pragma optimize=none
 void OS_delaymicroseconds(long micros)
 {
-  osal_int_enable(INTS_ALL);
   while (micros-- > 0)
   {
     /* 32 NOPs == 1 usecs */

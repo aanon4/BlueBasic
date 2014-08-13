@@ -208,7 +208,6 @@ extern os_timer_t blueBasic_timers[OS_MAX_TIMER];
 #define OS_malloc(A)           osal_mem_alloc(A)
 #define OS_free(A)             osal_mem_free(A)
 #define OS_reboot()            SystemReset()
-#define OS_millis()            osal_GetSystemClock()
 
 extern void OS_init(void);
 extern void OS_openserial(void);
@@ -227,6 +226,7 @@ extern char OS_interrupt_attach(unsigned char pin, unsigned short lineno);
 extern char OS_interrupt_detach(unsigned char pin);
 extern void OS_autorun_set(unsigned char autorun);
 extern char OS_autorun_get(void);
+extern long OS_millis(void);
 extern void OS_delaymicroseconds(long micros);
 
 extern void interpreter_devicefound(unsigned char addtype, unsigned char* address, signed char rssi, unsigned char eventtype, unsigned char len, unsigned char* data);
