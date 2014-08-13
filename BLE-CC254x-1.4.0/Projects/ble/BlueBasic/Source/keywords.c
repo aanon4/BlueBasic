@@ -33,6 +33,7 @@ struct keyword
   { "TIMER", "KW_TIMER" },
   { "REPEAT", "KW_REPEAT" },
   { "DELAY", "KW_DELAY" },
+  { "DELAYMICROSECONDS", "KW_DELAYMICROSECONDS" },
   { "ABS(", "FUNC_ABS" },
   { "LEN(", "FUNC_LEN" },
   { "RND(", "FUNC_RND" },

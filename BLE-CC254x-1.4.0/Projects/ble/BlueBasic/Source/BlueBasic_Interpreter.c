@@ -110,6 +110,7 @@ enum
   KW_TIMER,
   KW_REPEAT,
   KW_DELAY,
+  KW_DELAYMICROSECONDS,
   FUNC_ABS,
   FUNC_LEN,
   FUNC_RND,
@@ -1420,6 +1421,8 @@ interperate:
     goto cmd_timer;
   case KW_DELAY:
     goto cmd_delay;
+  case KW_DELAYMICROSECONDS:
+    goto cmd_delaymicroseconds;
   case KW_AUTORUN:
     goto cmd_autorun;
   case BLE_GATT:
@@ -2189,18 +2192,23 @@ cmd_timer:
 // Pauses execution for timeout-ms 
 //
 cmd_delay:
+  val = expression();
+  if (error_num || val < 0)
   {
-    VAR_TYPE timeout;
-  
-    timeout = expression();
-    if (error_num)
-    {
-      goto qwhat;
-    }
-    current_line += current_line[sizeof(LINENUM)];
-    OS_timer_start(DELAY_TIMER, timeout, 0, *(LINENUM*)current_line);
+    goto qwhat;
   }
+  current_line += current_line[sizeof(LINENUM)];
+  OS_timer_start(DELAY_TIMER, val, 0, *(LINENUM*)current_line);
   return IX_PROMPT;
+  
+cmd_delaymicroseconds:
+  val = expression();
+  if (error_num || val < 0)
+  {
+    goto qwhat;
+  }
+  OS_delaymicroseconds(val);
+  goto run_next_statement;
 
 //
 // AUTORUN ON|OFF

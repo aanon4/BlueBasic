@@ -360,7 +360,7 @@ char OS_timer_start(unsigned char id, unsigned long timeout, unsigned char repea
   return 1;
 }
 
-extern char OS_interrupt_attach(unsigned char pin, unsigned short lineno)
+char OS_interrupt_attach(unsigned char pin, unsigned short lineno)
 {
   unsigned char i;
 
@@ -376,7 +376,7 @@ extern char OS_interrupt_attach(unsigned char pin, unsigned short lineno)
   return 0;
 }
 
-extern char OS_interrupt_detach(unsigned char pin)
+char OS_interrupt_detach(unsigned char pin)
 {
   unsigned char i;
 
@@ -390,4 +390,21 @@ extern char OS_interrupt_detach(unsigned char pin)
     }
   }
   return 0;
+}
+
+#pragma optimize=none
+void OS_delaymicroseconds(long micros)
+{
+  osal_int_enable(INTS_ALL);
+  while (micros-- > 0)
+  {
+    /* 32 NOPs == 1 usecs */
+    asm("nop"); asm("nop"); asm("nop"); asm("nop"); asm("nop");
+    asm("nop"); asm("nop"); asm("nop"); asm("nop"); asm("nop");
+    asm("nop"); asm("nop"); asm("nop"); asm("nop"); asm("nop");
+    asm("nop"); asm("nop"); asm("nop"); asm("nop"); asm("nop");
+    asm("nop"); asm("nop"); asm("nop"); asm("nop"); asm("nop");
+    asm("nop"); asm("nop"); asm("nop"); asm("nop"); asm("nop");
+    asm("nop"); asm("nop");
+  }
 }
