@@ -81,6 +81,7 @@ static const unsigned char keywords_5[] =
   'S','C','A','N',BLE_SCAN,
   'S','E','R','V','I','C','E',BLE_SERVICE,
   'S','L','A','V','E','_','L','A','T','E','N','C','Y',KW_CONSTANT,CO_SLAVE_LATENCY,
+  'S','L','A','V','E',KW_SLAVE,
   'S','P','I',KW_SPI,
   'S','T','E','P',KW_STEP,
   0
@@ -152,6 +153,7 @@ static const unsigned char keywords_11[] =
 static const unsigned char keywords_12[] =
 {
   '&',OP_AND,
+  'M','A','S','T','E','R',KW_MASTER,
   'M','A','X','_','C','O','N','N','_','I','N','T','E','R','V','A','L',KW_CONSTANT,CO_MAX_CONN_INTERVAL,
   'M','E','M',KW_MEM,
   'M','I','L','L','I','S','(',FUNC_MILLIS,

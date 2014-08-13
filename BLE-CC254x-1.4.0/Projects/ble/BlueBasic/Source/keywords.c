@@ -100,6 +100,8 @@ struct keyword
   { "TRANSFER", "KW_TRANSFER" },
   { "MSB", "KW_MSB" },
   { "LSB", "KW_LSB" },
+  { "MASTER", "KW_MASTER" },
+  { "SLAVE", "KW_SLAVE" },
   //
   // Constants
   //

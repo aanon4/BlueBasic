@@ -177,6 +177,8 @@ enum
   KW_TRANSFER,
   KW_MSB,
   KW_LSB,
+  KW_MASTER,
+  KW_SLAVE,
 };
 
 enum
@@ -2860,13 +2862,13 @@ cmd_btset:
   goto run_next_statement;
 
 //
-// SPI <port 0|1|2|3> <mode 0|1|2|3> LSB|MSB <speed>
+// SPI MASTER <port 0|1|2|3> <mode 0|1|2|3> LSB|MSB <speed>
 //  or
 // SPI TRANSFER Px(y) <array>
 //
 cmd_spi:
   {
-    if (*txtpos != KW_TRANSFER)
+    if (*txtpos == KW_MASTER)
     {
       // Setup
       unsigned char port;
@@ -2874,6 +2876,7 @@ cmd_spi:
       unsigned char msblsb;
       unsigned char speed;
 
+      txtpos++;
       port = expression();
       mode = expression();
       if (error_num || port > 3 || mode > 3)
@@ -2941,7 +2944,7 @@ cmd_spi:
         U1CSR = 0x00;
       }
     }
-    else
+    else if (*txtpos == KW_TRANSFER)
     {
       // Transfer
       unsigned char pin;
@@ -2999,6 +3002,10 @@ cmd_spi:
         }
       }
       pin_write(pin, 1);
+    }
+    else
+    {
+      goto qwhat;
     }
   }
   goto run_next_statement;
