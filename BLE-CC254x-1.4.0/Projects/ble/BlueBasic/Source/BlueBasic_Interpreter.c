@@ -561,7 +561,7 @@ static unsigned char print_quoted_string(void)
   else
   {
     // Print the characters
-    for (; i > 0; i--)
+    for (; i; i--)
     {
       OS_putchar(*txtpos++);
     }
@@ -1317,7 +1317,9 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
 
   // Make room for new line if we can
   if ((unsigned short)(txtpos - program_end) < linelen)
+  {
     return IX_OUTOFMEMORY;
+  }
 
   // Move program up to make space
   OS_rmemcpy(start + linelen, start, program_end - start);
@@ -3000,7 +3002,7 @@ cmd_spi:
       pin_write(pin, 0);
       if (spiChannel == 0)
       {
-        for (len = vframe->header.frame_size - sizeof(stack_variable_frame); len > 0; len--, ptr++)
+        for (len = vframe->header.frame_size - sizeof(stack_variable_frame); len; len--, ptr++)
         {
           U0CSR &= 0xF9; // Clear flags
           U0DBUF = *ptr;
@@ -3014,7 +3016,7 @@ cmd_spi:
       }
       else
       {
-        for (len = vframe->header.frame_size - sizeof(stack_variable_frame); len > 0; len--, ptr++)
+        for (len = vframe->header.frame_size - sizeof(stack_variable_frame); len; len--, ptr++)
         {
           U1CSR &= 0xF9;
           U1DBUF = *ptr;
@@ -3444,7 +3446,9 @@ done:
   // Build a stack header for this service
   sp -= sizeof(stack_service_frame);
   if(sp < program_end)
+  {
     goto oom;
+  }
   frame = (stack_service_frame*)sp;
   frame->header.frame_type = STACK_SERVICE_FLAG;
   frame->header.frame_size = origsp - sp;
@@ -3697,7 +3701,7 @@ void ble_connection_status(unsigned short connHandle, unsigned char changeType, 
       }
       if (changeType == LINKDB_STATUS_UPDATE_REMOVED || (changeType == LINKDB_STATUS_UPDATE_STATEFLAGS && !linkDB_Up(connHandle)))
       {
-        for (i = ((short*)vframe->attrs)[-1]; i > 0; i--)
+        for (i = ((short*)vframe->attrs)[-1]; i; i--)
         {
           if (vframe->attrs[i].type.uuid == ble_client_characteristic_config_uuid)
           {
