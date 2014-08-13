@@ -239,14 +239,12 @@ typedef struct stack_for_frame
   char for_var;
   VAR_TYPE terminal;
   VAR_TYPE step;
-  unsigned char *current_line;
   unsigned char *txtpos;
 } stack_for_frame;
 
 typedef struct stack_gosub_frame
 {
   stack_header header;
-  unsigned char *current_line;
   unsigned char *txtpos;
 } stack_gosub_frame;
 
@@ -274,7 +272,6 @@ enum {
 };
 
 static __data unsigned char* txtpos;
-static __data unsigned char* current_line;
 static __data unsigned char* program_end;
 static __data unsigned char error_num;
 
@@ -453,7 +450,6 @@ static void tokenize(void)
         }
         if (*table == 0)
         {
-not_found:
           // Not found
           // Advance until next likely token start
           c = *scanpos;
@@ -596,11 +592,25 @@ static unsigned char* findline(void)
 
   for (line = program_start; ; line += line[sizeof(LINENUM)])
   {
-    if (line == program_end)
+    if (line == program_end || *(LINENUM*)line >= linenum)
     {
       return line;
     }
-    else if (*(LINENUM*)line >= linenum)
+  }
+}
+
+//
+// Find the line contain the current txtpos.
+//
+static unsigned char* findtxtline(void)
+{
+  unsigned char *line;
+  unsigned char* nline;
+  
+  for (line = program_start; ; line = nline)
+  {
+    nline = line + line[sizeof(LINENUM)];
+    if (line == program_end || (txtpos >= line && txtpos < nline))
     {
       return line;
     }
@@ -1212,7 +1222,6 @@ void interpreter_setup(void)
     {
       OS_timer_start(DELAY_TIMER, OS_AUTORUN_TIMEOUT, 0, *(LINENUM*)program_start);
     }
-    current_line = program_end;
     OS_prompt_buffer(program_end + sizeof(LINENUM), sp);
   }
 }
@@ -1255,8 +1264,7 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
       f->header.frame_type = STACK_EVENT_FLAG;
       f->header.frame_size = sizeof(stack_event_frame);
     }
-    current_line = findline();
-    txtpos = current_line + sizeof(LINENUM) + sizeof(char);
+    txtpos = findline() + sizeof(LINENUM) + sizeof(char);
     if (txtpos >= program_end)
     {
       goto print_error_or_ok;
@@ -1322,7 +1330,6 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
 // -- Commands ---------------------------------------------------------------
 
 direct:
-  current_line = NULL;
   txtpos = program_end + sizeof(LINENUM);
   if (*txtpos == NL)
   {
@@ -1348,8 +1355,7 @@ run_next_statement:
     error_num = ERROR_GENERAL;
     goto print_error_or_ok;
   }
-  current_line = txtpos + 1;
-  txtpos = current_line + sizeof(LINENUM) + sizeof(char);
+  txtpos += sizeof(LINENUM) + sizeof(char) + sizeof(char);
   if (txtpos >= program_end) // Out of lines to run
   {
     goto print_error_or_ok;
@@ -1394,7 +1400,6 @@ interperate:
       }
       sp += ((stack_header*)sp)->frame_size;
     }
-    current_line = program_start;
     txtpos = program_start + sizeof(LINENUM) + sizeof(char);
     if (txtpos >= program_end)
     {
@@ -1422,8 +1427,7 @@ interperate:
     {
       goto qwhat;
     }
-    current_line = findline();
-    txtpos = current_line + sizeof(LINENUM) + sizeof(char);
+    txtpos = findline() + sizeof(LINENUM) + sizeof(char);
     if (txtpos >= program_end)
     {
       goto print_error_or_ok;
@@ -1510,9 +1514,9 @@ qwhat:
 
 print_error_or_ok:
   printmsg(error_msgs[error_num]);
-  if (current_line != NULL && error_num != ERROR_OK)
+  if (txtpos < program_end && error_num != ERROR_OK)
   {
-    list_line = current_line;
+    list_line = findtxtline();
     OS_putchar('>');
     OS_putchar('>');
     OS_putchar(WS_SPACE);
@@ -1525,10 +1529,6 @@ print_error_or_ok:
 // --- Commands --------------------------------------------------------------
 
 cmd_elif:
-    if (current_line == NULL)
-    {
-      return IX_PROMPT;
-    }
     val = expression();
     if(error_num || *txtpos != NL)
     {
@@ -1541,23 +1541,22 @@ cmd_elif:
     else
     {
       unsigned char nest = 0;
+      txtpos++;
       for (;;)
       {
-        current_line +=	current_line[sizeof(LINENUM)];
-        if(current_line == program_end)
+        if(txtpos >= program_end)
         {
           printmsg(error_msgs[ERROR_OK]);
           return IX_PROMPT;
         }
-        txtpos = current_line+sizeof(LINENUM)+sizeof(char);
-        switch (*txtpos)
+        switch (txtpos[sizeof(LINENUM) + sizeof(char)])
         {
           case KW_IF:
-            if (txtpos[1] == KW_END)
+            if (txtpos[sizeof(LINENUM) + sizeof(char) + 1] == KW_END)
             {
               if (!nest)
               {
-                txtpos += 2;
+                txtpos += sizeof(LINENUM) + sizeof(char) + 2;
                 goto run_next_statement;
               }
               nest--;
@@ -1570,41 +1569,47 @@ cmd_elif:
           case KW_ELSE:
             if (!nest)
             {
-              txtpos++;
+              txtpos += sizeof(LINENUM) + sizeof(char) + 1;
               goto run_next_statement;
             }
             break;
           case KW_ELIF:
             if (!nest)
             {
+              txtpos += sizeof(LINENUM) + sizeof(char);
               goto interperate;
             }
             break;
           default:
             break;
         }
+        txtpos += txtpos[sizeof(LINENUM)];
       }
     }
  
 cmd_else:
   {
     unsigned char nest = 0;
+    ignore_blanks();
+    if (*txtpos != NL)
+    {
+      goto qwhat;
+    }
+    txtpos++;
     for (;;)
     {
-      current_line +=	current_line[sizeof(LINENUM)];
-      if(current_line == program_end)
+      if(txtpos >= program_end)
       {
         printmsg(error_msgs[ERROR_OK]);
         return IX_PROMPT;
       }
-      txtpos = current_line+sizeof(LINENUM)+sizeof(char);
-      if (txtpos[0] == KW_IF)
+      if (txtpos[sizeof(LINENUM) + sizeof(char)] == KW_IF)
       {
-        if (txtpos[1] == KW_END)
+        if (txtpos[sizeof(LINENUM) + sizeof(char) + 1] == KW_END)
         {
           if (!nest)
           {
-            txtpos += 2;
+            txtpos += sizeof(LINENUM) + sizeof(char) + 2;
             goto run_next_statement;
           }
           nest--;
@@ -1614,19 +1619,25 @@ cmd_else:
           nest++;
         }
       }
+      txtpos +=	txtpos[sizeof(LINENUM)];
     }
-   }
+  }
 
 forloop:
   {
     unsigned char var;
-    VAR_TYPE initial, step, terminal;
-    if(*txtpos < 'A' || *txtpos > 'Z')
+    VAR_TYPE initial;
+    VAR_TYPE step;
+    VAR_TYPE terminal;
+    stack_for_frame *f;
+
+    if (*txtpos < 'A' || *txtpos > 'Z')
+    {
       goto qwhat;
-    var = *txtpos;
-    txtpos++;
+    }
+    var = *txtpos++;
     ignore_blanks();
-    if(*txtpos != RELOP_EQ)
+    if (*txtpos != RELOP_EQ)
     {
       goto qwhat;
     }
@@ -1663,33 +1674,27 @@ forloop:
       step = 1;
     }
     ignore_blanks();
-    if(*txtpos != NL)
+    if (*txtpos != NL)
     {
       goto qwhat;
     }
 
-    if(!error_num && *txtpos == NL)
+    if (sp - sizeof(stack_for_frame) < program_end)
     {
-      stack_for_frame *f;
-      if (sp - sizeof(stack_for_frame) < program_end)
-      {
-        goto qoom;
-      }
-
-      sp -= sizeof(stack_for_frame);
-      f = (stack_for_frame *)sp;
-      VARIABLE_INT_SET(var, initial);
-      f->header.frame_type = STACK_FOR_FLAG;
-      f->header.frame_size = sizeof(stack_for_frame);
-      f->for_var = var;
-      f->terminal = terminal;
-      f->step = step;
-      f->txtpos = txtpos;
-      f->current_line = current_line;
-      goto run_next_statement;
+      goto qoom;
     }
+
+    sp -= sizeof(stack_for_frame);
+    f = (stack_for_frame *)sp;
+    VARIABLE_INT_SET(var, initial);
+    f->header.frame_type = STACK_FOR_FLAG;
+    f->header.frame_size = sizeof(stack_for_frame);
+    f->for_var = var;
+    f->terminal = terminal;
+    f->step = step;
+    f->txtpos = txtpos;
+    goto run_next_statement;
   }
-  goto qwhat;
 
 cmd_gosub:
   {
@@ -1709,9 +1714,7 @@ cmd_gosub:
     f->header.frame_type = STACK_GOSUB_FLAG;
     f->header.frame_size = sizeof(stack_gosub_frame);
     f->txtpos = txtpos;
-    f->current_line = current_line;
-    current_line = findline();
-    txtpos = current_line + sizeof(LINENUM) + sizeof(char);
+    txtpos = findline() + sizeof(LINENUM) + sizeof(char);
     if (txtpos >= program_end)
     {
       goto print_error_or_ok;
@@ -1736,7 +1739,6 @@ gosub_return:
         if (txtpos[-1] == KW_RETURN)
         {
           stack_gosub_frame *f = (stack_gosub_frame *)sp;
-          current_line = f->current_line;
           txtpos = f->txtpos;
           sp += f->header.frame_size;
           goto run_next_statement;
@@ -1765,7 +1767,6 @@ gosub_return:
             {
               // We have to loop so don't pop the stack
               txtpos = f->txtpos;
-              current_line = f->current_line;
             }
             else
             {
@@ -2009,7 +2010,7 @@ load:
       OS_file_read(program_start, len);
     }
     OS_file_close();
-    current_line = program_end;
+    txtpos = program_end;
     goto print_error_or_ok;
   }
 
@@ -2021,7 +2022,7 @@ save:
   OS_file_open(0, 'w');
   OS_file_write(program_start, program_end - program_start);
   OS_file_close();
-  current_line = program_end;
+  txtpos = program_end;
   goto print_error_or_ok;
 
 //
@@ -3462,11 +3463,11 @@ done:
 
 error:
   sp = origsp;
-  current_line = line;
+  txtpos = line + sizeof(LINENUM) + sizeof(char);
   return 1;
 oom:
   sp = origsp;
-  current_line = line;
+  txtpos = line + sizeof(LINENUM) + sizeof(char);
   return 2;
 }
 
