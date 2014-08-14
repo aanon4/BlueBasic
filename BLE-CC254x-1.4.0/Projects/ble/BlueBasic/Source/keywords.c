@@ -104,15 +104,18 @@ struct keyword
   { "LSB", "SPI_LSB" },
   { "MASTER", "SPI_MASTER" },
   { "SLAVE", "SPI_SLAVE" },
+  { "PULSEIN(", "FUNC_PULSEIN" },
   //
   // Constants
   //
   { "TRUE", "KW_CONSTANT,CO_TRUE" },
   { "FALSE", "KW_CONSTANT,CO_FALSE" },
-  { "ON", "KW_CONSTANT,CO_TRUE" },
-  { "OFF", "KW_CONSTANT,CO_FALSE" },
-  { "YES", "KW_CONSTANT,CO_TRUE" },
-  { "NO", "KW_CONSTANT,CO_FALSE" },
+  { "ON", "KW_CONSTANT,CO_ON" },
+  { "OFF", "KW_CONSTANT,CO_OFF" },
+  { "YES", "KW_CONSTANT,CO_YES" },
+  { "NO", "KW_CONSTANT,CO_NO" },
+  { "HIGH", "KW_CONSTANT,CO_HIGH" },
+  { "LOW", "KW_CONSTANT,CO_LOW" },
 
   { "ADVERT_ENABLED", "KW_CONSTANT,CO_ADVERT_ENABLED" },
   { "MIN_CONN_INTERVAL", "KW_CONSTANT,CO_MIN_CONN_INTERVAL" },
