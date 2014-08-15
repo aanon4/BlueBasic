@@ -3,9 +3,9 @@
 30 ELSE
 31 IF 1
 32 PRINT "ha"
-33 IF END
+33 FI
 40 PRINT "goodbye"
-50 IF END
+50 FI
 60 PRINT "done"
 RUN
 .
@@ -14,9 +14,9 @@ RUN
 30 ELSE
 31 IF 1
 32 PRINT "ha"
-33 IF END
+33 FI
 40 PRINT "goodbye"
-50 IF END
+50 FI
 60 PRINT "done"
 RUN
 hello

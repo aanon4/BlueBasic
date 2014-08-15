@@ -1,14 +1,14 @@
-10 SCAN 5000 GENERAL LIMITED FALSE TRUE ONDISCOVER GOSUB 100
+10 SCAN 5000 GENERAL LIMITED DUPLICATES ONDISCOVER GOSUB 100
 20 END
-100 PRINT "Found one " A " " R " " E
-110 PRINT "  " B(0) " " B(1) " " B(2) " " B(3) " " B(4) " " B(5) " " B(6) " " B(7)
+100 PRINT "Found one ",A," ",R," ",E
+110 PRINT "  ",B(0)," ",B(1)," ",B(2)," ",B(3)," ",B(4)," ",B(5)," ",B(6)," " B(7)
 120 RETURN
 RUN
 .
-10 SCAN 5000 GENERAL LIMITED FALSE TRUE ONDISCOVER GOSUB 100
+10 SCAN 5000 GENERAL LIMITED DUPLICATES ONDISCOVER GOSUB 100
 20 END
-100 PRINT "Found one " A " " R " " E
-110 PRINT "  " B(0) " " B(1) " " B(2) " " B(3) " " B(4) " " B(5) " " B(6) " " B(7)
+100 PRINT "Found one ",A," ",R," ",E
+110 PRINT "  ",B(0)," ",B(1)," ",B(2)," ",B(3)," ",B(4)," ",B(5)," ",B(6)," " B(7)
 120 RETURN
 RUN
 OK

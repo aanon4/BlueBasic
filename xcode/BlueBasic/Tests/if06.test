@@ -4,7 +4,7 @@
 27 PRINT "middle"
 30 ELSE
 40 PRINT "goodbye"
-50 IF END
+50 FI
 60 PRINT "done"
 RUN
 .
@@ -14,7 +14,7 @@ RUN
 27 PRINT "middle"
 30 ELSE
 40 PRINT "goodbye"
-50 IF END
+50 FI
 60 PRINT "done"
 RUN
 middle

@@ -79,6 +79,10 @@ static const char memorymsg[]         = " bytes free.";
 // above and below simultaneously to selectively obliterate functionality.
 enum
 {
+  // -----------------------
+  // Keywords
+  //
+
   KW_CONSTANT = 0x80,
   KW_LIST,
   KW_LOAD,
@@ -93,10 +97,12 @@ enum
   KW_IF,
   KW_ELIF,
   KW_ELSE,
+  KW_FI,
   KW_GOTO,
   KW_GOSUB,
   KW_RETURN,
   KW_REM,
+  KW_SLASHSLASH,
   KW_FOR,
   KW_PRINT,
   KW_REBOOT,
@@ -121,25 +127,9 @@ enum
   KW_ANALOGRESOLUTION,
 
   // -----------------------
-  
-  ST_TO,
-  ST_STEP,
-  TI_STOP,
-  TI_REPEAT,
-  FUNC_ABS,
-  FUNC_LEN,
-  FUNC_RND,
-  FUNC_MILLIS,
-  FUNC_BATTERY,
-  RELOP_GE,
-  RELOP_NE,
-  RELOP_GT,
-  RELOP_EQEQ,
-  RELOP_EQ,
-  RELOP_LE,
-  RELOP_LT,
-  RELOP_NE_BANG,
-  FUNC_HEX,
+  // Operators
+  //
+
   OP_ADD,
   OP_SUB,
   OP_MUL,
@@ -148,6 +138,34 @@ enum
   OP_AND,
   OP_OR,
   OP_XOR,
+  OP_GE,
+  OP_NE,
+  OP_GT,
+  OP_EQEQ,
+  OP_EQ,
+  OP_LE,
+  OP_LT,
+  OP_NE_BANG,
+  OP_UMINUS,
+  
+  // -----------------------
+  // Functions
+  //
+  
+  FUNC_ABS,
+  FUNC_LEN,
+  FUNC_RND,
+  FUNC_MILLIS,
+  FUNC_BATTERY,
+  FUNC_HEX,
+  FUNC_PULSEIN,
+  
+  // -----------------------
+
+  ST_TO,
+  ST_STEP,
+  TI_STOP,
+  TI_REPEAT,
   PM_PULLUP,
   PM_PULLDOWN,
   PM_INPUT,
@@ -174,12 +192,13 @@ enum
   BLE_NAME,
   BLE_CUSTOM,
   BLE_FUNC_BTGET,
+  BLE_ACTIVE,
+  BLE_DUPLICATES,
   SPI_TRANSFER,
   SPI_MSB,
   SPI_LSB,
   SPI_MASTER,
   SPI_SLAVE,
-  FUNC_PULSEIN,
 };
 
 enum
@@ -228,13 +247,45 @@ static const VAR_TYPE constantmap[] =
   TGAP_LIM_DISC_ADV_INT_MIN,
   TGAP_LIM_DISC_ADV_INT_MAX,
   TGAP_GEN_DISC_ADV_INT_MIN,
-  TGAP_GEN_DISC_ADV_INT_MAX,};
+  TGAP_GEN_DISC_ADV_INT_MAX,
+};
+
+//
+// See http://en.wikipedia.org/wiki/Operator_precedence
+//
+static const unsigned char operator_precedence[] =
+{
+   4, // OP_ADD
+   4, // OP_SUB
+   3, // OP_MUL
+   3, // OP_DIV
+   3, // OP_REM
+   8, // OP_AND
+  10, // OP_OR
+   9, // OP_XOR
+   6, // OP_GE,
+   7, // OP_NE,
+   6, // OP_GT,
+   7, // OP_EQEQ,
+   7, // OP_EQ,
+   6, // OP_LE,
+   6, // OP_LT,
+   7, // OP_NE_BANG,
+   2, // OP_UMINUS
+};
+
+enum
+{
+  EXPR_NORMAL = 0,
+  EXPR_BRACES,
+  EXPR_COMMA,
+};
 
 #include "keyword_tables.h"
 
-
 // Interpreter exit statuses
-enum {
+enum
+{
   IX_BYE,
   IX_PROMPT,
   IX_OUTOFMEMORY
@@ -284,6 +335,14 @@ enum {
   STACK_VARIABLE_NORMAL = 'N'
 };
 
+enum {
+  VAR_NORMAL   = 0x00,
+  VAR_VARIABLE = 0x01,
+  // These flags are used inside the special struct
+  VAR_INT      = 0x02,
+  VAR_DIM_BYTE = 0x04,
+};
+
 static __data unsigned char* txtpos;
 static __data unsigned char* program_end;
 static __data unsigned char error_num;
@@ -294,14 +353,11 @@ static unsigned char* list_line;
 static unsigned char* program_start;
 static LINENUM linenum;
 
+static unsigned char cache_name;
+static stack_variable_frame* cache_frame;
+static unsigned char* cache_ptr;
+static stack_variable_frame normal_variable = { { STACK_VARIABLE_FLAG, 0 }, VAR_INT, 0, 0, NULL };
 
-enum {
-  VAR_NORMAL   = 0x00,
-  VAR_VARIABLE = 0x01,
-  // These flags are used inside the special struct
-  VAR_INT      = 0x02,
-  VAR_DIM_BYTE = 0x04,
-};
 #define VARIABLE_INT_ADDR(F)    (((VAR_TYPE*)variables_begin) + ((F) - 'A'))
 #define VARIABLE_INT_GET(F)     (*VARIABLE_INT_ADDR(F))
 #define VARIABLE_INT_SET(F,V)   (*VARIABLE_INT_ADDR(F) = (V))
@@ -326,12 +382,14 @@ static unsigned char analogReference;
 static unsigned char analogResolution = 0x30; // 14-bits
 
 static void pin_write(unsigned char pin, unsigned char val);
-static VAR_TYPE pin_read(unsigned char pin);
+static VAR_TYPE pin_read(unsigned char major, unsigned char minor);
 static unsigned char pin_parse(void);
+static unsigned short pin_pulsein(unsigned char pin, unsigned char level, unsigned short timeout);
+#define PIN_MAKE(A,I) (((A) << 4) | ((I) & 15))
 #define PIN_MAJOR(P)  ((P) >> 4)
 #define PIN_MINOR(P)  ((P) & 15)
 
-static VAR_TYPE expression(void);
+static VAR_TYPE expression(unsigned char mode);
 
 unsigned char  ble_adbuf[31];
 unsigned char* ble_adptr;
@@ -384,7 +442,7 @@ static const gattServiceCBs_t ble_service_callbacks =
 //
 static inline void ignore_blanks(void)
 {
-  while (*txtpos == WS_SPACE)
+  if (*txtpos == WS_SPACE)
   {
     txtpos++;
   }
@@ -761,36 +819,33 @@ static unsigned char* get_variable_frame(char name, stack_variable_frame** frame
   unsigned char* tsp;
   unsigned char vname;
 
+  if (name == cache_name)
+  {
+    *frame = cache_frame;
+    return cache_ptr;
+  }
   if (VARIABLE_FLAGS_GET(name) == VAR_VARIABLE)
   {
     for (tsp = sp; tsp < variables_begin; tsp += ((stack_header*)tsp)->frame_size)
     {
       if (((stack_header*)tsp)->frame_type == STACK_VARIABLE_FLAG && ((stack_variable_frame*)tsp)->name == name)
       {
-        if (frame)
-        {
-          *frame = (stack_variable_frame*)tsp;
-        }
+        *frame = (stack_variable_frame*)tsp;
         if (((stack_variable_frame*)tsp)->type == VAR_INT)
         {
           return (unsigned char*)VARIABLE_INT_ADDR(name);
         }
         else
         {
-          return tsp + sizeof(stack_variable_frame);
+          cache_name = name;
+          cache_frame = (stack_variable_frame*)tsp;
+          cache_ptr = tsp + sizeof(stack_variable_frame);
+          return cache_ptr;
         }
       }
     }
   }
-  if (frame)
-  {
-    static stack_variable_frame normal;
-    normal.header.frame_type = STACK_VARIABLE_NORMAL;
-    normal.type = VAR_INT;
-    normal.name = name;
-    normal.ble = NULL;
-    *frame = &normal;
-  }
+  *frame = &normal_variable;
   return (unsigned char*)VARIABLE_INT_ADDR(name);
 }
 
@@ -824,6 +879,7 @@ void create_dim(unsigned char name, VAR_TYPE size, unsigned char* data)
     {
       OS_memset(sp + sizeof(stack_variable_frame), 0, size);
     }
+    cache_name = 0;
   }
 }
 
@@ -833,462 +889,463 @@ void create_dim(unsigned char name, VAR_TYPE size, unsigned char* data)
 //
 // -------------------------------------------------------------------------------------------
 
-static VAR_TYPE expr4(void)
+static VAR_TYPE* expression_operate(unsigned char op, VAR_TYPE* queueptr)
 {
-  unsigned char ch;
-  VAR_TYPE a;
-  unsigned char* ptr;
-
-  ch = *txtpos++;
-
-  if (ch == OP_SUB)
+  if (op == OP_UMINUS)
   {
-    return -expr4();
+    queueptr[-1] = -queueptr[-1];
   }
-
-  else if (ch >= '0' && ch <= '9')
+  else
   {
-    txtpos--;
-    a = parse_int(255, 10);
-    error_num = ERROR_OK;
-    return a;
-  }
-
-  // Is it a function?
-  else if (ch >= 0x80)
-  {
-    switch (ch)
+    queueptr--;
+    switch (op)
     {
-      // Is it an input pin?
-      case KW_PIN_P0:
-      case KW_PIN_P1:
-      case KW_PIN_P2:
-        txtpos--;
-        a = pin_parse();
-        if (error_num)
+      case OP_ADD:
+        queueptr[-1] += queueptr[0];
+        break;
+      case OP_SUB:
+        queueptr[-1] -= queueptr[0];
+        break;
+      case OP_MUL:
+        queueptr[-1] *= queueptr[0];
+        break;
+      case OP_DIV:
+        if (queueptr[0] == 0)
         {
-          goto expr4_error;
+          goto expr_div0;
         }
-        return pin_read(a);
+        queueptr[-1] /= queueptr[0];
+        break;
+      case OP_REM:
+        if (queueptr[0] == 0)
+        {
+          goto expr_div0;
+        }
+        queueptr[-1] %= queueptr[0];
+        break;
+      case OP_AND:
+        queueptr[-1] &= queueptr[0];
+        break;
+      case OP_OR:
+        queueptr[-1] |= queueptr[0];
+        break;
+      case OP_XOR:
+        queueptr[-1] ^= queueptr[0];
+        break;
+      case OP_GE:
+        queueptr[-1] = queueptr[-1] >= queueptr[0];
+        break;
+      case OP_NE:
+      case OP_NE_BANG:
+        queueptr[-1] = queueptr[-1] != queueptr[0];
+        break;
+      case OP_GT:
+        queueptr[-1] = queueptr[-1] > queueptr[0];
+        break;
+      case OP_EQEQ:
+      case OP_EQ:
+        queueptr[-1] = queueptr[-1] == queueptr[0];
+        break;
+      case OP_LE:
+        queueptr[-1] = queueptr[-1] <= queueptr[0];
+        break;
+      case OP_LT:
+        queueptr[-1] = queueptr[-1] < queueptr[0];
+        break;
+      default:
+        error_num = ERROR_EXPRESSION;
+        return NULL;
+    }
+  }
+  return queueptr;
+expr_div0:
+  error_num = ERROR_DIV0;
+  return NULL;
+}
 
-      // 0x... hex literal
-      case FUNC_HEX:
-        a = parse_int(8, 16);
-        error_num = ERROR_OK; // Okay to stop parsing early
-        return a;
+static VAR_TYPE expression(unsigned char mode)
+{
+#define EXPRESSION_STACK_SIZE 4
+#define EXPRESSION_QUEUE_SIZE 4
+  VAR_TYPE queue[EXPRESSION_QUEUE_SIZE];
+  unsigned char stack[EXPRESSION_STACK_SIZE];
+  unsigned char lastop = 1;
 
-      // Is it a constant?
-      case KW_CONSTANT:
-        return constantmap[*txtpos++ - CO_TRUE];
+  // Done parse if we have a pending error
+  if (error_num)
+  {
+    return 0;
+  }
+  
+  VAR_TYPE* queueptr = queue;
+  unsigned char* stackptr = stack;
 
-      case FUNC_LEN:
-        ch = *txtpos;
-        if (ch >= 'A' && ch <= 'Z' && txtpos[1] == ')')
+  for (;;)
+  {
+    unsigned char op = *txtpos++;
+    switch (op)
+    {
+      // Ignore whitespace
+      case WS_SPACE:
+        continue;
+
+      case NL:
+        txtpos--;
+        goto done;
+      
+      default:
+        // Parse number
+        if (op >= '0' && op <= '9')
+        {
+          if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+          {
+            goto expr_oom;
+          }
+          txtpos--;
+          *queueptr++ = parse_int(255, 10);
+          error_num = ERROR_OK;
+          lastop = 0;
+        }
+        else if (op >= 'A' && op <= 'Z')
         {
           stack_variable_frame* frame;
-          txtpos += 2;
-          get_variable_frame(ch, &frame);
+          unsigned char* ptr = get_variable_frame(op, &frame);
+          
           if (frame->type == VAR_DIM_BYTE)
           {
-            return frame->header.frame_size - sizeof(stack_variable_frame);
+            if (stackptr >= &stack[EXPRESSION_STACK_SIZE - 1])
+            {
+              goto expr_oom;
+            }
+            *stackptr++ = op;
+            lastop = 1;
           }
-        }
-        goto expr4_error;
-
-      //
-      // PULSEIN(<pin>, LOW|HIGH [, <timeout>])
-      //  Wait for the input pin to change to the given state, and return the time in usecs.
-      //
-      case FUNC_PULSEIN:
-      {
-// These two are use to convert test loops into usecs (and back) based
-// on code calibration; one loop takes ~4us.
-#define USECS_TO_LOOPS(V)   (((V) * 100) / 365)
-#define LOOPS_TO_USECS(V)   ((((VAR_TYPE)(V)) * 365) / 100)
-        unsigned char pin;
-        unsigned char mask;
-        unsigned short count;
-        unsigned short timeout = 0xFFFF; // Max timeout is 262ms
-        
-        pin = pin_parse();
-        if (*txtpos++ != ',')
-        {
-          goto expr4_error;
-        }
-        a = expression();
-        if (error_num)
-        {
-          goto expr4_error;
-        }
-        if (*txtpos == ',')
-        {
-          txtpos++;
-          timeout = USECS_TO_LOOPS(expression());
-          if (error_num)
+          else
           {
-            goto expr4_error;
+            if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+            {
+              goto expr_oom;
+            }
+            *queueptr++ = *(VAR_TYPE*)ptr;
+            lastop = 0;
           }
-        }
-        if (*txtpos++ != ')')
-        {
-          goto expr4_error;
-        }
-
-        // This code is broken out (rather than using pin_read) to make it as fast as possible
-        // and so get the most accurate timings.
-        mask = PIN_MINOR(pin);
-        a = (a ? 1 : 0) << mask;
-        mask = 1 << mask;
-        pin = PIN_MAJOR(pin);
-        
-        // Wait for pin to be 'a'
-        for (count = 1; count < timeout; count++)
-        {
-          switch (pin)
-          {
-            case 0:
-              if ((P0 & mask) == a)
-              {
-                goto pulsein_start;
-              }
-              break;
-            case 1:
-              if ((P1 & mask) == a)
-              {
-                goto pulsein_start;
-              }
-              break;
-            case 2:
-              if ((P2 & mask) == a)
-              {
-                goto pulsein_start;
-              }
-              break;
-          }
-        }
-        return 0;
-
-pulsein_start:
-        timeout -= count;
-
-        // Count until pin stops being 'a'
-        for (count = 1; count < timeout; count++)
-        {
-          switch (pin)
-          {
-            case 0:
-              if ((P0 & mask) != a)
-              {
-                return LOOPS_TO_USECS(count);
-              }
-              break;
-            case 1:
-              if ((P1 & mask) != a)
-              {
-                return LOOPS_TO_USECS(count);
-              }
-              break;
-            case 2:
-              if ((P2 & mask) != a)
-              {
-                return LOOPS_TO_USECS(count);
-              }
-              break;
-          }
-        }
-        return 0;
-      }
-
-      default:
-        break;
-    }
-    
-    // Is it a no-arg function?
-    if (*txtpos == ')')
-    {
-      txtpos++;
-      switch (ch)
-      {
-        case FUNC_MILLIS:
-          return OS_millis();
-          
-        case FUNC_BATTERY:
-          ADCCON3 = 0x0F | 0x10 | 0x00; // VDD/3, 10-bit, internal voltage reference
-#ifdef SIMULATE_PINS
-          ADCCON1 = 0x80;
-#endif
-          while ((ADCCON1 & 0x80) == 0)
-            ;
-          a = ADCL;
-          a |= ADCH << 8;
-          a = a >> 6;
-          // VDD can be in the range 2v to 3.6v. Internal reference voltage is 1.24v (per datasheet)
-          // So we're measuring VDD/3 against 1.24v giving us (VDD x 511) / 3.72
-          // or VDD = (ADC * 3.72 / 511). x 1000 to get result in mV.
-          return (a * 3720L) / 511L;
-          
-#if 0 // Calibration seems problematic - leave this out until we find a fix.
-        case FUNC_TEMP:
-          ADCCON3 = 0x0E | 0x30 | 0x00; // Temp, 14-bit, internal voltage reference
-#ifdef SIMULATE_PINS
-          ADCCON1 = 0x80;
-#endif
-          while ((ADCCON1 & 0x80) == 0)
-            ;
-          a = ADCL;
-          a |= ADCH << 8;
-          a = a >> 2;
-          // ADC value @ 24C is 1225. ADC value changes @ 4.5/1C. So ADC at 0C is 1117.
-          // So temp in C is (ADC - 1117) / 4.5 or (2xADC - 2234) / 9.
-          return (2 * a - 2234) / 9;
-#endif
-          
-        default:
-          goto expr4_error;
-      }
-    }
-
-    // Assume it's a function with an argument(s)
-    a = expression();
-    if (*txtpos != ')' || error_num)
-    {
-      goto expr4_error;
-    }
-    txtpos++;
-
-    switch(ch)
-    {
-      default:
-        goto expr4_error;
-        
-      case FUNC_ABS:
-        return a < 0 ? -a : a;
-        
-      case FUNC_RND:
-        return OS_rand() % a;
-
-      case BLE_FUNC_BTGET:
-      {
-        if (a & 0x8000)
-        {
-          goto expr4_error; // Not supported
         }
         else
         {
-          VAR_TYPE v;
-          GAPRole_GetParameter(a, (unsigned long*)&v, 0, NULL);
-          return v;
+          txtpos--;
+          goto done;
         }
+        break;
+        
+      case KW_CONSTANT:
+        if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+        {
+          goto expr_oom;
+        }
+        *queueptr++ = constantmap[*txtpos++ - CO_TRUE];
+        lastop = 0;
+        break;
+
+      case FUNC_HEX:
+        if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+        {
+          goto expr_oom;
+        }
+        *queueptr++ = parse_int(255, 16);
+        error_num = ERROR_OK;
+        lastop = 0;
+        break;
+
+      case FUNC_MILLIS:
+        ignore_blanks();
+        if (*txtpos++ != ')')
+        {
+          goto expr_error;
+        }
+        if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+        {
+          goto expr_oom;
+        }
+        *queueptr++ = OS_millis();
+        lastop = 0;
+        break;
+
+      case FUNC_BATTERY:
+      {
+        VAR_TYPE top;
+
+        ignore_blanks();
+        if (*txtpos++ != ')')
+        {
+          goto expr_error;
+        }
+        if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+        {
+          goto expr_oom;
+        }
+        ADCCON3 = 0x0F | 0x10 | 0x00; // VDD/3, 10-bit, internal voltage reference
+#ifdef SIMULATE_PINS
+        ADCCON1 = 0x80;
+#endif
+        while ((ADCCON1 & 0x80) == 0)
+          ;
+        top = ADCL;
+        top |= ADCH << 8;
+        top = top >> 6;
+        // VDD can be in the range 2v to 3.6v. Internal reference voltage is 1.24v (per datasheet)
+        // So we're measuring VDD/3 against 1.24v giving us (VDD x 511) / 3.72
+        // or VDD = (ADC * 3.72 / 511). x 1000 to get result in mV.
+        *queueptr++ = (top * 3720L) / 511L;
+        lastop = 0;
+        break;
+      }
+        
+      case FUNC_LEN:
+      {
+        unsigned char ch = *txtpos;
+        if (ch < 'A' || ch > 'Z' || txtpos[1] != ')')
+        {
+          goto expr_error;
+        }
+        if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+        {
+          goto expr_oom;
+        }
+        stack_variable_frame* frame;
+        txtpos += 2;
+        get_variable_frame(ch, &frame);
+        if (frame->type != VAR_DIM_BYTE)
+        {
+          goto expr_error;
+        }
+        *queueptr++ = frame->header.frame_size - sizeof(stack_variable_frame);
+        lastop = 0;
+        break;
+      }
+
+      case '(':
+        if (stackptr == &stack[EXPRESSION_STACK_SIZE])
+        {
+          goto expr_oom;
+        }
+        *stackptr++ = op;
+        lastop = 1;
+        break;
+
+      case FUNC_ABS:
+      case FUNC_RND:
+      case KW_PIN_P0:
+      case KW_PIN_P1:
+      case KW_PIN_P2:
+      case BLE_FUNC_BTGET:
+        if (stackptr >= &stack[EXPRESSION_STACK_SIZE - 1])
+        {
+          goto expr_oom;
+        }
+        *stackptr++ = op;
+        *stackptr++ = '(';
+        lastop = 1;
+        break;
+
+      case FUNC_PULSEIN:
+        if (stackptr >= &stack[EXPRESSION_STACK_SIZE - 1])
+        {
+          goto expr_oom;
+        }
+        if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+        {
+          goto expr_oom;
+        }
+        *queueptr++ = pin_parse();
+        if (error_num)
+        {
+          goto expr_error;
+        }
+        *stackptr++ = op;
+        *stackptr++ = '(';
+        lastop = 1;
+        break;
+
+
+      case ',':
+        for (;;)
+        {
+          if (stackptr == stack)
+          {
+            if (mode == EXPR_COMMA)
+            {
+              goto done;
+            }
+            goto expr_error;
+          }
+          unsigned const op2 = *--stackptr;
+          if (op2 == '(')
+          {
+            stackptr++;
+            break;
+          }
+          if ((queueptr = expression_operate(op2, queueptr)) <= queue)
+          {
+            goto expr_error;
+          }
+        }
+        lastop = 0;
+        break;
+
+      case ')':
+      {
+        for (;;)
+        {
+          if (stackptr == stack)
+          {
+            if (mode == EXPR_BRACES)
+            {
+              goto done;
+            }
+            goto expr_error;
+          }
+          unsigned const op2 = *--stackptr;
+          if (op2 == '(')
+          {
+            break;
+          }
+          if ((queueptr = expression_operate(op2, queueptr)) <= queue)
+          {
+            goto expr_error;
+          }
+        }
+        if (stackptr > stack)
+        {
+          if (queueptr == queue)
+          {
+            goto expr_error;
+          }
+          const VAR_TYPE top = queueptr[-1];
+          op = *--stackptr;
+          switch (op)
+          {
+            case FUNC_ABS:
+              queueptr[-1] = top < 0 ? -top : top;
+              break;
+            case FUNC_RND:
+              queueptr[-1] = OS_rand() % top;
+              break;
+            case KW_PIN_P0:
+              queueptr[-1] = pin_read(0, top);
+              break;
+            case KW_PIN_P1:
+              queueptr[-1] = pin_read(1, top);
+              break;
+            case KW_PIN_P2:
+              queueptr[-1] = pin_read(2, top);
+              break;
+            case BLE_FUNC_BTGET:
+              if (top & 0x8000)
+              {
+                goto expr_error; // Not supported
+              }
+              GAPRole_GetParameter(top, (unsigned long*)&queueptr[-1], 0, NULL);
+              break;
+            case FUNC_PULSEIN:
+              if (queueptr < &queue[3])
+              {
+                goto expr_error;
+              }
+              queueptr -= 2;
+              queueptr[-1] = pin_pulsein((unsigned char)queueptr[-1], (unsigned char)queueptr[0], (unsigned short)queueptr[1]);
+              break;
+
+            default:
+              if (op >= 'A' && op <= 'Z')
+              {
+                stack_variable_frame* frame;
+                unsigned char* ptr = get_variable_frame(op, &frame);
+
+                if (frame->type != VAR_DIM_BYTE || top < 0 || top >= frame->header.frame_size - sizeof(stack_variable_frame))
+                {
+                  goto expr_error;
+                }
+                queueptr[-1] = ptr[top];
+              }
+              else
+              {
+                stackptr++;
+              }
+              break;
+          }
+          lastop = 1;
+        }
+        break;
+      }
+
+      case OP_SUB:
+        if (lastop)
+        {
+          // Unary minus
+          op = OP_UMINUS;
+        }
+        // Fall through
+      case OP_ADD:
+      case OP_MUL:
+      case OP_DIV:
+      case OP_REM:
+      case OP_AND:
+      case OP_OR:
+      case OP_XOR:
+      case OP_GE:
+      case OP_NE:
+      case OP_GT:
+      case OP_EQEQ:
+      case OP_EQ:
+      case OP_LE:
+      case OP_LT:
+      case OP_NE_BANG:
+      {
+        const unsigned char op1precedence = operator_precedence[op - OP_ADD];
+        for (;;)
+        {
+          const unsigned char op2 = stackptr[-1] - OP_ADD;
+          if (stackptr == stack || op2 >= sizeof(operator_precedence) || op1precedence < operator_precedence[op2])
+          {
+            break;
+          }
+          if ((queueptr = expression_operate(*--stackptr, queueptr)) <= queue)
+          {
+            goto expr_error;
+          }
+        }
+        if (stackptr == &stack[EXPRESSION_STACK_SIZE])
+        {
+          goto expr_oom;
+        }
+        *stackptr++ = op;
+        lastop = 1;
+        break;
       }
     }
   }
-
-  // Is it a variable reference?
-  else if (ch >= 'A' && ch <= 'Z')
+done:
+  while (stackptr > stack)
   {
-    stack_variable_frame* frame;
-    ptr = get_variable_frame(ch, &frame);
-
-    if (frame->type == VAR_DIM_BYTE)
+    if ((queueptr = expression_operate(*--stackptr, queueptr)) <= queue)
     {
-      if (*txtpos != '(')
-      {
-        goto expr4_error;
-      }
-      txtpos++;
-      a = expression();
-      if (*txtpos != ')' || error_num)
-      {
-        goto expr4_error;
-      }
-      txtpos++;
-      
-      // Find the array and get value
-      if (a < 0 || a >= frame->header.frame_size - sizeof(stack_variable_frame))
-      {
-        goto expr4_error;
-      }
-      return ptr[a];
-    }
-    else
-    {
-      if (*txtpos == '(')
-      {
-        goto expr4_error;
-      }
-      return *(VAR_TYPE*)ptr;
+      goto expr_error;
     }
   }
-  else if (ch == '(')
+  if (queueptr != &queue[1])
   {
-    a = expression();
-    if (*txtpos != ')' || error_num)
-    {
-      goto expr4_error;
-    }
-
-    txtpos++;
-    return a;
+    goto expr_error;
   }
-
-expr4_error:
+  return queueptr[-1];
+expr_error:
   if (!error_num)
   {
     error_num = ERROR_EXPRESSION;
   }
   return 0;
-
-}
-
-static VAR_TYPE expr3(void)
-{
-  VAR_TYPE a, b;
-
-  a = expr4();
-
-  for (;;)
-  {
-    if (error_num)
-    {
-      return a;
-    }
-    switch (*txtpos++)
-    {
-      default:
-        txtpos--;
-        return a;
-      case OP_MUL:
-        a *= expr4();
-        break;
-      case OP_DIV:
-        b = expr4();
-        if (b == 0)
-          error_num = ERROR_DIV0;
-        else
-          a /= b;
-        break;
-      case OP_REM:
-        b = expr4();
-        if (b == 0)
-          error_num = ERROR_DIV0;
-        else
-          a %= b;
-        break;
-    }
-  }
-}
-
-static VAR_TYPE expr2(void)
-{
-  VAR_TYPE a;
-
-  if (*txtpos == OP_SUB || *txtpos == OP_ADD)
-  {
-    a = 0;
-  }
-  else
-  {
-    a = expr3();
-  }
-
-  for (;;)
-  {
-    if (error_num)
-    {
-      return a;
-    }
-    switch (*txtpos++)
-    {
-      default:
-        txtpos--;
-        return a;
-      case OP_SUB:
-        a -= expr3();
-        break;
-      case OP_ADD:
-        a += expr3();
-        break;
-    }
-  }
-}
-
-static VAR_TYPE expr1(void)
-{
-  VAR_TYPE a;
-
-  a = expr2();
-
-  for (;;)
-  {
-    if (error_num)
-    {
-      return a;
-    }
-    switch(*txtpos++)
-    {
-      default:
-        txtpos--;
-        return a;
-      case RELOP_GE:
-         a = a >= expr2();
-        break;
-      case RELOP_NE:
-      case RELOP_NE_BANG:
-        a = a != expr2();
-        break;
-      case RELOP_GT:
-        a = a > expr2();
-        break;
-      case RELOP_EQ:
-      case RELOP_EQEQ:
-        a = a == expr2();
-        break;
-      case RELOP_LE:
-        a = a <= expr2();
-        break;
-      case RELOP_LT:
-        a = a < expr2();
-        break;
-    }
-  }
-}
-
-static VAR_TYPE expression(void)
-{
-  VAR_TYPE a;
-
-  // Immediately stop parsing if we errored.
-  if (error_num)
-  {
-    return 0;
-  }
-
-  ignore_blanks();
-
-  a = expr1();
-
-  for (;;)
-  {
-    if (error_num)
-    {
-      return a;
-    }
-    switch (*txtpos++)
-    {
-      default:
-        txtpos--;
-        return a;
-      case OP_AND:
-        a &= expr1();
-        break;
-      case OP_OR:
-        a |= expr1();
-        break;
-      case OP_XOR:
-        a ^= expr1();
-        break;
-    }
-  }
+expr_oom:
+  error_num = ERROR_OOM;
+  return 0;
 }
 
 // -------------------------------------------------------------------------------------------
@@ -1296,7 +1353,6 @@ static VAR_TYPE expression(void)
 // The main interpreter
 //
 // -------------------------------------------------------------------------------------------
-
 
 void interpreter_init()
 {
@@ -1539,18 +1595,14 @@ interperate:
     case KW_LET:
       goto assignment;
     case KW_IF:
-      if (*txtpos == KW_END)
-      {
-        txtpos++;
-        goto run_next_statement;
-      }
-      // Fall through
     case KW_ELIF:
       goto cmd_elif;
     case KW_ELSE:
       goto cmd_else;
+    case KW_FI:
+      goto run_next_statement;
     case KW_GOTO:
-      linenum = expression();
+      linenum = expression(EXPR_NORMAL);
       if (error_num || *txtpos != NL)
       {
         goto qwhat;
@@ -1566,6 +1618,7 @@ interperate:
     case KW_RETURN:
       goto gosub_return;
     case KW_REM:
+    case KW_SLASHSLASH:
       goto execnextline;	// Ignore line completely
     case KW_FOR:
       goto forloop;
@@ -1593,7 +1646,7 @@ interperate:
     case KW_PIN_P1:
     case KW_PIN_P2:
       txtpos--;
-      goto assignment;
+      goto assignpin;
     case KW_GATT:
       goto ble_gatt;
     case KW_ADVERT:
@@ -1659,7 +1712,7 @@ print_error_or_ok:
   VAR_TYPE val;
 
 cmd_elif:
-    val = expression();
+    val = expression(EXPR_NORMAL);
     if (error_num || *txtpos != NL)
     {
       goto qwhat;
@@ -1682,19 +1735,7 @@ cmd_elif:
         switch (txtpos[sizeof(LINENUM) + sizeof(char)])
         {
           case KW_IF:
-            if (txtpos[sizeof(LINENUM) + sizeof(char) + 1] == KW_END)
-            {
-              if (!nest)
-              {
-                txtpos += sizeof(LINENUM) + sizeof(char) + 2;
-                goto run_next_statement;
-              }
-              nest--;
-            }
-            else
-            {
-              nest++;
-            }
+            nest++;
             break;
           case KW_ELSE:
             if (!nest)
@@ -1709,6 +1750,14 @@ cmd_elif:
               txtpos += sizeof(LINENUM) + sizeof(char);
               goto interperate;
             }
+            break;
+          case KW_FI:
+            if (!nest)
+            {
+              txtpos += sizeof(LINENUM) + sizeof(char) + 1;
+              goto run_next_statement;
+            }
+            nest--;
             break;
           default:
             break;
@@ -1735,19 +1784,16 @@ cmd_else:
       }
       if (txtpos[sizeof(LINENUM) + sizeof(char)] == KW_IF)
       {
-        if (txtpos[sizeof(LINENUM) + sizeof(char) + 1] == KW_END)
+        nest++;
+      }
+      else if (txtpos[sizeof(LINENUM) + sizeof(char)] == KW_FI)
+      {
+        if (!nest)
         {
-          if (!nest)
-          {
-            txtpos += sizeof(LINENUM) + sizeof(char) + 2;
-            goto run_next_statement;
-          }
-          nest--;
+          txtpos += sizeof(LINENUM) + sizeof(char) + 1;
+          goto run_next_statement;
         }
-        else
-        {
-          nest++;
-        }
+        nest--;
       }
       txtpos +=	txtpos[sizeof(LINENUM)];
     }
@@ -1767,13 +1813,13 @@ forloop:
     }
     var = *txtpos++;
     ignore_blanks();
-    if (*txtpos != RELOP_EQ)
+    if (*txtpos != OP_EQ)
     {
       goto qwhat;
     }
     txtpos++;
 
-    initial = expression();
+    initial = expression(EXPR_NORMAL);
     if (error_num)
     {
       goto qwhat;
@@ -1784,7 +1830,7 @@ forloop:
       goto qwhat;
     }
 
-    terminal = expression();
+    terminal = expression(EXPR_NORMAL);
     if (error_num)
     {
       goto qwhat;
@@ -1792,7 +1838,7 @@ forloop:
 
     if (*txtpos++ == ST_STEP)
     {
-      step = expression();
+      step = expression(EXPR_NORMAL);
       if (error_num)
       {
         goto qwhat;
@@ -1830,7 +1876,7 @@ cmd_gosub:
   {
     stack_gosub_frame *f;
 
-    linenum = expression();
+    linenum = expression(EXPR_NORMAL);
     if (error_num || *txtpos != NL)
     {
       goto qwhat;
@@ -1914,6 +1960,7 @@ gosub_return:
           unsigned char vname;
           stack_variable_frame* f = (stack_variable_frame*)sp;
           VARIABLE_FLAGS_SET(f->name, f->oflags);
+          cache_name = 0;
         }
         break;
       case STACK_SERVICE_FLAG:
@@ -1931,8 +1978,37 @@ gosub_return:
   goto qwhat;
 
 //
+// PX(Y) = Z
+// Assign a value to a pin.
+//
+assignpin:
+  {
+    unsigned char pin;
+    
+    pin = pin_parse();
+    if (error_num)
+    {
+      goto qwhat;
+    }
+    ignore_blanks();
+    if (*txtpos != OP_EQ)
+    {
+      goto qwhat;
+    }
+    txtpos++;
+    val = expression(EXPR_NORMAL);
+    if (error_num)
+    {
+      goto qwhat;
+    }
+    pin_write(pin, val);
+    
+    goto run_next_statement;
+  }
+
+//
 // X = Y
-// Assign a value to a variable or pin.
+// Assign a value to a variable.
 //
 assignment:
   {
@@ -1941,51 +2017,25 @@ assignment:
     unsigned char* ptr;
     VAR_TYPE idx;
 
-    // Are we setting an output pin?
     var = *txtpos;
-    if (var >= KW_PIN_P0 && var <= KW_PIN_P2)
-    {
-      unsigned char pin;
-      
-      pin = pin_parse();
-      if (error_num)
-      {
-        goto qwhat;
-      }
-      ignore_blanks();
-      if (*txtpos != RELOP_EQ)
-      {
-        goto qwhat;
-      }
-      txtpos++;
-      val = expression();
-      if (error_num)
-      {
-        goto qwhat;
-      }
-      pin_write(pin, val);
-
-      goto run_next_statement;
-    }
-
     if (var < 'A' || var > 'Z')
     {
       goto qwhat;
     }
     txtpos++;
-    ignore_blanks();
+
     ptr = get_variable_frame(var, &frame);
     
     switch (frame->type)
     {
       case VAR_INT:
-        if (*txtpos != RELOP_EQ)
+        if (*txtpos != OP_EQ)
         {
           goto qwhat;
         }
         txtpos++;
-        val = expression();
-        if (error_num || *txtpos != NL)
+        val = expression(EXPR_NORMAL);
+        if (error_num)
         {
           goto qwhat;
         }
@@ -1993,30 +2043,24 @@ assignment:
         goto var_done;
 
       case VAR_DIM_BYTE:
+        ignore_blanks();
         if (*txtpos != '(')
         {
           goto qwhat;
         }
         txtpos++;
-        idx = expression();
+        idx = expression(EXPR_BRACES);
         if (error_num)
         {
           goto qwhat;
         }
-        ignore_blanks();
-        if (*txtpos != ')')
+        if (idx < 0 || idx >= frame->header.frame_size - sizeof(stack_variable_frame) || *txtpos != OP_EQ)
         {
           goto qwhat;
         }
         txtpos++;
-        ignore_blanks();
-        if (idx < 0 || idx >= frame->header.frame_size - sizeof(stack_variable_frame) || *txtpos != RELOP_EQ)
-        {
-          goto qwhat;
-        }
-        txtpos++;
-        val = expression();
-        if (error_num || *txtpos != NL)
+        val = expression(EXPR_NORMAL);
+        if (error_num)
         {
           goto qwhat;
         }
@@ -2055,26 +2099,17 @@ list:
     {
       switch (list_line[sizeof(LINENUM) + sizeof(char)])
       {
-        case KW_IF:
-          if (list_line[sizeof(LINENUM) + sizeof(char) + 1] == KW_END)
-          {
-            goto indent_next;
-          }
-          else
-          {
-            goto indent_for;
-          }
         case KW_ELSE:
         case KW_ELIF:
           indent--;
           // Fall through
+        case KW_IF:
         case KW_FOR:
-indent_for:
           printline(indent);
           indent++;
           break;
         case KW_NEXT:
-indent_next:
+        case KW_FI:
           indent--;
           // Fall through
         default:
@@ -2088,7 +2123,6 @@ indent_next:
 print:
   for (;;)
   {
-    ignore_blanks();
     if (*txtpos == NL)
     {
       break;
@@ -2099,11 +2133,15 @@ print:
       {
         goto qwhat;
       }
+      else if (*txtpos == ',' || *txtpos == WS_SPACE)
+      {
+        txtpos++;
+      }
       else
       {
         VAR_TYPE e;
-        e = expression();
-        if (error_num || (*txtpos != NL && *txtpos != WS_SPACE))
+        e = expression(EXPR_COMMA);
+        if (error_num)
         {
           goto qwhat;
         }
@@ -2168,7 +2206,7 @@ cmd_dload:
     unsigned char var;
     unsigned char* ptr;
     
-    chan = expression();
+    chan = expression(EXPR_NORMAL);
     if (error_num || chan == 0)
     {
       goto qwhat;
@@ -2209,7 +2247,7 @@ cmd_dsave:
     unsigned char var;
     unsigned char* ptr;
 
-    chan = expression();
+    chan = expression(EXPR_NORMAL);
     if (error_num || chan == 0)
     {
       goto qwhat;
@@ -2254,25 +2292,18 @@ cmd_dim:
     {
       goto qwhat;
     }
-    name = *txtpos;
-    txtpos++;
+    name = *txtpos++;
     ignore_blanks();
     if (*txtpos != '(')
     {
       goto qwhat;
     }
     txtpos++;
-    size = expression();
+    size = expression(EXPR_BRACES);
     if (error_num)
     {
       goto qwhat;
     }
-    ignore_blanks();
-    if (*txtpos != ')')
-    {
-      goto qwhat;
-    }
-    txtpos++;
     create_dim(name, size, NULL);
     if (error_num)
     {
@@ -2292,7 +2323,7 @@ cmd_timer:
     unsigned char repeat = 0;
     LINENUM subline;
     
-    timer = (unsigned char)expression();
+    timer = (unsigned char)expression(EXPR_COMMA);
     if (error_num)
     {
       goto qwhat;
@@ -2305,7 +2336,7 @@ cmd_timer:
     }
     else
     {
-      timeout = expression();
+      timeout = expression(EXPR_NORMAL);
       if (error_num)
       {
         goto qwhat;
@@ -2321,7 +2352,7 @@ cmd_timer:
         goto qwhat;
       }
       txtpos++;
-      subline = (LINENUM)expression();
+      subline = (LINENUM)expression(EXPR_NORMAL);
       if (error_num)
       {
         goto qwhat;
@@ -2339,7 +2370,7 @@ cmd_timer:
 // Pauses execution for timeout-ms 
 //
 cmd_delay:
-  val = expression();
+  val = expression(EXPR_NORMAL);
   if (error_num || val < 0)
   {
     goto qwhat;
@@ -2350,7 +2381,7 @@ cmd_delay:
   return IX_PROMPT;
   
 cmd_delaymicroseconds:
-  val = expression();
+  val = expression(EXPR_NORMAL);
   if (error_num || val < 0)
   {
     goto qwhat;
@@ -2364,7 +2395,7 @@ cmd_delaymicroseconds:
 //
 cmd_autorun:
   {
-    VAR_TYPE v = expression();
+    VAR_TYPE v = expression(EXPR_NORMAL);
     if (error_num)
     {
       goto qwhat;
@@ -2524,7 +2555,7 @@ cmd_attachint:
       txtpos--;
       goto qwhat;
     }
-    line = expression();
+    line = expression(EXPR_NORMAL);
     if (error_num)
     {
       goto qwhat;
@@ -2695,18 +2726,18 @@ value_done:
   goto execnextline;
 
 //
-// SCAN <time> LIMITED|GENERAL <active> <duplicates> ONDISCOVER GOSUB <linenum>
+// SCAN <time> LIMITED|GENERAL [ACTIVE] [DUPLICATES] ONDISCOVER GOSUB <linenum>
 //  or
 // SCAN LIMITED|GENERAL|NAME "..."|CUSTOM "..."|END
 //
 ble_scan:
   if (*txtpos < 0x80)
   {
-    unsigned char active;
-    unsigned char dups;
+    unsigned char active = 0;
+    unsigned char dups = 0;
     unsigned char mode = 0;
 
-    val = expression();
+    val = expression(EXPR_NORMAL);
     if (error_num)
     {
       goto qwhat;
@@ -2737,21 +2768,24 @@ ble_scan:
         goto qwhat;
     }
 
-    active = expression();
-    dups = expression();
-    if (error_num)
+    if (*txtpos == BLE_ACTIVE)
     {
-      goto qwhat;
+      txtpos++;
+      active = 1;
+    }
+    if (*txtpos == BLE_DUPLICATES)
+    {
+      txtpos++;
+      dups = 1;
     }
 
-    ignore_blanks();
     if (txtpos[0] != BLE_ONDISCOVER || txtpos[1] != KW_GOSUB)
     {
       goto qwhat;
     }
-    
     txtpos += 2;
-    linenum = expression();
+
+    linenum = expression(EXPR_NORMAL);
     if (error_num)
     {
       goto qwhat;
@@ -2983,7 +3017,7 @@ cmd_btset:
     unsigned short param;
     unsigned char* ptr;
 
-    param = (unsigned short)expression();
+    param = (unsigned short)expression(EXPR_NORMAL);
     if (error_num)
     {
       goto qwhat;
@@ -3005,7 +3039,7 @@ cmd_btset:
     // Expects an int
     else
     {
-      val = expression();
+      val = expression(EXPR_NORMAL);
       if (error_num)
       {
         goto qwhat;
@@ -3034,8 +3068,8 @@ cmd_spi:
       unsigned char speed;
 
       txtpos++;
-      port = expression();
-      mode = expression();
+      port = expression(EXPR_COMMA);
+      mode = expression(EXPR_COMMA);
       if (error_num || port > 3 || mode > 3)
       {
         goto qwhat;
@@ -3046,7 +3080,7 @@ cmd_spi:
         goto qwhat;
       }
       txtpos++;
-      speed = expression();
+      speed = expression(EXPR_NORMAL);
       if (error_num)
       {
         goto qwhat;
@@ -3190,7 +3224,7 @@ cmd_analogref:
 //  Set the number of bits returned from an ADC operation.
 //
 cmd_analogresolution:
-  val = expression();
+  val = expression(EXPR_NORMAL);
   switch (val)
   {
     case 8:
@@ -3227,12 +3261,11 @@ static unsigned char pin_parse(void)
     txtpos--;
     goto badpin;
   }
-  minor = expression();
-  if (error_num || minor > 7 || *txtpos != ')')
+  minor = expression(EXPR_BRACES);
+  if (error_num || minor > 7)
   {
     goto badpin;
   }
-  txtpos++;
 #ifdef ENABLE_DEBUG_INTERFACE
   if (major == KW_PIN_P2 && (minor == 1 || minor == 2))
   {
@@ -3277,11 +3310,9 @@ void pin_write(unsigned char pin, unsigned char val)
 //
 // Read pin
 //
-VAR_TYPE pin_read(unsigned char pin)
+static VAR_TYPE pin_read(unsigned char major, unsigned char minor)
 {
-  unsigned char minor = PIN_MINOR(pin);
-
-  switch (PIN_MAJOR(pin))
+  switch (major)
   {
     case 0:
       if (APCFG & (1 << minor))
@@ -3303,6 +3334,146 @@ VAR_TYPE pin_read(unsigned char pin)
     default:
       return (P2 >> minor) & 1;
   }
+}
+
+static unsigned short pin_pulsein(unsigned char pin, unsigned char level, unsigned short timeout)
+{
+  // These two are use to convert test loops into usecs (and back) based
+  // on code calibration; one loop takes ~4us.
+#define USECS_TO_LOOPS(V)   (((V) * 100) / 365)
+#define LOOPS_TO_USECS(V)   ((((VAR_TYPE)(V)) * 365) / 100)
+  unsigned short count;
+  unsigned char minor;
+  unsigned char major;
+  
+  // This code is broken out (rather than using pin_read) to make it as fast as possible
+  // and so get the most accurate timings.
+  major = PIN_MAJOR(pin);
+  minor = PIN_MINOR(pin);
+  level = (level ? 1 : 0) << minor;
+  minor = 1 << minor;
+  
+  P0 |= 0x02; // DEBUG
+  
+  // Wait for old pulse to end, and pin to not be 'a'
+  for (count = 1; count < timeout; count++)
+  {
+    switch (major)
+    {
+      case 0:
+#ifdef SIMULATE_PINS
+        P0 = ~level;
+#endif
+        if ((P0 & minor) != level)
+        {
+          goto pulsein_waited;
+        }
+        break;
+      case 1:
+#ifdef SIMULATE_PINS
+        P1 = ~minor;
+#endif
+        if ((P1 & minor) != level)
+        {
+          goto pulsein_waited;
+        }
+        break;
+      case 2:
+#ifdef SIMULATE_PINS
+        P2 = ~minor;
+#endif
+        if ((P2 & minor) != level)
+        {
+          goto pulsein_waited;
+        }
+        break;
+    }
+  }
+  P0 &= 0xFD; // DEBUG
+  return 0;
+pulsein_waited:
+  P0 &= 0xFD; // DEBUG
+  P0 |= 0x02; // DEBUG
+  
+  // Wait for new pulse to start, and pin to be 'a'
+  for (; count < timeout; count++)
+  {
+    switch (major)
+    {
+      case 0:
+#ifdef SIMULATE_PINS
+        P0 = level;
+#endif
+        if ((P0 & minor) == level)
+        {
+          goto pulsein_start;
+        }
+        break;
+      case 1:
+#ifdef SIMULATE_PINS
+        P1 = level;
+#endif
+        if ((P1 & minor) == level)
+        {
+          goto pulsein_start;
+        }
+        break;
+      case 2:
+#ifdef SIMULATE_PINS
+        P2 = level;
+#endif
+        if ((P2 & minor) == level)
+        {
+          goto pulsein_start;
+        }
+        break;
+    }
+  }
+  P0 &= 0xFD; // DEBUG
+  return 0;
+  
+pulsein_start:
+  timeout -= count;
+  P0 &= 0xFD; // DEBUG
+  P0 |= 0x02; // DEBUG
+  
+  // Count until pulse stops, and pin stops being 'a'
+  for (count = 1; count < timeout; count++)
+  {
+    switch (major)
+    {
+      case 0:
+#ifdef SIMULATE_PINS
+        P0 = ~level;
+#endif
+        if ((P0 & minor) != level)
+        {
+          P0 &= 0xFD; // DEBUG
+          return LOOPS_TO_USECS(count);
+        }
+        break;
+      case 1:
+#ifdef SIMULATE_PINS
+        P1 = ~level;
+#endif
+        if ((P1 & minor) != level)
+        {
+          return LOOPS_TO_USECS(count);
+        }
+        break;
+      case 2:
+#ifdef SIMULATE_PINS
+        P2 = ~level;
+#endif
+        if ((P2 & minor) != level)
+        {
+          return LOOPS_TO_USECS(count);
+        }
+        break;
+    }
+  }
+  P0 &= 0xFD; // DEBUG
+  return 0;
 }
 
 //
@@ -3385,7 +3556,7 @@ static char ble_build_service(void)
             if (txtpos[1] == KW_GOSUB)
             {
               txtpos += 2;
-              onconnect = expression();
+              onconnect = expression(EXPR_NORMAL);
               if (error_num)
               {
                 goto error;
@@ -3504,7 +3675,7 @@ done:
             goto error;
           }
           txtpos++;
-          linenum = expression();
+          linenum = expression(EXPR_NORMAL);
           if (error_num)
           {
             goto error;

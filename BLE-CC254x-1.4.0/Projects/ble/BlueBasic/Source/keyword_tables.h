@@ -1,6 +1,7 @@
 static const unsigned char keywords_0[] =
 {
   'A','B','S','(',FUNC_ABS,
+  'A','C','T','I','V','E',BLE_ACTIVE,
   'A','D','C',PM_ADC,
   'A','D','V','E','R','T','_','E','N','A','B','L','E','D',KW_CONSTANT,CO_ADVERT_ENABLED,
   'A','D','V','E','R','T',KW_ADVERT,
@@ -53,6 +54,7 @@ static const unsigned char keywords_3[] =
   'D','I','M',KW_DIM,
   'D','L','O','A','D',KW_DLOAD,
   'D','S','A','V','E',KW_DSAVE,
+  'D','U','P','L','I','C','A','T','E','S',BLE_DUPLICATES,
   '^',OP_XOR,
   0
 };
@@ -78,6 +80,7 @@ static const unsigned char keywords_5[] =
 {
   'F','A','L','L','I','N','G',PM_FALLING,
   'F','A','L','S','E',KW_CONSTANT,CO_FALSE,
+  'F','I',KW_FI,
   'F','O','R',KW_FOR,
   'S','A','V','E',KW_SAVE,
   'S','C','A','N',KW_SCAN,
@@ -108,17 +111,18 @@ static const unsigned char keywords_6[] =
 };
 static const unsigned char keywords_7[] =
 {
-  '!','=',RELOP_NE_BANG,
+  '!','=',OP_NE_BANG,
   'H','I','G','H',KW_CONSTANT,CO_HIGH,
   '|',OP_OR,
   0
 };
 static const unsigned char keywords_8[] =
 {
+  '/','/',KW_SLASHSLASH,
   '/',OP_DIV,
-  '<','=',RELOP_LE,
-  '<','>',RELOP_NE,
-  '<',RELOP_LT,
+  '<','=',OP_LE,
+  '<','>',OP_NE,
+  '<',OP_LT,
   'I','F',KW_IF,
   'I','N','D','I','C','A','T','E',BLE_INDICATE,
   'I','N','P','U','T',PM_INPUT,
@@ -128,16 +132,16 @@ static const unsigned char keywords_8[] =
 static const unsigned char keywords_9[] =
 {
   '0','X',FUNC_HEX,
-  '=','=',RELOP_EQEQ,
-  '=',RELOP_EQ,
+  '=','=',OP_EQEQ,
+  '=',OP_EQ,
   'W','R','I','T','E','N','O','R','S','P',BLE_WRITENORSP,
   'W','R','I','T','E',BLE_WRITE,
   0
 };
 static const unsigned char keywords_10[] =
 {
-  '>','=',RELOP_GE,
-  '>',RELOP_GT,
+  '>','=',OP_GE,
+  '>',OP_GT,
   0
 };
 static const unsigned char keywords_11[] =
