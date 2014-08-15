@@ -70,7 +70,11 @@ static const char* const error_msgs[] =
 static const char initmsg[]           = "BlueBasic " kVersion;
 static const char memorymsg[]         = " bytes free.";
 
+#ifdef TARGET_CC254X
 #define VAR_TYPE    long int
+#else
+#define VAR_TYPE    int
+#endif
 #define VAR_SIZE    (4)
 
 
@@ -488,8 +492,21 @@ static void tokenize(void)
       {
         *writepos++ = c;
         readpos++;
-        while ((*writepos++ = *readpos++) != c)
-          ;
+        for (;;)
+        {
+          const char nc = *readpos++;
+          *writepos++ = nc;
+          if (nc == c)
+          {
+            break;
+          }
+          else if (nc == NL)
+          {
+            writepos--;
+            readpos--;
+            break;
+          }
+        }
         scanpos = readpos;
         break;
       }
@@ -1080,7 +1097,7 @@ static VAR_TYPE expression(unsigned char mode)
         {
           goto expr_oom;
         }
-        *queueptr++ = OS_millis();
+        *queueptr++ = (VAR_TYPE)OS_millis();
         lastop = 0;
         break;
 
@@ -3643,7 +3660,6 @@ wire_parse_done:;
         ptr += sizeof(unsigned char*);
         while (len--)
         {
-          P0 ^= 2; // DEBUG
           count = 1;
           switch (major)
           {
