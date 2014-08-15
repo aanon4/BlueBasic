@@ -60,6 +60,8 @@ struct keyword
   { "&", "OP_AND" },
   { "|", "OP_OR" },
   { "^", "OP_XOR" },
+  { "<<", "OP_LSHIFT" },
+  { ">>", "OP_RSHIFT" },
   { "DSAVE", "KW_DSAVE" },
   { "DLOAD", "KW_DLOAD" },
   { "PINMODE", "KW_PINMODE" },
@@ -109,6 +111,7 @@ struct keyword
   { "ACTIVE", "BLE_ACTIVE" },
   { "DUPLICATES", "BLE_DUPLICATES" },
   { "WIRE", "KW_WIRE" },
+  { "TIMEOUT", "PM_TIMEOUT" },
   //
   // Constants
   //

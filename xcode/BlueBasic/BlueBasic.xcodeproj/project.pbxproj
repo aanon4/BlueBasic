@@ -65,6 +65,7 @@
 		22FA2DC3197335CE0049CDB8 /* os.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = os.c; sourceTree = "<group>"; };
 		22FA500A199BCF8800535BCE /* add03.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = add03.test; sourceTree = "<group>"; };
 		22FA500B199BD02300535BCE /* add04.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = add04.test; sourceTree = "<group>"; };
+		22FA500C199C669600535BCE /* example02.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = example02.test; sourceTree = "<group>"; };
 		B81A7E5619774A81007DFEC6 /* add10.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = add10.test; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -117,6 +118,7 @@
 				226D1CFF19847030006B289B /* if05.test */,
 				226D1D0019847093006B289B /* if06.test */,
 				2233458F19948C4000B2141A /* spi01.test */,
+				22FA500C199C669600535BCE /* example02.test */,
 			);
 			path = Tests;
 			sourceTree = "<group>";

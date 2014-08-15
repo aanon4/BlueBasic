@@ -101,6 +101,7 @@ static const unsigned char keywords_6[] =
   'G','O','S','U','B',KW_GOSUB,
   'G','O','T','O',KW_GOTO,
   'T','I','M','E','O','U','T','_','M','U','L','T','I','P','L','I','E','R',KW_CONSTANT,CO_TIMEOUT_MULTIPLIER,
+  'T','I','M','E','O','U','T',PM_TIMEOUT,
   'T','I','M','E','R',KW_TIMER,
   'T','O',ST_TO,
   'T','R','A','N','S','F','E','R',SPI_TRANSFER,
@@ -119,6 +120,7 @@ static const unsigned char keywords_8[] =
 {
   '/','/',KW_SLASHSLASH,
   '/',OP_DIV,
+  '<','<',OP_LSHIFT,
   '<','=',OP_LE,
   '<','>',OP_NE,
   '<',OP_LT,
@@ -141,6 +143,7 @@ static const unsigned char keywords_9[] =
 static const unsigned char keywords_10[] =
 {
   '>','=',OP_GE,
+  '>','>',OP_RSHIFT,
   '>',OP_GT,
   0
 };

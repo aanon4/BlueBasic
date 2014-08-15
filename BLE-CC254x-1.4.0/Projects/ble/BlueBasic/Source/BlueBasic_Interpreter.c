@@ -151,6 +151,8 @@ enum
   OP_LE,
   OP_LT,
   OP_NE_BANG,
+  OP_LSHIFT,
+  OP_RSHIFT,
   OP_UMINUS,
   
   // -----------------------
@@ -179,6 +181,7 @@ enum
   PM_FALLING,
   PM_INTERNAL,
   PM_EXTERNAL,
+  PM_TIMEOUT,
   BLE_ONREAD,
   BLE_ONWRITE,
   BLE_ONCONNECT,
@@ -275,6 +278,8 @@ static const unsigned char operator_precedence[] =
    6, // OP_LE,
    6, // OP_LT,
    7, // OP_NE_BANG,
+   5, // OP_LSHIFT,
+   5, // OP_RSHIFT,
    2, // OP_UMINUS
 };
 
@@ -293,12 +298,18 @@ enum
   WIRE_INPUT,
   WIRE_INPUT_PULLUP,
   WIRE_INPUT_PULLDOWN,
-  WIRE_OUTPUT_BYTES,
-  WIRE_INPUT_BYTES,
+  WIRE_ADC,
   WIRE_HIGH,
   WIRE_LOW,
-  WIRE_OUTPUT_BYTE,
+  WIRE_TIMEOUT,
+  WIRE_OUTPUT_BYTES,
+  WIRE_OUTPUT_SHORT,
+  WIRE_INPUT_BYTES,
+  WIRE_INPUT_INT,
 };
+
+#define WIRE_COUNT_TO_USEC(C) (((C) * 370) >> 8) // Measured: each loop count takes 1.42us
+#define WIRE_USEC_TO_COUNT(U) (((U) << 8) / 370)
 
 #include "keyword_tables.h"
 
@@ -336,7 +347,8 @@ typedef struct stack_event_frame
   stack_header header;
 } stack_event_frame;
 
-typedef struct stack_variable_frame {
+typedef struct stack_variable_frame
+{
   stack_header header;
   char type;
   char name;
@@ -345,7 +357,8 @@ typedef struct stack_variable_frame {
   // .... bytes ...
 } stack_variable_frame;
 
-enum {
+enum
+{
   STACK_GOSUB_FLAG = 'G',
   STACK_FOR_FLAG = 'F',
   STACK_VARIABLE_FLAG = 'V',
@@ -354,7 +367,8 @@ enum {
   STACK_VARIABLE_NORMAL = 'N'
 };
 
-enum {
+enum
+{
   VAR_NORMAL   = 0x00,
   VAR_VARIABLE = 0x01,
   // These flags are used inside the special struct
@@ -403,11 +417,14 @@ static unsigned char analogResolution = 0x30; // 14-bits
 static void pin_write(unsigned char pin, unsigned char val);
 static VAR_TYPE pin_read(unsigned char major, unsigned char minor);
 static unsigned char pin_parse(void);
-static void pin_wire(void);
+static void pin_wire_parse(void);
+static void pin_wire(unsigned char* start, unsigned char* end);
 #define PIN_MAJOR(P)  ((P) >> 4)
 #define PIN_MINOR(P)  ((P) & 15)
 
 static VAR_TYPE expression(unsigned char mode);
+#define EXPRESSION_STACK_SIZE 8
+#define EXPRESSION_QUEUE_SIZE 8
 
 unsigned char  ble_adbuf[31];
 unsigned char* ble_adptr;
@@ -983,6 +1000,12 @@ static VAR_TYPE* expression_operate(unsigned char op, VAR_TYPE* queueptr)
       case OP_LT:
         queueptr[-1] = queueptr[-1] < queueptr[0];
         break;
+      case OP_LSHIFT:
+        queueptr[-1] <<= queueptr[0];
+        break;
+      case OP_RSHIFT:
+        queueptr[-1] >>= queueptr[0];
+        break;
       default:
         error_num = ERROR_EXPRESSION;
         return NULL;
@@ -996,8 +1019,6 @@ expr_div0:
 
 static VAR_TYPE expression(unsigned char mode)
 {
-#define EXPRESSION_STACK_SIZE 4
-#define EXPRESSION_QUEUE_SIZE 4
   VAR_TYPE queue[EXPRESSION_QUEUE_SIZE];
   unsigned char stack[EXPRESSION_STACK_SIZE];
   unsigned char lastop = 1;
@@ -1303,6 +1324,8 @@ static VAR_TYPE expression(unsigned char mode)
       case OP_LE:
       case OP_LT:
       case OP_NE_BANG:
+      case OP_LSHIFT:
+      case OP_RSHIFT:
       {
         const unsigned char op1precedence = operator_precedence[op - OP_ADD];
         for (;;)
@@ -2411,112 +2434,59 @@ cmd_autorun:
 
 cmd_pinmode:
   {
-    unsigned char pin;
     unsigned char pinMode;
-    unsigned char dbit;
+    unsigned char cmd[3];
     
-    pin = pin_parse();
+    cmd[0] = WIRE_PIN;
+    cmd[1] = pin_parse();
     if (error_num)
     {
       goto qwhat;
     }
 
-    dbit = 1 << PIN_MINOR(pin);
-
     ignore_blanks();
-    pinMode = *txtpos++;
-    if (pinMode == PM_INPUT)
+    switch (*txtpos++)
     {
-      ignore_blanks();
-      pinMode = *txtpos++;
-      if (pinMode == NL)
-      {
-        txtpos--;
-        pinMode = PM_INPUT;
-      }
-      else if (pinMode != PM_PULLUP && pinMode != PM_PULLDOWN)
-      {
+      case PM_INPUT:
+        pinMode = *txtpos++;
+        if (pinMode == NL)
+        {
+          txtpos--;
+          cmd[2] = WIRE_INPUT;
+        }
+        else if (pinMode == PM_PULLUP)
+        {
+          cmd[2] = WIRE_INPUT_PULLUP;
+        }
+        else if (pinMode == PM_PULLDOWN)
+        {
+          cmd[2] = WIRE_INPUT_PULLDOWN;
+        }
+        else
+        {
+          txtpos--;
+          goto qwhat;
+        }
+        break;
+      case PM_ADC:
+        if (PIN_MAJOR(cmd[1]) != 0)
+        {
+          goto qwhat;
+        }
+        cmd[2] = WIRE_ADC;
+        break;
+      case PM_OUTPUT:
+        cmd[2] = WIRE_OUTPUT;
+        break;
+      default:
         txtpos--;
         goto qwhat;
-      }
-    }
-    else if (pinMode == PM_ADC)
-    {
-      if (PIN_MAJOR(pin) != 0)
-      {
-        goto qwhat;
-      }
-    }
-    else if (pinMode != PM_OUTPUT)
-    {
-      txtpos--;
-      goto qwhat;
     }
     
-    if (PIN_MAJOR(pin) == 0) // KW_PIN_P0
+    pin_wire(cmd, cmd + sizeof(cmd));
+    if (error_num)
     {
-      P0SEL &= ~dbit;
-      APCFG &= ~dbit;
-      P0DIR = (P0DIR & ~dbit) | (pinMode == PM_OUTPUT ? dbit : 0);
-      switch (pinMode)
-      {
-        case PM_INPUT:
-          P0INP |= dbit;
-          break;
-        case PM_PULLUP:
-          P0INP &= ~dbit;
-          P2INP &= ~(1 << 5);
-          break;
-        case PM_PULLDOWN:
-          P0INP &= ~dbit;
-          P2INP |= 1 << 5;
-          break;
-        case PM_ADC:
-          APCFG |= dbit;
-          break;
-      }
-    }
-    else if (PIN_MAJOR(pin) == 1) // KW_PIN_P1
-    {
-      P1SEL &= ~dbit;
-      P1DIR = (P1DIR & ~dbit) | (pinMode == PM_OUTPUT ? dbit : 0);
-      switch (pinMode)
-      {
-        case PM_INPUT:
-          P1INP |= dbit;
-          break;
-        case PM_PULLUP:
-          P1INP &= ~dbit;
-          P2INP &= ~(1 << 6);
-          break;
-        case PM_PULLDOWN:
-          P1INP &= ~dbit;
-          P2INP |= 1 << 6;
-          break;
-        case PM_ADC:
-          goto qwhat;
-      }
-    }
-    else
-    {
-      P2SEL &= ~dbit;
-      P2DIR = (P2DIR & ~dbit) | (pinMode == PM_OUTPUT ? dbit : 0);
-      switch (pinMode)
-      {
-        case PM_INPUT:
-          P2INP |= dbit;
-          break;
-        case PM_PULLUP:
-          P2INP &= ~dbit;
-          P2INP &= ~(1 << 7);
-          break;
-        case PM_PULLDOWN:
-          P2INP &= ~dbit;
-          P2INP |= 1 << 7;
-          break;
-        case PM_ADC:
-          goto qwhat;
-      }
+      goto qwhat;
     }
   }
   goto run_next_statement;
@@ -2654,7 +2624,7 @@ cmd_detachint:
 // WIRE ([<pin>] OUTPUT|INPUT [PULLUP|PULLDOWN] HIGH|LOW [<array>|<value, value, ...>])*
 //
 cmd_wire:
-  pin_wire();
+  pin_wire_parse();
   if (error_num)
   {
     goto qwhat;
@@ -3356,7 +3326,7 @@ static VAR_TYPE pin_read(unsigned char major, unsigned char minor)
 // Execute a wire command. This manipulates a pin(s) input and output quickly
 // and can be used for signalling devices.
 //
-static void pin_wire(void)
+static void pin_wire_parse(void)
 {
   unsigned char* ptr = program_end;
   unsigned char input = 0;
@@ -3368,7 +3338,8 @@ static void pin_wire(void)
     {
       case NL:
         txtpos--;
-        goto wire_parse_done;
+        pin_wire(program_end, ptr);
+        return;
       case WS_SPACE:
       case ',':
         break;
@@ -3402,6 +3373,15 @@ static void pin_wire(void)
           goto wire_error;
         }
         break;
+      case PM_TIMEOUT:
+        *ptr++ = WIRE_TIMEOUT;
+        *(unsigned short*)ptr = WIRE_USEC_TO_COUNT(expression(EXPR_COMMA));
+        ptr += sizeof(unsigned short);
+        if (error_num)
+        {
+          goto wire_error;
+        }
+        break;
       default:
         if (op >= 'A' && op <= 'Z')
         {
@@ -3419,8 +3399,7 @@ static void pin_wire(void)
           else if (input)
           {
             *vptr = 0;
-            *ptr++ = WIRE_INPUT_BYTES;
-            *ptr++ = 1;
+            *ptr++ = WIRE_INPUT_INT;
             *(unsigned char**)ptr = vptr;
             ptr += sizeof(unsigned char*);
             break;
@@ -3438,8 +3417,9 @@ static void pin_wire(void)
         }
         else if (!input)
         {
-          *ptr++ = WIRE_OUTPUT_BYTE;
-          *ptr++ = val;
+          *ptr++ = WIRE_OUTPUT_SHORT;
+          *(unsigned short*)ptr = val;
+          ptr += sizeof(unsigned short);
         }
         else
         {
@@ -3453,16 +3433,17 @@ wire_error:
   {
     error_num = ERROR_GENERAL;
   }
-  return;
+}
 
-wire_parse_done:;
+static void pin_wire(unsigned char* ptr, unsigned char* end)
+{
   // We now have an fast expression to manipulate the pins. Do it.
   // We inline all the pin operations to keep the time down.
-  const unsigned char* end = ptr;
   unsigned char major = 0;
   unsigned char dbit = 1;
   unsigned char high = 0;
-  for (ptr = program_end; ptr < end; )
+  unsigned short timeout = 256;
+  while (ptr < end)
   {
     switch (*ptr++)
     {
@@ -3475,7 +3456,6 @@ wire_parse_done:;
         {
           case 0:
             P0SEL &= ~dbit;
-            APCFG &= ~dbit;
             break;
           case 1:
             P1SEL &= ~dbit;
@@ -3491,6 +3471,7 @@ wire_parse_done:;
         {
           case 0:
             P0DIR |= dbit;
+            APCFG &= ~dbit;
             high = (P0 & dbit) ? 1 : 0;
             break;
           case 1:
@@ -3509,6 +3490,7 @@ wire_parse_done:;
           case 0:
             P0DIR &= ~dbit;
             P0INP |= dbit;
+            APCFG &= ~dbit;
             break;
           case 1:
             P1DIR &= ~dbit;
@@ -3526,6 +3508,7 @@ wire_parse_done:;
           case 0:
             P0DIR &= ~dbit;
             P0INP &= ~dbit;
+            APCFG &= ~dbit;
             P2INP &= ~(1 << 5);
             break;
           case 1:
@@ -3546,6 +3529,7 @@ wire_parse_done:;
           case 0:
             P0DIR &= ~dbit;
             P0INP &= ~dbit;
+            APCFG &= ~dbit;
             P2INP |= 1 << 5;
             break;
           case 1:
@@ -3559,6 +3543,13 @@ wire_parse_done:;
             P2INP |= 1 << 7;
             break;
         }
+        break;
+      case WIRE_ADC:
+        APCFG |= dbit;
+        break;
+      case WIRE_TIMEOUT:
+        timeout = *(unsigned short*)ptr;
+        ptr += sizeof(unsigned short);
         break;
       case WIRE_HIGH:
       wire_high:
@@ -3592,9 +3583,10 @@ wire_parse_done:;
         }
         high = 0;
         break;
-      case WIRE_OUTPUT_BYTE:
-        OS_delaymicroseconds(*ptr++);
-        if (ptr < end && *ptr == WIRE_OUTPUT_BYTE)
+      case WIRE_OUTPUT_SHORT:
+        OS_delaymicroseconds(*(unsigned short*)ptr);
+        ptr += sizeof(unsigned short);
+        if (ptr < end && *ptr == WIRE_OUTPUT_SHORT)
         {
           high = !high;
           if (high)
@@ -3665,22 +3657,21 @@ wire_parse_done:;
           {
             case 0:
               v = P0 & dbit;
-              for (; v == (P0 & dbit) && count < 256; count++)
+              for (; v == (P0 & dbit) && count < timeout; count++)
                 ;
               break;
             case 1:
               v = P1 & dbit;
-              for (; v == (P1 & dbit && count < 256); count++)
+              for (; v == (P1 & dbit) && count < timeout; count++)
                 ;
               break;
             case 2:
               v = P2 & dbit;
-              for (; v == (P2 & dbit && count < 256); count++)
+              for (; v == (P2 & dbit) && count < timeout; count++)
                 ;
               break;
           }
-#define COUNT_TO_USEC(C) (((C) * 370) >> 8) // Measured: each loop count takes 1.42us
-          count = COUNT_TO_USEC(count);
+          count = WIRE_COUNT_TO_USEC(count);
           if (count > 255)
           {
             count = 0;
@@ -3689,9 +3680,41 @@ wire_parse_done:;
         }
         break;
       }
+      case WIRE_INPUT_INT:
+      {
+        unsigned short count = 1;
+        unsigned char v;
+        switch (major)
+        {
+          case 0:
+            v = P0 & dbit;
+            for (; v == (P0 & dbit) && count < timeout; count++)
+              ;
+            break;
+          case 1:
+            v = P1 & dbit;
+            for (; v == (P1 & dbit) && count < timeout; count++)
+              ;
+            break;
+          case 2:
+            v = P2 & dbit;
+            for (; v == (P2 & dbit) && count < timeout; count++)
+              ;
+            break;
+        }
+        **(VAR_TYPE**)ptr = WIRE_COUNT_TO_USEC(count);
+        ptr += sizeof(unsigned char*);
+        break;
+      }
       default:
         goto wire_error;
     }
+  }
+  return;
+wire_error:
+  if (!error_num)
+  {
+    error_num = ERROR_GENERAL;
   }
   return;
 }
