@@ -14,8 +14,15 @@
 #include "hal_uart.h"
 #include "OSAL_PwrMgr.h"
 
-#define	FILE_HEADER	0x80
-#define FILE_DATA       0x81
+#define FILE_HANDLE_PROGRAM     0
+#define FILE_HANDLE_DATA        1
+#define FILE_HANDLE_MAX         (OS_MAX_FILE)
+
+#define	FILE_HEADER             (0x80)
+#define FILE_PROGRAM_FIRST      (0x81)
+#define FILE_PROGRAM_END        (FILE_PROGRAM_FIRST+0x20)
+#define FILE_DATA_FIRST         (FILE_PROGRAM_END+1)
+#define FILE_BLOCK_SIZE         (128)
 
 extern void osalTimeUpdate(void);
 
@@ -242,7 +249,7 @@ short OS_file_open(unsigned char chan, unsigned char rw)
 {
   struct program_header header;
 
-  if (file.h != -1 || chan > OS_MAX_FILE)
+  if (file.h != -1 || chan > FILE_HANDLE_MAX)
   {
     return -1;
   }
@@ -267,33 +274,61 @@ short OS_file_open(unsigned char chan, unsigned char rw)
   return file.l;
 }
 
-short OS_file_read(unsigned char* buf, short len)
+unsigned char OS_file_read(unsigned char* buf, short len)
 {
-  if (len > file.l)
+  if (len <= file.l)
   {
-    len = file.l;
+    if (file.h == FILE_HANDLE_PROGRAM)
+    {
+      unsigned char idx = FILE_PROGRAM_FIRST;
+      while (len > 0 && idx < FILE_PROGRAM_END)
+      {
+        if (osal_snv_read(idx, (len > FILE_BLOCK_SIZE ? FILE_BLOCK_SIZE : len), buf) != SUCCESS)
+        {
+          return -1;
+        }
+        buf += FILE_BLOCK_SIZE;
+        idx++;
+        len -= FILE_BLOCK_SIZE;
+      }
+      return 1;
+    }
+    else if (osal_snv_read(file.h - FILE_HANDLE_DATA + FILE_DATA_FIRST, len, buf) == SUCCESS)
+    {
+      return 1;
+    }
   }
-  if (osal_snv_read(FILE_DATA + file.h, len, buf) == SUCCESS)
-  {
-    return len;
-  }
-  else
-  {
-    return -1;
-  }
+  return 0;
 }
 
-short OS_file_write(unsigned char* buf, short len)
+unsigned char OS_file_write(unsigned char* buf, short len)
 {
-  if (osal_snv_write(FILE_DATA + file.h, len, buf) == SUCCESS)
+  if (file.h == FILE_HANDLE_PROGRAM)
   {
+    unsigned char idx = FILE_PROGRAM_FIRST;
     file.l = len;
-    return len;
+    while (len > 0 && idx < FILE_PROGRAM_END)
+    {
+      if (osal_snv_write(idx, (len > FILE_BLOCK_SIZE ? FILE_BLOCK_SIZE : len), buf) != SUCCESS)
+      {
+        file.l = 0;
+        return -1;
+      }
+      buf += FILE_BLOCK_SIZE;
+      idx++;
+      len -= FILE_BLOCK_SIZE;
+    }
+    return 1;
   }
-  else
+  else if (len <= FILE_BLOCK_SIZE)
   {
-    return -1;
+    if (osal_snv_write(file.h - FILE_HANDLE_DATA + FILE_DATA_FIRST, len, buf) == SUCCESS)
+    {
+      file.l = len;
+      return 1;
+    }
   }
+  return 0;
 }
 
 void OS_file_close(void)

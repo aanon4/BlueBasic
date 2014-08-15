@@ -120,14 +120,14 @@ void OS_file_close(void)
   }
 }
 
-short OS_file_read(unsigned char* buf, short len)
+unsigned char OS_file_read(unsigned char* buf, short len)
 {
-  return fread(buf, len, sizeof(unsigned char), filep);
+  return fread(buf, len, sizeof(unsigned char), filep) == len;
 }
 
-short OS_file_write(unsigned char* buf, short len)
+unsigned char OS_file_write(unsigned char* buf, short len)
 {
-  return fwrite(buf, len, sizeof(unsigned char), filep);
+  return fwrite(buf, len, sizeof(unsigned char), filep) == len;
 }
 
 void OS_autorun_set(unsigned char autorun)
