@@ -306,6 +306,7 @@ enum
   WIRE_OUTPUT_SHORT,
   WIRE_INPUT_BYTES,
   WIRE_INPUT_INT,
+  WIRE_INPUT_WAIT_SHORT,
 };
 
 #define WIRE_COUNT_TO_USEC(C) (((C) * 370) >> 8) // Measured: each loop count takes 1.42us
@@ -3415,15 +3416,17 @@ static void pin_wire_parse(void)
         {
           *ptr++ = (val ? WIRE_HIGH : WIRE_LOW);
         }
-        else if (!input)
+        else if (input)
         {
-          *ptr++ = WIRE_OUTPUT_SHORT;
+          *ptr++ = WIRE_INPUT_WAIT_SHORT;
           *(unsigned short*)ptr = val;
           ptr += sizeof(unsigned short);
         }
         else
         {
-          goto wire_error;
+          *ptr++ = WIRE_OUTPUT_SHORT;
+          *(unsigned short*)ptr = val;
+          ptr += sizeof(unsigned short);
         }
         break;
     }
@@ -3706,6 +3709,10 @@ static void pin_wire(unsigned char* ptr, unsigned char* end)
         ptr += sizeof(unsigned char*);
         break;
       }
+      case WIRE_INPUT_WAIT_SHORT:
+        OS_delaymicroseconds(*(unsigned short*)ptr);
+        ptr += sizeof(unsigned short);
+        break;
       default:
         goto wire_error;
     }
