@@ -125,6 +125,7 @@ enum
   KW_SPI,
   KW_ANALOGREFERENCE,
   KW_ANALOGRESOLUTION,
+  KW_WIRE,
 
   // -----------------------
   // Operators
@@ -158,7 +159,6 @@ enum
   FUNC_MILLIS,
   FUNC_BATTERY,
   FUNC_HEX,
-  FUNC_PULSEIN,
   
   // -----------------------
 
@@ -281,6 +281,21 @@ enum
   EXPR_COMMA,
 };
 
+// WIRE commands
+enum
+{
+  WIRE_PIN = 1,
+  WIRE_OUTPUT,
+  WIRE_INPUT,
+  WIRE_INPUT_PULLUP,
+  WIRE_INPUT_PULLDOWN,
+  WIRE_OUTPUT_BYTES,
+  WIRE_INPUT_BYTES,
+  WIRE_HIGH,
+  WIRE_LOW,
+  WIRE_OUTPUT_BYTE,
+};
+
 #include "keyword_tables.h"
 
 // Interpreter exit statuses
@@ -384,8 +399,7 @@ static unsigned char analogResolution = 0x30; // 14-bits
 static void pin_write(unsigned char pin, unsigned char val);
 static VAR_TYPE pin_read(unsigned char major, unsigned char minor);
 static unsigned char pin_parse(void);
-static unsigned short pin_pulsein(unsigned char pin, unsigned char level, unsigned short timeout);
-#define PIN_MAKE(A,I) (((A) << 4) | ((I) & 15))
+static void pin_wire(void);
 #define PIN_MAJOR(P)  ((P) >> 4)
 #define PIN_MINOR(P)  ((P) & 15)
 
@@ -1147,26 +1161,6 @@ static VAR_TYPE expression(unsigned char mode)
         lastop = 1;
         break;
 
-      case FUNC_PULSEIN:
-        if (stackptr >= &stack[EXPRESSION_STACK_SIZE - 1])
-        {
-          goto expr_oom;
-        }
-        if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
-        {
-          goto expr_oom;
-        }
-        *queueptr++ = pin_parse();
-        if (error_num)
-        {
-          goto expr_error;
-        }
-        *stackptr++ = op;
-        *stackptr++ = '(';
-        lastop = 1;
-        break;
-
-
       case ',':
         for (;;)
         {
@@ -1245,14 +1239,6 @@ static VAR_TYPE expression(unsigned char mode)
                 goto expr_error; // Not supported
               }
               GAPRole_GetParameter(top, (unsigned long*)&queueptr[-1], 0, NULL);
-              break;
-            case FUNC_PULSEIN:
-              if (queueptr < &queue[3])
-              {
-                goto expr_error;
-              }
-              queueptr -= 2;
-              queueptr[-1] = pin_pulsein((unsigned char)queueptr[-1], (unsigned char)queueptr[0], (unsigned short)queueptr[1]);
               break;
 
             default:
@@ -1669,6 +1655,8 @@ interperate:
       goto cmd_analogref;
     case KW_ANALOGRESOLUTION:
       goto cmd_analogresolution;
+    case KW_WIRE:
+      goto cmd_wire;
   }
   goto qwhat;
 
@@ -2644,6 +2632,17 @@ cmd_detachint:
     }
     goto run_next_statement;
   }
+  
+//
+// WIRE ([<pin>] OUTPUT|INPUT [PULLUP|PULLDOWN] HIGH|LOW [<array>|<value, value, ...>])*
+//
+cmd_wire:
+  pin_wire();
+  if (error_num)
+  {
+    goto qwhat;
+  }
+  goto run_next_statement;
 
   unsigned char ch;
 ble_gatt:
@@ -3336,144 +3335,349 @@ static VAR_TYPE pin_read(unsigned char major, unsigned char minor)
   }
 }
 
-static unsigned short pin_pulsein(unsigned char pin, unsigned char level, unsigned short timeout)
+//
+// Execute a wire command. This manipulates a pin(s) input and output quickly
+// and can be used for signalling devices.
+//
+static void pin_wire(void)
 {
-  // These two are use to convert test loops into usecs (and back) based
-  // on code calibration; one loop takes ~4us.
-#define USECS_TO_LOOPS(V)   (((V) * 100) / 365)
-#define LOOPS_TO_USECS(V)   ((((VAR_TYPE)(V)) * 365) / 100)
-  unsigned short count;
-  unsigned char minor;
-  unsigned char major;
-  
-  // This code is broken out (rather than using pin_read) to make it as fast as possible
-  // and so get the most accurate timings.
-  major = PIN_MAJOR(pin);
-  minor = PIN_MINOR(pin);
-  level = (level ? 1 : 0) << minor;
-  minor = 1 << minor;
-  
-  P0 |= 0x02; // DEBUG
-  
-  // Wait for old pulse to end, and pin to not be 'a'
-  for (count = 1; count < timeout; count++)
+  unsigned char* ptr = program_end;
+  unsigned char input = 0;
+
+  for (;;)
   {
-    switch (major)
+    const unsigned char op = *txtpos++;
+    switch (op)
     {
-      case 0:
-#ifdef SIMULATE_PINS
-        P0 = ~level;
-#endif
-        if ((P0 & minor) != level)
+      case NL:
+        txtpos--;
+        goto wire_parse_done;
+      case WS_SPACE:
+      case ',':
+        break;
+      case KW_PIN_P0:
+      case KW_PIN_P1:
+      case KW_PIN_P2:
+        txtpos--;
+        *ptr++ = WIRE_PIN;
+        *ptr++ = pin_parse();
+        if (error_num)
         {
-          goto pulsein_waited;
+          goto wire_error;
         }
         break;
-      case 1:
-#ifdef SIMULATE_PINS
-        P1 = ~minor;
-#endif
-        if ((P1 & minor) != level)
+      case PM_OUTPUT:
+        *ptr++ = WIRE_OUTPUT;
+        input = 0;
+        break;
+      case PM_INPUT:
+        *ptr++ = WIRE_INPUT;
+        input = 1;
+        break;
+      case PM_PULLUP:
+      case PM_PULLDOWN:
+        if (ptr > program_end && ptr[-1] == WIRE_INPUT)
         {
-          goto pulsein_waited;
+          ptr[-1] = (op == PM_PULLUP ? WIRE_INPUT_PULLUP : WIRE_INPUT_PULLDOWN);
+        }
+        else
+        {
+          goto wire_error;
         }
         break;
-      case 2:
-#ifdef SIMULATE_PINS
-        P2 = ~minor;
-#endif
-        if ((P2 & minor) != level)
+      default:
+        if (op >= 'A' && op <= 'Z')
         {
-          goto pulsein_waited;
+          stack_variable_frame* vframe;
+          unsigned char* vptr = get_variable_frame(op, &vframe);
+          if (vframe->type == VAR_DIM_BYTE)
+          {
+            *ptr++ = (input ? WIRE_INPUT_BYTES : WIRE_OUTPUT_BYTES);
+            *ptr++ = vframe->header.frame_size - sizeof(stack_variable_frame);
+            OS_memset(vptr, 0, vframe->header.frame_size - sizeof(stack_variable_frame));
+            *(unsigned char**)ptr = vptr;
+            ptr += sizeof(unsigned char*);
+            break;
+          }
+          else if (input)
+          {
+            *vptr = 0;
+            *ptr++ = WIRE_INPUT_BYTES;
+            *ptr++ = 1;
+            *(unsigned char**)ptr = vptr;
+            ptr += sizeof(unsigned char*);
+            break;
+          }
+        }
+        txtpos--;
+        VAR_TYPE val = expression(EXPR_COMMA);
+        if (error_num)
+        {
+          goto wire_error;
+        }
+        if (ptr > program_end && ptr[-1] == WIRE_OUTPUT)
+        {
+          *ptr++ = (val ? WIRE_HIGH : WIRE_LOW);
+        }
+        else if (!input)
+        {
+          *ptr++ = WIRE_OUTPUT_BYTE;
+          *ptr++ = val;
+        }
+        else
+        {
+          goto wire_error;
         }
         break;
     }
   }
-  P0 &= 0xFD; // DEBUG
-  return 0;
-pulsein_waited:
-  P0 &= 0xFD; // DEBUG
-  P0 |= 0x02; // DEBUG
-  
-  // Wait for new pulse to start, and pin to be 'a'
-  for (; count < timeout; count++)
+wire_error:
+  if (!error_num)
   {
-    switch (major)
+    error_num = ERROR_GENERAL;
+  }
+  return;
+
+wire_parse_done:;
+  // We now have an fast expression to manipulate the pins. Do it.
+  // We inline all the pin operations to keep the time down.
+  const unsigned char* end = ptr;
+  unsigned char major = 0;
+  unsigned char dbit = 1;
+  unsigned char high = 0;
+  for (ptr = program_end; ptr < end; )
+  {
+    switch (*ptr++)
     {
-      case 0:
-#ifdef SIMULATE_PINS
-        P0 = level;
-#endif
-        if ((P0 & minor) == level)
+      case WIRE_PIN:
+      {
+        unsigned char pin = *ptr++;
+        major = PIN_MAJOR(pin);
+        dbit = 1 << PIN_MINOR(pin);
+        switch (major)
         {
-          goto pulsein_start;
+          case 0:
+            P0SEL &= ~dbit;
+            APCFG &= ~dbit;
+            break;
+          case 1:
+            P1SEL &= ~dbit;
+            break;
+          case 2:
+            P2SEL &= ~dbit;
+            break;
         }
         break;
-      case 1:
-#ifdef SIMULATE_PINS
-        P1 = level;
-#endif
-        if ((P1 & minor) == level)
+      }
+      case WIRE_OUTPUT:
+        switch (major)
         {
-          goto pulsein_start;
+          case 0:
+            P0DIR |= dbit;
+            high = (P0 & dbit) ? 1 : 0;
+            break;
+          case 1:
+            P1DIR |= dbit;
+            high = (P1 & dbit) ? 1 : 0;
+            break;
+          case 2:
+            P2DIR |= dbit;
+            high = (P2 & dbit) ? 1 : 0;
+            break;
         }
         break;
-      case 2:
-#ifdef SIMULATE_PINS
-        P2 = level;
-#endif
-        if ((P2 & minor) == level)
+      case WIRE_INPUT:
+        switch (major)
         {
-          goto pulsein_start;
+          case 0:
+            P0DIR &= ~dbit;
+            P0INP |= dbit;
+            break;
+          case 1:
+            P1DIR &= ~dbit;
+            P1INP |= dbit;
+            break;
+          case 2:
+            P2DIR &= ~dbit;
+            P2INP |= dbit;
+            break;
         }
         break;
+      case WIRE_INPUT_PULLUP:
+        switch (major)
+        {
+          case 0:
+            P0DIR &= ~dbit;
+            P0INP &= ~dbit;
+            P2INP &= ~(1 << 5);
+            break;
+          case 1:
+            P1DIR &= ~dbit;
+            P1INP &= ~dbit;
+            P2INP &= ~(1 << 6);
+            break;
+          case 2:
+            P2DIR &= ~dbit;
+            P2INP &= ~dbit;
+            P2INP &= ~(1 << 7);
+            break;
+        }
+        break;
+      case WIRE_INPUT_PULLDOWN:
+        switch (major)
+        {
+          case 0:
+            P0DIR &= ~dbit;
+            P0INP &= ~dbit;
+            P2INP |= 1 << 5;
+            break;
+          case 1:
+            P1DIR &= ~dbit;
+            P1INP &= ~dbit;
+            P2INP |= 1 << 6;
+            break;
+          case 2:
+            P2DIR &= ~dbit;
+            P2INP &= ~dbit;
+            P2INP |= 1 << 7;
+            break;
+        }
+        break;
+      case WIRE_HIGH:
+      wire_high:
+        switch (major)
+        {
+          case 0:
+            P0 |= dbit;
+            break;
+          case 1:
+            P1 |= dbit;
+            break;
+          case 2:
+            P2 |= dbit;
+            break;
+        }
+        high = 1;
+        break;
+      case WIRE_LOW:
+      wire_low:
+        switch (major)
+        {
+          case 0:
+            P0 &= ~dbit;
+            break;
+          case 1:
+            P1 &= ~dbit;
+            break;
+          case 2:
+            P2 &= ~dbit;
+            break;
+        }
+        high = 0;
+        break;
+      case WIRE_OUTPUT_BYTE:
+        OS_delaymicroseconds(*ptr++);
+        if (ptr < end && *ptr == WIRE_OUTPUT_BYTE)
+        {
+          high = !high;
+          if (high)
+          {
+            goto wire_high;
+          }
+          else
+          {
+            goto wire_low;
+          }
+        }
+        break;
+      case WIRE_OUTPUT_BYTES:
+      {
+        unsigned char len = *ptr++;
+        unsigned char* data = *(unsigned char**)ptr;
+        ptr += sizeof(unsigned char);
+        while (len--)
+        {
+          OS_delaymicroseconds(*data++);
+          if (len)
+          {
+            high = !high;
+            if (high)
+            {
+              switch (major)
+              {
+                case 0:
+                  P0 &= ~dbit;
+                  break;
+                case 1:
+                  P1 &= ~dbit;
+                  break;
+                case 2:
+                  P2 &= ~dbit;
+                  break;
+              }
+            }
+            else
+            {
+              switch (major)
+              {
+                case 0:
+                  P0 &= ~dbit;
+                  break;
+                case 1:
+                  P1 &= ~dbit;
+                  break;
+                case 2:
+                  P2 &= ~dbit;
+                  break;
+              }
+            }
+          }
+        }
+      }
+      case WIRE_INPUT_BYTES:
+      {
+        unsigned short count;
+        unsigned char v;
+        unsigned char len = *ptr++;
+        unsigned char* data = *(unsigned char**)ptr;
+        ptr += sizeof(unsigned char*);
+        while (len--)
+        {
+          P0 ^= 2; // DEBUG
+          count = 1;
+          switch (major)
+          {
+            case 0:
+              v = P0 & dbit;
+              for (; v == (P0 & dbit) && count < 256; count++)
+                ;
+              break;
+            case 1:
+              v = P1 & dbit;
+              for (; v == (P1 & dbit && count < 256); count++)
+                ;
+              break;
+            case 2:
+              v = P2 & dbit;
+              for (; v == (P2 & dbit && count < 256); count++)
+                ;
+              break;
+          }
+#define COUNT_TO_USEC(C) (((C) * 370) >> 8) // Measured: each loop count takes 1.42us
+          count = COUNT_TO_USEC(count);
+          if (count > 255)
+          {
+            count = 0;
+          }
+          *data++ = count;
+        }
+        break;
+      }
+      default:
+        goto wire_error;
     }
   }
-  P0 &= 0xFD; // DEBUG
-  return 0;
-  
-pulsein_start:
-  timeout -= count;
-  P0 &= 0xFD; // DEBUG
-  P0 |= 0x02; // DEBUG
-  
-  // Count until pulse stops, and pin stops being 'a'
-  for (count = 1; count < timeout; count++)
-  {
-    switch (major)
-    {
-      case 0:
-#ifdef SIMULATE_PINS
-        P0 = ~level;
-#endif
-        if ((P0 & minor) != level)
-        {
-          P0 &= 0xFD; // DEBUG
-          return LOOPS_TO_USECS(count);
-        }
-        break;
-      case 1:
-#ifdef SIMULATE_PINS
-        P1 = ~level;
-#endif
-        if ((P1 & minor) != level)
-        {
-          return LOOPS_TO_USECS(count);
-        }
-        break;
-      case 2:
-#ifdef SIMULATE_PINS
-        P2 = ~level;
-#endif
-        if ((P2 & minor) != level)
-        {
-          return LOOPS_TO_USECS(count);
-        }
-        break;
-    }
-  }
-  P0 &= 0xFD; // DEBUG
-  return 0;
+  return;
 }
 
 //

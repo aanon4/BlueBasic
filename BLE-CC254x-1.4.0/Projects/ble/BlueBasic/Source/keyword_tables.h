@@ -41,7 +41,6 @@ static const unsigned char keywords_2[] =
   'P','R','I','N','T',KW_PRINT,
   'P','U','L','L','D','O','W','N',PM_PULLDOWN,
   'P','U','L','L','U','P',PM_PULLUP,
-  'P','U','L','S','E','I','N','(',FUNC_PULSEIN,
   0
 };
 static const unsigned char keywords_3[] =
@@ -134,6 +133,7 @@ static const unsigned char keywords_9[] =
   '0','X',FUNC_HEX,
   '=','=',OP_EQEQ,
   '=',OP_EQ,
+  'W','I','R','E',KW_WIRE,
   'W','R','I','T','E','N','O','R','S','P',BLE_WRITENORSP,
   'W','R','I','T','E',BLE_WRITE,
   0

@@ -401,17 +401,9 @@ long OS_millis(void)
 }
 
 #pragma optimize=none
-void OS_delaymicroseconds(long micros)
+void OS_delaymicroseconds(short micros)
 {
+  // An empty loop is pretty accurate it turns out
   while (micros-- > 0)
-  {
-    /* 32 NOPs == 1 usecs */
-    asm("nop"); asm("nop"); asm("nop"); asm("nop"); asm("nop");
-    asm("nop"); asm("nop"); asm("nop"); asm("nop"); asm("nop");
-    asm("nop"); asm("nop"); asm("nop"); asm("nop"); asm("nop");
-    asm("nop"); asm("nop"); asm("nop"); asm("nop"); asm("nop");
-    asm("nop"); asm("nop"); asm("nop"); asm("nop"); asm("nop");
-    asm("nop"); asm("nop"); asm("nop"); asm("nop"); asm("nop");
-    asm("nop"); asm("nop");
-  }
+    ;
 }

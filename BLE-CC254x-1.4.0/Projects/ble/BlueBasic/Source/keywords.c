@@ -106,9 +106,9 @@ struct keyword
   { "LSB", "SPI_LSB" },
   { "MASTER", "SPI_MASTER" },
   { "SLAVE", "SPI_SLAVE" },
-  { "PULSEIN(", "FUNC_PULSEIN" },
   { "ACTIVE", "BLE_ACTIVE" },
   { "DUPLICATES", "BLE_DUPLICATES" },
+  { "WIRE", "KW_WIRE" },
   //
   // Constants
   //

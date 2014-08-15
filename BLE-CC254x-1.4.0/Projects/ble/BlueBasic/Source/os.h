@@ -33,7 +33,7 @@
 #define OS_millis()           (time(0) * 1000)
 #define OS_interrupt_attach(A, B) 0
 #define OS_interrupt_detach(A)    0
-#define OS_delaymicroseconds(A)
+#define OS_delaymicroseconds(A) do { } while ((A), 0)
 
 extern void OS_prompt_buffer(unsigned char* start, unsigned char* end);
 extern char OS_prompt_available(void);
@@ -229,7 +229,7 @@ extern char OS_interrupt_detach(unsigned char pin);
 extern void OS_autorun_set(unsigned char autorun);
 extern char OS_autorun_get(void);
 extern long OS_millis(void);
-extern void OS_delaymicroseconds(long micros);
+extern void OS_delaymicroseconds(short micros);
 
 extern void interpreter_devicefound(unsigned char addtype, unsigned char* address, signed char rssi, unsigned char eventtype, unsigned char len, unsigned char* data);
 
