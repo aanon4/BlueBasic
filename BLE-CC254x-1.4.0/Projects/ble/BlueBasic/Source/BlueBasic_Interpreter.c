@@ -54,6 +54,7 @@ enum
   ERROR_OOM,
   ERROR_TOOBIG,
   ERROR_BADPIN,
+  ERROR_DIRECT,
 };
 
 static const char* const error_msgs[] =
@@ -65,6 +66,7 @@ static const char* const error_msgs[] =
   "Out of memory",
   "Too big",
   "Bad pin",
+  "Not in direct",
 };
 
 static const char initmsg[]           = "BlueBasic " kVersion;
@@ -130,6 +132,7 @@ enum
   KW_ANALOGREFERENCE,
   KW_ANALOGRESOLUTION,
   KW_WIRE,
+  KW_I2C,
 
   // -----------------------
   // Operators
@@ -172,6 +175,7 @@ enum
   ST_STEP,
   TI_STOP,
   TI_REPEAT,
+
   PM_PULLUP,
   PM_PULLDOWN,
   PM_INPUT,
@@ -182,6 +186,9 @@ enum
   PM_INTERNAL,
   PM_EXTERNAL,
   PM_TIMEOUT,
+  PM_WAIT,
+  PM_PULSE,
+
   BLE_ONREAD,
   BLE_ONWRITE,
   BLE_ONCONNECT,
@@ -201,6 +208,7 @@ enum
   BLE_FUNC_BTGET,
   BLE_ACTIVE,
   BLE_DUPLICATES,
+
   SPI_TRANSFER,
   SPI_MSB,
   SPI_LSB,
@@ -293,24 +301,33 @@ enum
 // WIRE commands
 enum
 {
-  WIRE_PIN = 1,
-  WIRE_OUTPUT,
-  WIRE_INPUT,
-  WIRE_INPUT_PULLUP,
-  WIRE_INPUT_PULLDOWN,
-  WIRE_ADC,
-  WIRE_HIGH,
-  WIRE_LOW,
-  WIRE_TIMEOUT,
-  WIRE_OUTPUT_BYTES,
-  WIRE_OUTPUT_SHORT,
-  WIRE_INPUT_BYTES,
-  WIRE_INPUT_INT,
-  WIRE_INPUT_WAIT_SHORT,
-};
+  WIRE_CMD_MASK = 0x07,
 
-#define WIRE_COUNT_TO_USEC(C) (((C) * 370) >> 8) // Measured: each loop count takes 1.42us
-#define WIRE_USEC_TO_COUNT(U) (((U) << 8) / 370)
+  WIRE_PIN_OUTPUT = 1,
+  WIRE_PIN_INPUT = 2,
+  WIRE_PIN_HIGH = 3,
+  WIRE_PIN_LOW = 4,
+  
+  WIRE_PIN_GENERAL = 0,
+  
+  WIRE_PIN = 0x00,
+  WIRE_INPUT = 0x08,
+  WIRE_OUTPUT = 0x10,
+  WIRE_HIGH = 0x18,
+  WIRE_LOW = 0x20,
+  WIRE_INPUT_NORMAL = 0x28,
+  WIRE_INPUT_PULLUP = 0x30,
+  WIRE_INPUT_PULLDOWN = 0x38,
+  WIRE_INPUT_ADC = 0x48,
+  WIRE_TIMEOUT = 0x50,
+  WIRE_WAIT_TIME = 0x58,
+  WIRE_WAIT_HIGH = 0x60,
+  WIRE_WAIT_LOW = 0x68,
+  WIRE_INPUT_PULSE = 0x70,
+  WIRE_INPUT_READ = 0x78,
+  WIRE_METADATA = 0x80,
+};
+#define WIRE_CASE(C)  ((C) >> 3)
 
 #include "keyword_tables.h"
 
@@ -414,14 +431,17 @@ static unsigned char PERCFG;
 static unsigned char spiChannel;
 static unsigned char analogReference;
 static unsigned char analogResolution = 0x30; // 14-bits
+static unsigned char i2cScl;
+static unsigned char i2cSda;
 
 static void pin_write(unsigned char pin, unsigned char val);
 static VAR_TYPE pin_read(unsigned char major, unsigned char minor);
 static unsigned char pin_parse(void);
 static void pin_wire_parse(void);
 static void pin_wire(unsigned char* start, unsigned char* end);
-#define PIN_MAJOR(P)  ((P) >> 4)
-#define PIN_MINOR(P)  ((P) & 15)
+#define PIN_MAKE(A,I) (((A) << 6) | ((I) << 3))
+#define PIN_MAJOR(P)  ((P) >> 6)
+#define PIN_MINOR(P)  (((P) >> 3) & 7)
 
 static VAR_TYPE expression(unsigned char mode);
 #define EXPRESSION_STACK_SIZE 8
@@ -801,7 +821,7 @@ static void printline(unsigned char indent)
               OS_putchar(c);
             }
             c = begin[-2];
-            if (c != '(')
+            if (c != '(' && *list_line != ',')
             {
               OS_putchar(WS_SPACE);
               c = WS_SPACE;
@@ -896,6 +916,37 @@ static unsigned char* get_variable_frame(char name, stack_variable_frame** frame
   }
   *frame = &normal_variable;
   return (unsigned char*)VARIABLE_INT_ADDR(name);
+}
+
+//
+// Parse the variable name and return a pointer to its memory and its size.
+//
+static unsigned char* parse_variable_address(stack_variable_frame** vframe)
+{
+  unsigned char* ptr;
+  const unsigned char name = *txtpos;
+
+  if (name < 'A' || name > 'Z')
+  {
+    return NULL;
+  }
+  txtpos++;
+  ptr = get_variable_frame(name, vframe);
+  if ((*vframe)->type == VAR_DIM_BYTE)
+  {
+    if (*txtpos != '(')
+    {
+      return NULL;
+    }
+    txtpos++;
+    VAR_TYPE index = expression(EXPR_BRACES);
+    if (error_num || index < 0 || index >= (*vframe)->header.frame_size - sizeof(stack_variable_frame))
+    {
+      return NULL;
+    }
+    ptr += index;
+  }
+  return ptr;
 }
 
 //
@@ -1698,6 +1749,8 @@ interperate:
       goto cmd_analogresolution;
     case KW_WIRE:
       goto cmd_wire;
+    case KW_I2C:
+      goto cmd_i2c;
   }
   goto qwhat;
 
@@ -1713,6 +1766,10 @@ qtoobig:
   
 qbadpin:
   error_num = ERROR_BADPIN;
+  goto print_error_or_ok;
+
+qdirect:
+  error_num = ERROR_DIRECT;
   goto print_error_or_ok;
 
 qwhat:
@@ -2041,69 +2098,33 @@ assignpin:
 //
 assignment:
   {
-    unsigned char var;
     stack_variable_frame* frame;
     unsigned char* ptr;
-    VAR_TYPE idx;
 
-    var = *txtpos;
-    if (var < 'A' || var > 'Z')
+    ptr = parse_variable_address(&frame);
+    if (!ptr || *txtpos != OP_EQ)
     {
       goto qwhat;
     }
     txtpos++;
-
-    ptr = get_variable_frame(var, &frame);
-    
-    switch (frame->type)
+    val = expression(EXPR_NORMAL);
+    if (error_num)
     {
-      case VAR_INT:
-        if (*txtpos != OP_EQ)
-        {
-          goto qwhat;
-        }
-        txtpos++;
-        val = expression(EXPR_NORMAL);
-        if (error_num)
-        {
-          goto qwhat;
-        }
-        *(VAR_TYPE*)ptr = val;
-        goto var_done;
-
-      case VAR_DIM_BYTE:
-        ignore_blanks();
-        if (*txtpos != '(')
-        {
-          goto qwhat;
-        }
-        txtpos++;
-        idx = expression(EXPR_BRACES);
-        if (error_num)
-        {
-          goto qwhat;
-        }
-        if (idx < 0 || idx >= frame->header.frame_size - sizeof(stack_variable_frame) || *txtpos != OP_EQ)
-        {
-          goto qwhat;
-        }
-        txtpos++;
-        val = expression(EXPR_NORMAL);
-        if (error_num)
-        {
-          goto qwhat;
-        }
-        ptr[idx] = (unsigned char)val;
-var_done:
-        if (frame->ble)
-        {
-          ble_notify_assign(frame->ble);
-        }
-        goto run_next_statement;
-
-      default:
-        goto qwhat;
+      goto qwhat;
     }
+    if (frame->type == VAR_DIM_BYTE)
+    {
+      *ptr = val;
+    }
+    else
+    {
+      *(VAR_TYPE*)ptr = val;
+    }
+    if (frame->ble)
+    {
+      ble_notify_assign(frame->ble);
+    }
+    goto run_next_statement;
   }
 
 //
@@ -2436,10 +2457,11 @@ cmd_autorun:
 cmd_pinmode:
   {
     unsigned char pinMode;
-    unsigned char cmd[3];
+    unsigned char cmds[4];
+    unsigned char* cmd = cmds;
     
-    cmd[0] = WIRE_PIN;
-    cmd[1] = pin_parse();
+    *cmd++ = WIRE_PIN;
+    *cmd++ = pin_parse();
     if (error_num)
     {
       goto qwhat;
@@ -2449,19 +2471,20 @@ cmd_pinmode:
     switch (*txtpos++)
     {
       case PM_INPUT:
+        *cmd++ = WIRE_INPUT;
         pinMode = *txtpos++;
         if (pinMode == NL)
         {
+          *cmd++ = WIRE_INPUT_NORMAL;
           txtpos--;
-          cmd[2] = WIRE_INPUT;
         }
         else if (pinMode == PM_PULLUP)
         {
-          cmd[2] = WIRE_INPUT_PULLUP;
+          *cmd++ = WIRE_INPUT_PULLUP;
         }
         else if (pinMode == PM_PULLDOWN)
         {
-          cmd[2] = WIRE_INPUT_PULLDOWN;
+          *cmd++ = WIRE_INPUT_PULLDOWN;
         }
         else
         {
@@ -2474,17 +2497,18 @@ cmd_pinmode:
         {
           goto qwhat;
         }
-        cmd[2] = WIRE_ADC;
+        *cmd++ = WIRE_INPUT;
+        *cmd++ = WIRE_INPUT_ADC;
         break;
       case PM_OUTPUT:
-        cmd[2] = WIRE_OUTPUT;
+        *cmd++ = WIRE_OUTPUT;
         break;
       default:
         txtpos--;
         goto qwhat;
     }
     
-    pin_wire(cmd, cmd + sizeof(cmd));
+    pin_wire(cmds, cmd);
     if (error_num)
     {
       goto qwhat;
@@ -2622,9 +2646,13 @@ cmd_detachint:
   }
   
 //
-// WIRE ([<pin>] OUTPUT|INPUT [PULLUP|PULLDOWN] HIGH|LOW [<array>|<value, value, ...>])*
+// WIRE ...
 //
 cmd_wire:
+  if (txtpos >= program_end)
+  {
+    goto qdirect;
+  }
   pin_wire_parse();
   if (error_num)
   {
@@ -2632,8 +2660,11 @@ cmd_wire:
   }
   goto run_next_statement;
 
-  unsigned char ch;
 ble_gatt:
+  if (txtpos >= program_end)
+  {
+    goto qdirect;
+  }
   switch(*txtpos++)
   {
     case BLE_SERVICE:
@@ -2663,8 +2694,8 @@ ble_gatt:
               goto value_done;
           }
         }
-value_done:
-        ch = *--txtpos;
+      value_done:;
+        const unsigned char ch = *--txtpos;
         if (ch >= 'A' && ch <= 'Z')
         {
           unsigned char vname;
@@ -2788,213 +2819,215 @@ ble_scan:
   // Fall through ...
 
 ble_advert:
-  if (!ble_adptr)
   {
-    ble_adptr = ble_adbuf;
-  }
-  ch = *txtpos;
-  switch (ch)
-  {
-    case BLE_LIMITED:
-      if (ble_adptr + 3 > ble_adbuf + sizeof(ble_adbuf))
-      {
-        goto qtoobig;
-      }
-      *ble_adptr++ = 2;
-      *ble_adptr++ = GAP_ADTYPE_FLAGS;
-      *ble_adptr++ = GAP_ADTYPE_FLAGS_LIMITED | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED;
-      txtpos++;
-      break;
-    case BLE_GENERAL:
-      if (ble_adptr + 3 > ble_adbuf + sizeof(ble_adbuf))
-      {
-        goto qtoobig;
-      }
-      *ble_adptr++ = 2;
-      *ble_adptr++ = GAP_ADTYPE_FLAGS;
-      *ble_adptr++ = GAP_ADTYPE_FLAGS_GENERAL | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED;
-      txtpos++;
-      break;
-    case BLE_NAME:
-      {
-        ch = *++txtpos;
+    if (!ble_adptr)
+    {
+      ble_adptr = ble_adbuf;
+    }
+    unsigned char ch = *txtpos;
+    switch (ch)
+    {
+      case BLE_LIMITED:
+        if (ble_adptr + 3 > ble_adbuf + sizeof(ble_adbuf))
+        {
+          goto qtoobig;
+        }
+        *ble_adptr++ = 2;
+        *ble_adptr++ = GAP_ADTYPE_FLAGS;
+        *ble_adptr++ = GAP_ADTYPE_FLAGS_LIMITED | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED;
+        txtpos++;
+        break;
+      case BLE_GENERAL:
+        if (ble_adptr + 3 > ble_adbuf + sizeof(ble_adbuf))
+        {
+          goto qtoobig;
+        }
+        *ble_adptr++ = 2;
+        *ble_adptr++ = GAP_ADTYPE_FLAGS;
+        *ble_adptr++ = GAP_ADTYPE_FLAGS_GENERAL | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED;
+        txtpos++;
+        break;
+      case BLE_NAME:
+        {
+          ch = *++txtpos;
+          if (ch != SQUOTE && ch != DQUOTE)
+          {
+            goto qwhat;
+          }
+          else
+          {
+            short len;
+            short alen;
+
+            len = find_quoted_string();
+            if (len == -1)
+            {
+              goto qwhat;
+            }
+            if (ble_adptr + 3 > ble_adbuf + sizeof(ble_adbuf))
+            {
+              goto qtoobig;
+            }
+            else
+            {
+              alen = ble_adbuf + sizeof(ble_adbuf) - ble_adptr - 2;
+              if (alen > len)
+              {
+                *ble_adptr++ = len + 1;
+                *ble_adptr++ = GAP_ADTYPE_LOCAL_NAME_COMPLETE;
+                alen = len;
+              }
+              else
+              {
+                *ble_adptr++ = alen + 1;
+                *ble_adptr++ = GAP_ADTYPE_LOCAL_NAME_SHORT;
+              }
+              OS_memcpy(ble_adptr, txtpos, alen);
+              ble_adptr += alen;
+              GGS_SetParameter(GGS_DEVICE_NAME_ATT, len < GAP_DEVICE_NAME_LEN ? len : GAP_DEVICE_NAME_LEN, txtpos);
+              txtpos += len + 1;
+            }
+          }
+        }
+        break;
+      case BLE_CUSTOM:
+        {
+          unsigned char* lenptr;
+          if (ble_adptr == NULL)
+          {
+            goto qwhat;
+          }
+          if (ble_adptr + 1 > ble_adbuf + sizeof(ble_adbuf))
+          {
+            goto qtoobig;
+          }
+          lenptr = ble_adptr++;
+
+          for (;;)
+          {
+            ch = *++txtpos;
+            if (ch == NL)
+            {
+              *lenptr = (unsigned char)(ble_adptr - lenptr - 1);
+              break;
+            }
+            else if (ch == SQUOTE || ch == DQUOTE)
+            {
+              unsigned short v;
+              txtpos++;
+              for (;;)
+              {
+                ignore_blanks();
+                v = parse_int(2, 16);
+                if (error_num)
+                {
+                  if (*txtpos == ch)
+                  {
+                    error_num = ERROR_OK;
+                    break;
+                  }
+                  goto qwhat;
+                }
+                if (ble_adptr + 1 > ble_adbuf + sizeof(ble_adbuf))
+                {
+                  goto qtoobig;
+                }
+                *ble_adptr++ = (unsigned char)v;
+              }
+            }
+            else if (ch >= 'A' && ch <= 'Z')
+            {
+              stack_variable_frame* frame;
+              unsigned char* ptr;
+              
+              if (txtpos[1] != NL && txtpos[1] != WS_SPACE)
+              {
+                goto qwhat;
+              }
+
+              ptr = get_variable_frame(ch, &frame);
+              if (frame->type != VAR_DIM_BYTE)
+              {
+                goto qwhat;
+              }
+              if (ble_adptr + frame->header.frame_size - sizeof(stack_variable_frame) > ble_adbuf + sizeof(ble_adbuf))
+              {
+                goto qtoobig;
+              }
+              for (ch = sizeof(stack_variable_frame); ch < frame->header.frame_size; ch++)
+              {
+                *ble_adptr++ = *ptr++;
+              }
+            }
+            else if (ch != WS_SPACE)
+            {
+              goto qwhat;
+            }
+          }
+        }
+        break;
+      case KW_END:
+        if (ble_adptr == ble_adbuf)
+        {
+          ble_adptr = NULL;
+          goto qwhat;
+        }
+        if (ble_isadvert)
+        {
+          GAPRole_SetParameter(_GAPROLE(BLE_ADVERT_DATA), 0, ble_adptr - ble_adbuf, ble_adbuf);
+          GAPRole_SetParameter(_GAPROLE(BLE_ADVERT_ENABLED), 1, 0, NULL);
+        }
+        else
+        {
+          GAPRole_SetParameter(_GAPROLE(BLE_SCAN_RSP_DATA), 0, ble_adptr - ble_adbuf, ble_adbuf);
+        }
+        ble_adptr = NULL;
+        txtpos++;
+        break;
+      default:
         if (ch != SQUOTE && ch != DQUOTE)
         {
           goto qwhat;
         }
         else
         {
-          short len;
-          short alen;
-
-          len = find_quoted_string();
-          if (len == -1)
+          ch = ble_get_uuid();
+          if (!ch)
           {
             goto qwhat;
           }
-          if (ble_adptr + 3 > ble_adbuf + sizeof(ble_adbuf))
+          if (ble_adptr + 2 + ble_uuid_len > ble_adbuf + sizeof(ble_adbuf))
           {
             goto qtoobig;
           }
-          else
+          *ble_adptr++ = ble_uuid_len + 1;
+          switch (ble_uuid_len)
           {
-            alen = ble_adbuf + sizeof(ble_adbuf) - ble_adptr - 2;
-            if (alen > len)
-            {
-              *ble_adptr++ = len + 1;
-              *ble_adptr++ = GAP_ADTYPE_LOCAL_NAME_COMPLETE;
-              alen = len;
-            }
-            else
-            {
-              *ble_adptr++ = alen + 1;
-              *ble_adptr++ = GAP_ADTYPE_LOCAL_NAME_SHORT;
-            }
-            OS_memcpy(ble_adptr, txtpos, alen);
-            ble_adptr += alen;
-            GGS_SetParameter(GGS_DEVICE_NAME_ATT, len < GAP_DEVICE_NAME_LEN ? len : GAP_DEVICE_NAME_LEN, txtpos);
-            txtpos += len + 1;
+            case 2:
+              *ble_adptr++ = GAP_ADTYPE_16BIT_COMPLETE;
+              break;
+            case 4:
+              *ble_adptr++ = GAP_ADTYPE_32BIT_COMPLETE;
+              break;
+            case 16:
+              *ble_adptr++ = GAP_ADTYPE_128BIT_COMPLETE;
+              break;
+            default:
+              goto qwhat;
           }
-        }
-      }
-      break;
-    case BLE_CUSTOM:
-      {
-        unsigned char* lenptr;
-        if (ble_adptr == NULL)
-        {
-          goto qwhat;
-        }
-        if (ble_adptr + 1 > ble_adbuf + sizeof(ble_adbuf))
-        {
-          goto qtoobig;
-        }
-        lenptr = ble_adptr++;
-
-        for (;;)
-        {
-          ch = *++txtpos;
-          if (ch == NL)
+          OS_memcpy(ble_adptr, ble_uuid, ble_uuid_len);
+          ignore_blanks();
+          if (*txtpos == BLE_MORE)
           {
-            *lenptr = (unsigned char)(ble_adptr - lenptr - 1);
-            break;
-          }
-          else if (ch == SQUOTE || ch == DQUOTE)
-          {
-            unsigned short v;
+            ble_adptr[-1] &= 0xFE;
             txtpos++;
-            for (;;)
-            {
-              ignore_blanks();
-              v = parse_int(2, 16);
-              if (error_num)
-              {
-                if (*txtpos == ch)
-                {
-                  error_num = ERROR_OK;
-                  break;
-                }
-                goto qwhat;
-              }
-              if (ble_adptr + 1 > ble_adbuf + sizeof(ble_adbuf))
-              {
-                goto qtoobig;
-              }
-              *ble_adptr++ = (unsigned char)v;
-            }
           }
-          else if (ch >= 'A' && ch <= 'Z')
-          {
-            stack_variable_frame* frame;
-            unsigned char* ptr;
-            
-            if (txtpos[1] != NL && txtpos[1] != WS_SPACE)
-            {
-              goto qwhat;
-            }
-
-            ptr = get_variable_frame(ch, &frame);
-            if (frame->type != VAR_DIM_BYTE)
-            {
-              goto qwhat;
-            }
-            if (ble_adptr + frame->header.frame_size - sizeof(stack_variable_frame) > ble_adbuf + sizeof(ble_adbuf))
-            {
-              goto qtoobig;
-            }
-            for (ch = sizeof(stack_variable_frame); ch < frame->header.frame_size; ch++)
-            {
-              *ble_adptr++ = *ptr++;
-            }
-          }
-          else if (ch != WS_SPACE)
-          {
-            goto qwhat;
-          }
+          ble_adptr += ble_uuid_len;
         }
-      }
-      break;
-    case KW_END:
-      if (ble_adptr == ble_adbuf)
-      {
-        ble_adptr = NULL;
-        goto qwhat;
-      }
-      if (ble_isadvert)
-      {
-        GAPRole_SetParameter(_GAPROLE(BLE_ADVERT_DATA), 0, ble_adptr - ble_adbuf, ble_adbuf);
-        GAPRole_SetParameter(_GAPROLE(BLE_ADVERT_ENABLED), 1, 0, NULL);
-      }
-      else
-      {
-        GAPRole_SetParameter(_GAPROLE(BLE_SCAN_RSP_DATA), 0, ble_adptr - ble_adbuf, ble_adbuf);
-      }
-      ble_adptr = NULL;
-      txtpos++;
-      break;
-    default:
-      if (ch != SQUOTE && ch != DQUOTE)
-      {
-        goto qwhat;
-      }
-      else
-      {
-        ch = ble_get_uuid();
-        if (!ch)
-        {
-          goto qwhat;
-        }
-        if (ble_adptr + 2 + ble_uuid_len > ble_adbuf + sizeof(ble_adbuf))
-        {
-          goto qtoobig;
-        }
-        *ble_adptr++ = ble_uuid_len + 1;
-        switch (ble_uuid_len)
-        {
-          case 2:
-            *ble_adptr++ = GAP_ADTYPE_16BIT_COMPLETE;
-            break;
-          case 4:
-            *ble_adptr++ = GAP_ADTYPE_32BIT_COMPLETE;
-            break;
-          case 16:
-            *ble_adptr++ = GAP_ADTYPE_128BIT_COMPLETE;
-            break;
-          default:
-            goto qwhat;
-        }
-        OS_memcpy(ble_adptr, ble_uuid, ble_uuid_len);
-        ignore_blanks();
-        if (*txtpos == BLE_MORE)
-        {
-          ble_adptr[-1] &= 0xFE;
-          txtpos++;
-        }
-        ble_adptr += ble_uuid_len;
-      }
-      break;
+        break;
+    }
+    goto run_next_statement;
   }
-  goto run_next_statement;
 
 //
 // BTSET <paramater> <value>|<array>
@@ -3137,7 +3170,7 @@ cmd_spi:
         goto qwhat;
       }
       ignore_blanks();
-      ch = *txtpos;
+      const unsigned char ch = *txtpos;
       if (ch < 'A' || ch > 'Z')
       {
         goto qwhat;
@@ -3185,6 +3218,186 @@ cmd_spi:
     {
       goto qwhat;
     }
+  }
+  goto run_next_statement;
+  
+//
+// I2C MASTER <scl pin> <sda pin>
+//  or
+// I2C TRANSFER WRITE <data, data, ...> [READ <variable>|<array>]
+//  note: The CC2541 has i2c hardware which we are not yet using.
+//
+cmd_i2c:
+  switch (*txtpos++)
+  {
+    case SPI_MASTER:
+    {
+      unsigned char* ptr = program_end;
+
+      i2cScl = pin_parse();
+      i2cSda = pin_parse();
+      if (error_num)
+      {
+        break;
+      }
+      // Setup the i2c port so everything is INPUT_PULLUP.
+      // We the outputs to LOW so when the pin is set to OUTPUT, it
+      // will be driven low by default.
+      *ptr++ = WIRE_PIN_INPUT | i2cScl;
+      *ptr++ = WIRE_INPUT_PULLUP;
+      *ptr++ = WIRE_LOW;
+      *ptr++ = WIRE_PIN_INPUT | i2cSda;
+      *ptr++ = WIRE_INPUT_PULLUP;
+      *ptr++ = WIRE_LOW;
+      
+      pin_wire(program_end, ptr);
+      break;
+    }
+    case SPI_TRANSFER:
+    {
+      unsigned char* rdata = NULL;
+      unsigned char* data = NULL;
+      unsigned char len = 0;
+      unsigned char i = 0;
+
+      if (*txtpos != BLE_WRITE)
+      {
+        goto qwhat;
+      }
+      txtpos++;
+
+      unsigned char* ptr = program_end;
+
+      unsigned char cpin = i2cSda;
+      unsigned char cdata = 1;
+#define WIRE_SDA_LOW() if (cdata) { cdata = 0; if (cpin != i2cSda) { cpin = i2cSda; *ptr++ = WIRE_PIN_OUTPUT|cpin; } else { *ptr++ = WIRE_OUTPUT; } }
+#define WIRE_SCL_LOW() if (cpin != i2cScl) { cpin = i2cScl; *ptr++ = WIRE_PIN_OUTPUT | cpin; } else { *ptr++ = WIRE_OUTPUT; }
+#define WIRE_SDA_HIGH() if (!cdata) { cdata = 1; if (cpin != i2cSda) { cpin = i2cSda; *ptr++ = WIRE_PIN_INPUT | cpin; } else { *ptr++ = WIRE_INPUT; } }
+#define WIRE_SCL_HIGH() if (cpin != i2cScl) { cpin = i2cScl; *ptr++ = WIRE_PIN_INPUT | cpin; } else { *ptr++ = WIRE_INPUT; }
+#define WIRE_SCL_WAIT() *ptr++ = WIRE_WAIT_HIGH; *ptr++ = 0
+#define WIRE_SDA_READ(P) if (cpin != i2cSda) { cpin = i2cSda; *ptr++ = WIRE_PIN_INPUT | cpin; } *ptr++ = WIRE_INPUT_READ; *ptr++ = 0
+
+      // Start
+      WIRE_SDA_LOW();
+      WIRE_SCL_LOW();
+      
+      // Encode data we want to write
+      for (;;)
+      {
+        unsigned char b;
+        const unsigned char c = *txtpos;
+        if (c == NL)
+        {
+          goto i2c_end;
+        }
+        if (c == BLE_READ)
+        {
+          txtpos++;
+          break;
+        }
+        const unsigned char d = expression(EXPR_COMMA);
+        if (error_num)
+        {
+          goto qwhat;
+        }
+        for (b = 128; b; b >>= 1)
+        {
+          if (d & b)
+          {
+            WIRE_SDA_HIGH();
+          }
+          else
+          {
+            WIRE_SDA_LOW();
+          }
+          WIRE_SCL_HIGH();
+          WIRE_SCL_WAIT();
+          WIRE_SCL_LOW();
+        }
+        // Ack
+        WIRE_SDA_HIGH();
+        WIRE_SCL_HIGH();
+      }
+
+      // Encode data we want to read
+      stack_variable_frame* vframe;
+      i = *txtpos;
+      if (i < 'A' || i > 'Z')
+      {
+        goto qwhat;
+      }
+      txtpos++;
+      rdata = get_variable_frame(i, &vframe);
+      if (vframe->type == VAR_DIM_BYTE)
+      {
+        len = vframe->header.frame_size - sizeof(stack_variable_frame);
+        OS_memset(rdata, 0, len);
+      }
+      else
+      {
+        *(VAR_TYPE*)rdata = 0;
+        len = 1;
+      }
+      
+      // Read bits
+      WIRE_SCL_LOW();
+      WIRE_SDA_HIGH();
+      data = ptr;
+      for (i = len; i--; )
+      {
+        unsigned char b;
+        for (b = 8; b; b--)
+        {
+          WIRE_SCL_HIGH();
+          WIRE_SCL_WAIT();
+          WIRE_SDA_READ();
+          WIRE_SCL_LOW();
+        }
+        // Ack
+        WIRE_SDA_LOW();
+        WIRE_SCL_HIGH();
+        WIRE_SCL_LOW();
+        WIRE_SDA_HIGH();
+      }
+i2c_end:
+      // End
+      WIRE_SDA_LOW();
+      WIRE_SCL_HIGH();
+      WIRE_SDA_HIGH();
+      
+      pin_wire(program_end, ptr);
+      if (error_num)
+      {
+        break;
+      }
+      // If we read data, reassemble it
+      if (rdata)
+      {
+        unsigned char v = 0;
+        unsigned idx = 0;
+        len *= 8;
+        for (idx = 0; data < ptr && idx < len; )
+        {
+          if (*data++ == WIRE_INPUT_READ)
+          {
+            v = (v << 1) | (*data++ ? 1 : 0);
+            if (!(++idx & 7))
+            {
+              *rdata++ = v;
+              v = 0;
+            }
+          }
+        }
+      }
+      break;
+    }
+    default:
+      txtpos--;
+      goto qwhat;
+  }
+  if (error_num)
+  {
+    goto qwhat;
   }
   goto run_next_statement;
 
@@ -3241,6 +3454,11 @@ static unsigned char pin_parse(void)
 {
   unsigned char major;
   unsigned char minor;
+
+  if (error_num)
+  {
+    return 0;
+  }
   
   major = *txtpos++;
   if (major < KW_PIN_P0 || major > KW_PIN_P2)
@@ -3267,7 +3485,7 @@ static unsigned char pin_parse(void)
   }
 #endif
 #endif
-  return ((major - KW_PIN_P0) << 4) | minor;
+  return PIN_MAKE(major - KW_PIN_P0, minor);
 badpin:
   error_num = ERROR_BADPIN;
   return 0;
@@ -3324,13 +3542,20 @@ static VAR_TYPE pin_read(unsigned char major, unsigned char minor)
 }
 
 //
-// Execute a wire command. This manipulates a pin(s) input and output quickly
-// and can be used for signalling devices.
+// Execute a wire command.
+// Essentially it compiles the BASIC wire representation into a set of instructions which
+// can be executed quickly to read and write pins.
 //
 static void pin_wire_parse(void)
 {
   unsigned char* ptr = program_end;
   unsigned char input = 0;
+  unsigned char doneInput = 0;
+  struct wire_var
+  {
+    unsigned char* var;
+    struct wire_var* next;
+  }* head = NULL;
 
   for (;;)
   {
@@ -3338,8 +3563,21 @@ static void pin_wire_parse(void)
     switch (op)
     {
       case NL:
+        // If the next line is also a WIRE, we continue building.
+        if (txtpos[sizeof(LINENUM) + sizeof(char)] == KW_WIRE)
+        {
+          txtpos += sizeof(LINENUM) + sizeof(char);
+          break;
+        }
         txtpos--;
         pin_wire(program_end, ptr);
+        if (!error_num)
+        {
+          for (; head; head = head->next)
+          {
+            *head->var = *((unsigned char*)head + sizeof(struct wire_var) + 1) ? 1 : 0;
+          }
+        }
         return;
       case WS_SPACE:
       case ',':
@@ -3361,11 +3599,16 @@ static void pin_wire_parse(void)
         break;
       case PM_INPUT:
         *ptr++ = WIRE_INPUT;
+        if (!doneInput)
+        {
+          *ptr++ = WIRE_INPUT_NORMAL;
+          doneInput = 1;
+        }
         input = 1;
         break;
       case PM_PULLUP:
       case PM_PULLDOWN:
-        if (ptr > program_end && ptr[-1] == WIRE_INPUT)
+        if (doneInput && ptr[-1] == WIRE_INPUT_NORMAL)
         {
           ptr[-1] = (op == PM_PULLUP ? WIRE_INPUT_PULLUP : WIRE_INPUT_PULLDOWN);
         }
@@ -3376,59 +3619,106 @@ static void pin_wire_parse(void)
         break;
       case PM_TIMEOUT:
         *ptr++ = WIRE_TIMEOUT;
-        *(unsigned short*)ptr = WIRE_USEC_TO_COUNT(expression(EXPR_COMMA));
+        *(unsigned short*)ptr = expression(EXPR_COMMA);
         ptr += sizeof(unsigned short);
         if (error_num)
         {
           goto wire_error;
         }
         break;
-      default:
-        if (op >= 'A' && op <= 'Z')
+      case PM_WAIT:
+        if (*txtpos == KW_CONSTANT)
         {
-          stack_variable_frame* vframe;
-          unsigned char* vptr = get_variable_frame(op, &vframe);
-          if (vframe->type == VAR_DIM_BYTE)
+          if (txtpos[1] == CO_HIGH)
           {
-            *ptr++ = (input ? WIRE_INPUT_BYTES : WIRE_OUTPUT_BYTES);
-            *ptr++ = vframe->header.frame_size - sizeof(stack_variable_frame);
-            OS_memset(vptr, 0, vframe->header.frame_size - sizeof(stack_variable_frame));
-            *(unsigned char**)ptr = vptr;
-            ptr += sizeof(unsigned char*);
+            *ptr++ = WIRE_WAIT_HIGH;
+            *ptr++ = 0;
+            txtpos += 2;
             break;
           }
-          else if (input)
+          else if (txtpos[1] == CO_LOW)
           {
-            *vptr = 0;
-            *ptr++ = WIRE_INPUT_INT;
-            *(unsigned char**)ptr = vptr;
-            ptr += sizeof(unsigned char*);
+            *ptr++ = WIRE_WAIT_LOW;
+            *ptr++ = 0;
+            txtpos += 2;
             break;
           }
         }
-        txtpos--;
-        VAR_TYPE val = expression(EXPR_COMMA);
+        *ptr++ = WIRE_WAIT_TIME;
+        *(unsigned short*)ptr = expression(EXPR_COMMA);
+        ptr += sizeof(unsigned short);
         if (error_num)
         {
           goto wire_error;
         }
-        if (ptr > program_end && ptr[-1] == WIRE_OUTPUT)
+        break;
+      case BLE_READ:
+      {
+        stack_variable_frame* vframe;
+        unsigned char* vptr = parse_variable_address(&vframe);
+        if (!input || !vptr)
         {
-          *ptr++ = (val ? WIRE_HIGH : WIRE_LOW);
+          goto wire_error;
         }
-        else if (input)
+        if (vframe->type == VAR_DIM_BYTE)
         {
-          *ptr++ = WIRE_INPUT_WAIT_SHORT;
-          *(unsigned short*)ptr = val;
-          ptr += sizeof(unsigned short);
+          *vptr = 0;
         }
         else
         {
-          *ptr++ = WIRE_OUTPUT_SHORT;
-          *(unsigned short*)ptr = val;
-          ptr += sizeof(unsigned short);
+          *(VAR_TYPE*)vptr = 0;
         }
+        *ptr++ = WIRE_METADATA;
+        *ptr++ = sizeof(struct wire_var);
+        ((struct wire_var*)ptr)->var = vptr;
+        ((struct wire_var*)ptr)->next = head;
+        head = (struct wire_var*)ptr;
+        ptr += sizeof(struct wire_var);
+        *ptr++ = WIRE_INPUT_READ;
+        *ptr++ = 0;
         break;
+      }
+      case PM_PULSE:
+      {
+        if (input)
+        {
+          unsigned char v = *txtpos++;
+          if (v >= 'A' && v <= 'Z')
+          {
+            stack_variable_frame* vframe;
+            unsigned char* vptr = get_variable_frame(v, &vframe);
+            *ptr++ = WIRE_INPUT_PULSE;
+            if (vframe->type == VAR_DIM_BYTE)
+            {
+              OS_memset(vptr, 0, vframe->header.frame_size - sizeof(stack_variable_frame));
+              *ptr++ = sizeof(unsigned char);
+              *ptr++ = vframe->header.frame_size - sizeof(stack_variable_frame);
+            }
+            else
+            {
+              *vptr = 0;
+              *ptr++ = 1;
+              *ptr++ = sizeof(unsigned short);
+            }
+            *(unsigned char**)ptr = vptr;
+            ptr += sizeof(unsigned char*);
+            break;
+          }
+        }
+        goto wire_error;
+      }
+      default:
+        if (!input)
+        {
+          txtpos--;
+          VAR_TYPE val = expression(EXPR_COMMA);
+          if (!error_num)
+          {
+            *ptr++ = (val ? WIRE_HIGH : WIRE_LOW);
+            break;
+          }
+        }
+        goto wire_error;
     }
   }
 wire_error:
@@ -3442,279 +3732,338 @@ static void pin_wire(unsigned char* ptr, unsigned char* end)
 {
   // We now have an fast expression to manipulate the pins. Do it.
   // We inline all the pin operations to keep the time down.
+
+  unsigned short wtimeout = 256;
+  unsigned short ptimeout = 256;
   unsigned char major = 0;
   unsigned char dbit = 1;
-  unsigned char high = 0;
-  unsigned short timeout = 256;
+  unsigned char size;
+  unsigned char len;
+  unsigned short count;
+
   while (ptr < end)
   {
-    switch (*ptr++)
+    const unsigned char cmd = *ptr++;
+
+    if (cmd & WIRE_CMD_MASK)
     {
-      case WIRE_PIN:
+      major = PIN_MAJOR(cmd);
+      dbit = 1 << PIN_MINOR(cmd);
+      switch (cmd & WIRE_CMD_MASK)
       {
-        unsigned char pin = *ptr++;
-        major = PIN_MAJOR(pin);
-        dbit = 1 << PIN_MINOR(pin);
-        switch (major)
-        {
-          case 0:
-            P0SEL &= ~dbit;
-            break;
-          case 1:
-            P1SEL &= ~dbit;
-            break;
-          case 2:
-            P2SEL &= ~dbit;
-            break;
-        }
-        break;
+        case WIRE_PIN_OUTPUT:
+          goto wire_output;
+        case WIRE_PIN_INPUT:
+          goto wire_input;
+        case WIRE_PIN_HIGH:
+          goto wire_high;
+        case WIRE_PIN_LOW:
+          goto wire_low;
+        default:
+          goto wire_error;
       }
-      case WIRE_OUTPUT:
-        switch (major)
-        {
-          case 0:
-            P0DIR |= dbit;
-            APCFG &= ~dbit;
-            high = (P0 & dbit) ? 1 : 0;
-            break;
-          case 1:
-            P1DIR |= dbit;
-            high = (P1 & dbit) ? 1 : 0;
-            break;
-          case 2:
-            P2DIR |= dbit;
-            high = (P2 & dbit) ? 1 : 0;
-            break;
-        }
-        break;
-      case WIRE_INPUT:
-        switch (major)
-        {
-          case 0:
-            P0DIR &= ~dbit;
-            P0INP |= dbit;
-            APCFG &= ~dbit;
-            break;
-          case 1:
-            P1DIR &= ~dbit;
-            P1INP |= dbit;
-            break;
-          case 2:
-            P2DIR &= ~dbit;
-            P2INP |= dbit;
-            break;
-        }
-        break;
-      case WIRE_INPUT_PULLUP:
-        switch (major)
-        {
-          case 0:
-            P0DIR &= ~dbit;
-            P0INP &= ~dbit;
-            APCFG &= ~dbit;
-            P2INP &= ~(1 << 5);
-            break;
-          case 1:
-            P1DIR &= ~dbit;
-            P1INP &= ~dbit;
-            P2INP &= ~(1 << 6);
-            break;
-          case 2:
-            P2DIR &= ~dbit;
-            P2INP &= ~dbit;
-            P2INP &= ~(1 << 7);
-            break;
-        }
-        break;
-      case WIRE_INPUT_PULLDOWN:
-        switch (major)
-        {
-          case 0:
-            P0DIR &= ~dbit;
-            P0INP &= ~dbit;
-            APCFG &= ~dbit;
-            P2INP |= 1 << 5;
-            break;
-          case 1:
-            P1DIR &= ~dbit;
-            P1INP &= ~dbit;
-            P2INP |= 1 << 6;
-            break;
-          case 2:
-            P2DIR &= ~dbit;
-            P2INP &= ~dbit;
-            P2INP |= 1 << 7;
-            break;
-        }
-        break;
-      case WIRE_ADC:
-        APCFG |= dbit;
-        break;
-      case WIRE_TIMEOUT:
-        timeout = *(unsigned short*)ptr;
-        ptr += sizeof(unsigned short);
-        break;
-      case WIRE_HIGH:
-      wire_high:
-        switch (major)
-        {
-          case 0:
-            P0 |= dbit;
-            break;
-          case 1:
-            P1 |= dbit;
-            break;
-          case 2:
-            P2 |= dbit;
-            break;
-        }
-        high = 1;
-        break;
-      case WIRE_LOW:
-      wire_low:
-        switch (major)
-        {
-          case 0:
-            P0 &= ~dbit;
-            break;
-          case 1:
-            P1 &= ~dbit;
-            break;
-          case 2:
-            P2 &= ~dbit;
-            break;
-        }
-        high = 0;
-        break;
-      case WIRE_OUTPUT_SHORT:
-        OS_delaymicroseconds(*(unsigned short*)ptr);
-        ptr += sizeof(unsigned short);
-        if (ptr < end && *ptr == WIRE_OUTPUT_SHORT)
-        {
-          high = !high;
-          if (high)
-          {
-            goto wire_high;
-          }
-          else
-          {
-            goto wire_low;
-          }
-        }
-        break;
-      case WIRE_OUTPUT_BYTES:
+    }
+    else
+    {
+      switch (WIRE_CASE(cmd))
       {
-        unsigned char len = *ptr++;
-        unsigned char* data = *(unsigned char**)ptr;
-        ptr += sizeof(unsigned char);
-        while (len--)
+        case WIRE_CASE(WIRE_PIN):
         {
-          OS_delaymicroseconds(*data++);
-          if (len)
+          len = *ptr++;
+          major = PIN_MAJOR(len);
+          dbit = 1 << PIN_MINOR(len);
+          break;
+        }
+        case WIRE_CASE(WIRE_OUTPUT):
+        wire_output:
+          switch (major)
           {
-            high = !high;
-            if (high)
+            case 0:
+              P0DIR |= dbit;
+              break;
+            case 1:
+              P1DIR |= dbit;
+              break;
+            case 2:
+              P2DIR |= dbit;
+              break;
+          }
+          break;
+        case WIRE_CASE(WIRE_INPUT):
+        wire_input:
+          switch (major)
+          {
+            case 0:
+              P0DIR &= ~dbit;
+              break;
+            case 1:
+              P1DIR &= ~dbit;
+              break;
+            case 2:
+              P2DIR &= ~dbit;
+              break;
+          }
+          break;
+        case WIRE_CASE(WIRE_INPUT_NORMAL):
+          switch (major)
+          {
+            case 0:
+              P0SEL &= ~dbit;
+              P0INP |= dbit;
+              APCFG &= ~dbit;
+              break;
+            case 1:
+              P1SEL &= ~dbit;
+              P1INP |= dbit;
+              break;
+            case 2:
+              P2SEL &= ~dbit;
+              P2INP |= dbit;
+              break;
+          }
+          break;
+        case WIRE_CASE(WIRE_INPUT_PULLUP):
+          switch (major)
+          {
+            case 0:
+              P0SEL &= ~dbit;
+              P0INP &= ~dbit;
+              APCFG &= ~dbit;
+              P2INP &= ~(1 << 5);
+              break;
+            case 1:
+              P1SEL &= ~dbit;
+              P1INP &= ~dbit;
+              P2INP &= ~(1 << 6);
+              break;
+            case 2:
+              P2SEL &= ~dbit;
+              P2INP &= ~dbit;
+              P2INP &= ~(1 << 7);
+              break;
+          }
+          break;
+        case WIRE_CASE(WIRE_INPUT_PULLDOWN):
+          switch (major)
+          {
+            case 0:
+              P0SEL &= ~dbit;
+              P0INP &= ~dbit;
+              APCFG &= ~dbit;
+              P2INP |= 1 << 5;
+              break;
+            case 1:
+              P1SEL &= ~dbit;
+              P1INP &= ~dbit;
+              P2INP |= 1 << 6;
+              break;
+            case 2:
+              P2SEL &= ~dbit;
+              P2INP &= ~dbit;
+              P2INP |= 1 << 7;
+              break;
+          }
+          break;
+        case WIRE_CASE(WIRE_INPUT_ADC):
+          if (major == 0)
+          {
+            P0SEL &= ~dbit;
+            P0INP |= dbit;
+            APCFG |= dbit;
+          }
+          break;
+        case WIRE_CASE(WIRE_TIMEOUT):
+#define WIRE_USEC_TO_PULSE_COUNT(U) ((((U) - 24) * 82) >> 8) // Calibrated Aug 17, 2014
+#define WIRE_USEC_TO_WAIT_COUNT(U)  ((((U) - 21) * 179) >> 8) // Calibrated Aug 17, 2014
+#define WIRE_COUNT_TO_USEC(C)       ((((C) * 393) >> 8) + 1) // Calbirated Aug 17, 2014
+          wtimeout = *(unsigned short*)ptr;
+          ptimeout = WIRE_USEC_TO_PULSE_COUNT(wtimeout);
+          wtimeout = WIRE_USEC_TO_WAIT_COUNT(wtimeout);
+          ptr += sizeof(unsigned short);
+          break;
+        case WIRE_CASE(WIRE_WAIT_TIME):
+          OS_delaymicroseconds(*(short*)ptr - 12); // WIRE_WAIT_TIME execution takes 12us minimum
+          ptr += sizeof(unsigned short);
+          break;
+        case WIRE_CASE(WIRE_HIGH):
+        wire_high:
+          switch (major)
+          {
+            case 0:
+              P0 |= dbit;
+              break;
+            case 1:
+              P1 |= dbit;
+              break;
+            case 2:
+              P2 |= dbit;
+              break;
+          }
+          break;
+        case WIRE_CASE(WIRE_LOW):
+        wire_low:
+          switch (major)
+          {
+            case 0:
+              P0 &= ~dbit;
+              break;
+            case 1:
+              P1 &= ~dbit;
+              break;
+            case 2:
+              P2 &= ~dbit;
+              break;
+          }
+          break;
+        case WIRE_CASE(WIRE_INPUT_PULSE):
+        {
+          size = *ptr++;
+          len = *ptr++;
+          unsigned char* data = *(unsigned char**)ptr;
+          ptr += sizeof(unsigned char*);
+          while (len--)
+          {
+            count = 1;
+            switch (major)
             {
-              switch (major)
+              case 0:
               {
-                case 0:
-                  P0 &= ~dbit;
-                  break;
-                case 1:
-                  P1 &= ~dbit;
-                  break;
-                case 2:
-                  P2 &= ~dbit;
-                  break;
+                const unsigned char v = P0 & dbit;
+                for (; v == (P0 & dbit) && count < ptimeout; count++)
+                  ;
+                break;
+              }
+              case 1:
+              {
+                const unsigned char v = P1 & dbit;
+                for (; v == (P1 & dbit) && count < ptimeout; count++)
+                  ;
+                break;
+              }
+              case 2:
+              {
+                const unsigned char v = P2 & dbit;
+                for (; v == (P2 & dbit) && count < ptimeout; count++)
+                  ;
+                break;
+              }
+            }
+            if (size)
+            {
+              if (size == 1)
+              {
+                *data++ = count;
+              }
+              else
+              {
+                *(unsigned short*)data = count;
+                data += sizeof(unsigned short);
+              }
+            }
+          }
+          // Calibrate
+          if (size)
+          {
+            len = *(unsigned char*)(ptr - sizeof(unsigned char*) - sizeof(unsigned char));
+            data = *(unsigned char**)(ptr - sizeof(unsigned char*));
+            if (size == 1)
+            {
+              while (len--)
+              {
+                *data = WIRE_COUNT_TO_USEC(*data);
+                data++;
               }
             }
             else
             {
-              switch (major)
-              {
-                case 0:
-                  P0 &= ~dbit;
-                  break;
-                case 1:
-                  P1 &= ~dbit;
-                  break;
-                case 2:
-                  P2 &= ~dbit;
-                  break;
-              }
+              *(unsigned short*)data = WIRE_COUNT_TO_USEC(*(unsigned short*)data);
+              data += sizeof(unsigned short);
             }
           }
+          break;
         }
-      }
-      case WIRE_INPUT_BYTES:
-      {
-        unsigned short count;
-        unsigned char v;
-        unsigned char len = *ptr++;
-        unsigned char* data = *(unsigned char**)ptr;
-        ptr += sizeof(unsigned char*);
-        while (len--)
+        case WIRE_CASE(WIRE_WAIT_HIGH):
         {
           count = 1;
+          size = *ptr++;
           switch (major)
           {
             case 0:
-              v = P0 & dbit;
-              for (; v == (P0 & dbit) && count < timeout; count++)
+              for (; !(P0 & dbit) && count < wtimeout; count++)
                 ;
               break;
             case 1:
-              v = P1 & dbit;
-              for (; v == (P1 & dbit) && count < timeout; count++)
+              for (; !(P1 & dbit) && count < wtimeout; count++)
                 ;
               break;
             case 2:
-              v = P2 & dbit;
-              for (; v == (P2 & dbit) && count < timeout; count++)
+              for (; !(P2 & dbit) && count < wtimeout; count++)
                 ;
               break;
           }
-          count = WIRE_COUNT_TO_USEC(count);
-          if (count > 255)
-          {
-            count = 0;
-          }
-          *data++ = count;
+          goto wire_store;
         }
-        break;
-      }
-      case WIRE_INPUT_INT:
-      {
-        unsigned short count = 1;
-        unsigned char v;
-        switch (major)
+        case WIRE_CASE(WIRE_WAIT_LOW):
         {
-          case 0:
-            v = P0 & dbit;
-            for (; v == (P0 & dbit) && count < timeout; count++)
-              ;
-            break;
-          case 1:
-            v = P1 & dbit;
-            for (; v == (P1 & dbit) && count < timeout; count++)
-              ;
-            break;
-          case 2:
-            v = P2 & dbit;
-            for (; v == (P2 & dbit) && count < timeout; count++)
-              ;
-            break;
+          count = 1;
+          size = *ptr++;
+          switch (major)
+          {
+            case 0:
+              for (; (P0 & dbit) && count < wtimeout; count++)
+                ;
+              break;
+            case 1:
+              for (; (P1 & dbit) && count < wtimeout; count++)
+                ;
+              break;
+            case 2:
+              for (; (P2 & dbit) && count < wtimeout; count++)
+                ;
+              break;
+          }
+        wire_store:
+          if (size)
+          {
+            count = WIRE_COUNT_TO_USEC(count);
+            if (size == 1)
+            {
+              **(unsigned char**)ptr = count;
+            }
+            else
+            {
+              **(unsigned short**)ptr = count;
+            }
+            ptr += sizeof(unsigned char*);
+          }
+          break;
         }
-        **(VAR_TYPE**)ptr = WIRE_COUNT_TO_USEC(count);
-        ptr += sizeof(unsigned char*);
-        break;
+        case WIRE_CASE(WIRE_INPUT_READ):
+        {
+          switch (major)
+          {
+            case 0:
+              *ptr++ = P0 & dbit;
+#ifdef SIMULATE_PINS
+              ptr[-1] = 1;
+#endif
+              break;
+            case 1:
+              *ptr++ = P1 & dbit;
+              break;
+            case 2:
+              *ptr++ = P2 & dbit;
+              break;
+          }
+          break;
+        }
+        case WIRE_CASE(WIRE_METADATA):
+          size = *ptr++;
+          ptr += size;
+          break;
+        default:
+          goto wire_error;
       }
-      case WIRE_INPUT_WAIT_SHORT:
-        OS_delaymicroseconds(*(unsigned short*)ptr);
-        ptr += sizeof(unsigned short);
-        break;
-      default:
-        goto wire_error;
     }
   }
   return;

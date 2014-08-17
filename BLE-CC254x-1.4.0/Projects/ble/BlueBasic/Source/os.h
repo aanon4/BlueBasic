@@ -33,7 +33,7 @@
 #define OS_millis()           (time(0) * 1000)
 #define OS_interrupt_attach(A, B) 0
 #define OS_interrupt_detach(A)    0
-#define OS_delaymicroseconds(A) do { } while ((A), 0)
+#define OS_delaymicroseconds(A) do { } while ((void)(A), 0)
 
 extern void OS_prompt_buffer(unsigned char* start, unsigned char* end);
 extern char OS_prompt_available(void);

@@ -41,6 +41,7 @@ static const unsigned char keywords_2[] =
   'P','R','I','N','T',KW_PRINT,
   'P','U','L','L','D','O','W','N',PM_PULLDOWN,
   'P','U','L','L','U','P',PM_PULLUP,
+  'P','U','L','S','E',PM_PULSE,
   0
 };
 static const unsigned char keywords_3[] =
@@ -124,6 +125,7 @@ static const unsigned char keywords_8[] =
   '<','=',OP_LE,
   '<','>',OP_NE,
   '<',OP_LT,
+  'I','2','C',KW_I2C,
   'I','F',KW_IF,
   'I','N','D','I','C','A','T','E',BLE_INDICATE,
   'I','N','P','U','T',PM_INPUT,
@@ -135,6 +137,7 @@ static const unsigned char keywords_9[] =
   '0','X',FUNC_HEX,
   '=','=',OP_EQEQ,
   '=',OP_EQ,
+  'W','A','I','T',PM_WAIT,
   'W','I','R','E',KW_WIRE,
   'W','R','I','T','E','N','O','R','S','P',BLE_WRITENORSP,
   'W','R','I','T','E',BLE_WRITE,

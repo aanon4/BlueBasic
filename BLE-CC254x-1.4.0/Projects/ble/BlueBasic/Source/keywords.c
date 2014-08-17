@@ -112,6 +112,9 @@ struct keyword
   { "DUPLICATES", "BLE_DUPLICATES" },
   { "WIRE", "KW_WIRE" },
   { "TIMEOUT", "PM_TIMEOUT" },
+  { "WAIT", "PM_WAIT" },
+  { "PULSE", "PM_PULSE" },
+  { "I2C", "KW_I2C" },
   //
   // Constants
   //
