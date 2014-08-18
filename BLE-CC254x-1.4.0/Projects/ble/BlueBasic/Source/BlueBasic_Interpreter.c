@@ -433,7 +433,6 @@ static unsigned char analogResolution = 0x30; // 14-bits
 static unsigned char i2cScl;
 static unsigned char i2cSda;
 
-static void pin_write(unsigned char pin, unsigned char val);
 static VAR_TYPE pin_read(unsigned char major, unsigned char minor);
 static unsigned char pin_parse(void);
 static void pin_wire_parse(void);
@@ -2071,14 +2070,13 @@ gosub_return:
 //
 assignpin:
   {
-    unsigned char pin;
+    unsigned char pin[1];
     
-    pin = pin_parse();
+    pin[0] = pin_parse();
     if (error_num)
     {
       goto qwhat;
     }
-    ignore_blanks();
     if (*txtpos != OP_EQ)
     {
       goto qwhat;
@@ -2089,7 +2087,8 @@ assignpin:
     {
       goto qwhat;
     }
-    pin_write(pin, val);
+    pin[0] |= (val ? WIRE_PIN_HIGH : WIRE_PIN_LOW);
+    pin_wire(pin, pin + 1);
     
     goto run_next_statement;
   }
@@ -2168,7 +2167,10 @@ list:
       {
         case KW_ELSE:
         case KW_ELIF:
-          indent = (indent > 1 ? indent - 1 : indent);
+          if (indent > 1)
+          {
+            indent--;
+          }
           // Fall through
         case KW_IF:
         case KW_FOR:
@@ -2177,7 +2179,10 @@ list:
           break;
         case KW_NEXT:
         case KW_END:
-          indent = (indent > 1 ? indent - 1 : indent);
+          if (indent > 1)
+          {
+            indent--;
+          }
           // Fall through
         default:
           printline(nindent, indent);
@@ -3175,13 +3180,15 @@ cmd_spi:
     else if (*txtpos == SPI_TRANSFER)
     {
       // Transfer
-      unsigned char pin;
+      unsigned char pin[2];
       stack_variable_frame* vframe;
       unsigned char* ptr;
       unsigned short len;
       
       txtpos++;
-      pin = pin_parse();
+      pin[0] = pin_parse();
+      pin[1] = pin[0] | WIRE_PIN_HIGH;
+      pin[0] |= WIRE_PIN_LOW;
       if (error_num)
       {
         goto qwhat;
@@ -3200,7 +3207,7 @@ cmd_spi:
       txtpos++;
 
       // .. transfer ..
-      pin_write(pin, 0);
+      pin_wire(pin, pin + 1);
       if (spiChannel == 0)
       {
         for (len = vframe->header.frame_size - sizeof(stack_variable_frame); len; len--, ptr++)
@@ -3229,7 +3236,7 @@ cmd_spi:
           *ptr = U1DBUF;
         }
       }
-      pin_write(pin, 1);
+      pin_wire(pin + 1, pin + 2);
     }
     else
     {
@@ -3506,27 +3513,6 @@ static unsigned char pin_parse(void)
 badpin:
   error_num = ERROR_BADPIN;
   return 0;
-}
-
-//
-// Write pin
-//
-void pin_write(unsigned char pin, unsigned char val)
-{
-  unsigned char bit = 1 << PIN_MINOR(pin);
-
-  switch (PIN_MAJOR(pin))
-  {
-    case 0:
-      P0 = (P0 & ~bit) | (val ? bit : 0);
-      break;
-    case 1:
-      P1 = (P1 & ~bit) | (val ? bit : 0);
-      break;
-    default:
-      P2 = (P2 & ~bit) | (val ? bit : 0);
-      break;
-  }
 }
 
 //
