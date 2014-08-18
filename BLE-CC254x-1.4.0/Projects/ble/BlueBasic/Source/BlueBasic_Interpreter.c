@@ -309,21 +309,22 @@ enum
   WIRE_PIN_GENERAL = 0,
   
   WIRE_PIN = 0x00,
-  WIRE_INPUT = 0x08,
-  WIRE_OUTPUT = 0x10,
-  WIRE_HIGH = 0x18,
-  WIRE_LOW = 0x20,
-  WIRE_INPUT_NORMAL = 0x28,
-  WIRE_INPUT_PULLUP = 0x30,
-  WIRE_INPUT_PULLDOWN = 0x38,
-  WIRE_INPUT_ADC = 0x48,
-  WIRE_TIMEOUT = 0x50,
-  WIRE_WAIT_TIME = 0x58,
-  WIRE_WAIT_HIGH = 0x60,
-  WIRE_WAIT_LOW = 0x68,
-  WIRE_INPUT_PULSE = 0x70,
+  WIRE_OUTPUT = 0x08,
+  WIRE_INPUT = 0x10,
+  WIRE_INPUT_NORMAL = 0x18,
+  WIRE_INPUT_PULLUP = 0x20,
+  WIRE_INPUT_PULLDOWN = 0x28,
+  WIRE_INPUT_ADC = 0x30,
+  WIRE_TIMEOUT = 0x38,
+  WIRE_WAIT_TIME = 0x48,
+  WIRE_HIGH = 0x50,
+  WIRE_LOW = 0x58,
+  WIRE_INPUT_PULSE = 0x60,
+  WIRE_WAIT_HIGH = 0x68,
+  WIRE_WAIT_LOW = 0x70,
   WIRE_INPUT_READ = 0x78,
-  WIRE_METADATA = 0x80,
+  WIRE_INPUT_READ_ADC = 0x80,
+  WIRE_METADATA = 0x88,
 };
 #define WIRE_CASE(C)  ((C) >> 3)
 
@@ -3544,6 +3545,7 @@ static void pin_wire_parse(void)
   unsigned char doneInput = 0;
   struct wire_var
   {
+    unsigned char size;
     unsigned char* var;
     struct wire_var* next;
   }* head = NULL;
@@ -3566,7 +3568,14 @@ static void pin_wire_parse(void)
         {
           for (; head; head = head->next)
           {
-            *head->var = *((unsigned char*)head + sizeof(struct wire_var) + 1) ? 1 : 0;
+            if (head->size == 1)
+            {
+              *head->var = *((unsigned char*)head + sizeof(struct wire_var) + 1) ? 1 : 0;
+            }
+            else
+            {
+              *(unsigned short*)head->var = *(unsigned short*)((unsigned char*)head + sizeof(struct wire_var) + 1);
+            }
           }
         }
         return;
@@ -3645,6 +3654,12 @@ static void pin_wire_parse(void)
         break;
       case BLE_READ:
       {
+        unsigned char adc = 0;
+        if (*txtpos == PM_ADC)
+        {
+          adc = 1;
+          txtpos++;
+        }
         stack_variable_frame* vframe;
         unsigned char* vptr = parse_variable_address(&vframe);
         if (!input || !vptr)
@@ -3661,12 +3676,22 @@ static void pin_wire_parse(void)
         }
         *ptr++ = WIRE_METADATA;
         *ptr++ = sizeof(struct wire_var);
+        ((struct wire_var*)ptr)->size = (adc && vframe->type != VAR_DIM_BYTE ? 2 : 1);
         ((struct wire_var*)ptr)->var = vptr;
         ((struct wire_var*)ptr)->next = head;
         head = (struct wire_var*)ptr;
         ptr += sizeof(struct wire_var);
-        *ptr++ = WIRE_INPUT_READ;
-        *ptr++ = 0;
+        if (adc)
+        {
+          *ptr++ = WIRE_INPUT_READ_ADC;
+          *ptr++ = 0;
+          *ptr++ = 0;
+        }
+        else
+        {
+          *ptr++ = WIRE_INPUT_READ;
+          *ptr++ = 0;
+        }
         break;
       }
       case PM_PULSE:
@@ -3873,7 +3898,7 @@ static void pin_wire(unsigned char* ptr, unsigned char* end)
           ptr += sizeof(unsigned short);
           break;
         case WIRE_CASE(WIRE_WAIT_TIME):
-          OS_delaymicroseconds(*(short*)ptr - 12); // WIRE_WAIT_TIME execution takes 12us minimum
+          OS_delaymicroseconds(*(short*)ptr - 12); // WIRE_WAIT_TIME execution takes 12us minimum - Calibrated Aug 16, 2014
           ptr += sizeof(unsigned short);
           break;
         case WIRE_CASE(WIRE_HIGH):
@@ -4046,6 +4071,24 @@ static void pin_wire(unsigned char* ptr, unsigned char* end)
               *ptr++ = P2 & dbit;
               break;
           }
+          break;
+        }
+        case WIRE_CASE(WIRE_INPUT_READ_ADC):
+        {
+          // Quickly calculate minor number from bitmask
+          unsigned char minor = !!(dbit & 0xAA);
+          minor |= !!(dbit & 0xCC) << 1;
+          minor |= !!(dbit & 0xF0) << 2;
+          ADCCON3 = minor | analogResolution | analogReference;
+#ifdef SIMULATE_PINS
+          ADCCON1 = 0x80;
+#endif
+          while ((ADCCON1 & 0x80) == 0)
+            ;
+          count = ADCL;
+          count |= ADCH << 8;
+          *(short*)ptr = ((short)count) >> (8 - (analogResolution >> 3));
+          ptr += sizeof(short);
           break;
         }
         case WIRE_CASE(WIRE_METADATA):
