@@ -47,7 +47,6 @@ static const unsigned char keywords_2[] =
 static const unsigned char keywords_3[] =
 {
   '*',OP_MUL,
-  'D','E','L','A','Y','M','I','C','R','O','S','E','C','O','N','D','S',KW_DELAYMICROSECONDS,
   'D','E','L','A','Y',KW_DELAY,
   'D','E','T','A','C','H','I','N','T','E','R','R','U','P','T',KW_DETACHINTERRUPT,
   'D','E','V','_','A','D','D','R','E','S','S',KW_CONSTANT,CO_DEV_ADDRESS,

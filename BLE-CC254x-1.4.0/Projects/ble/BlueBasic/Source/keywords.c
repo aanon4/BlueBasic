@@ -35,7 +35,6 @@ struct keyword
   { "REPEAT", "TI_REPEAT" },
   { "STOP", "TI_STOP" },
   { "DELAY", "KW_DELAY" },
-  { "DELAYMICROSECONDS", "KW_DELAYMICROSECONDS" },
   { "ABS(", "FUNC_ABS" },
   { "LEN(", "FUNC_LEN" },
   { "RND(", "FUNC_RND" },

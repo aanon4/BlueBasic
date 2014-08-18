@@ -115,7 +115,6 @@ enum
   KW_DIM,
   KW_TIMER,
   KW_DELAY,
-  KW_DELAYMICROSECONDS,
   KW_AUTORUN,
   KW_PIN_P0,
   KW_PIN_P1,
@@ -1712,8 +1711,6 @@ interperate:
       goto cmd_timer;
     case KW_DELAY:
       goto cmd_delay;
-    case KW_DELAYMICROSECONDS:
-      goto cmd_delaymicroseconds;
     case KW_AUTORUN:
       goto cmd_autorun;
     case KW_PIN_P0:
@@ -2451,15 +2448,6 @@ cmd_delay:
     ;
   OS_timer_start(DELAY_TIMER, val, 0, *(LINENUM*)txtpos);
   return IX_PROMPT;
-  
-cmd_delaymicroseconds:
-  val = expression(EXPR_NORMAL);
-  if (error_num || val < 0)
-  {
-    goto qwhat;
-  }
-  OS_delaymicroseconds(val);
-  goto run_next_statement;
 
 //
 // AUTORUN ON|OFF
