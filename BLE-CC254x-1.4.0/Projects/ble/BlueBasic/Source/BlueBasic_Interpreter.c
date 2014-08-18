@@ -103,7 +103,6 @@ enum
   KW_IF,
   KW_ELIF,
   KW_ELSE,
-  KW_FI,
   KW_GOTO,
   KW_GOSUB,
   KW_RETURN,
@@ -1677,8 +1676,6 @@ interperate:
       goto cmd_elif;
     case KW_ELSE:
       goto cmd_else;
-    case KW_FI:
-      goto run_next_statement;
     case KW_GOTO:
       linenum = expression(EXPR_NORMAL);
       if (error_num || *txtpos != NL)
@@ -1705,11 +1702,7 @@ interperate:
     case KW_REBOOT:
       OS_reboot();
     case KW_END:
-      if (*txtpos != NL)
-      {
-        goto qwhat;
-      }
-      goto print_error_or_ok;
+      goto run_next_statement;
     case KW_DIM:
       goto cmd_dim;
     case KW_TIMER:
@@ -1837,7 +1830,7 @@ cmd_elif:
               goto interperate;
             }
             break;
-          case KW_FI:
+          case KW_END:
             if (!nest)
             {
               txtpos += sizeof(LINENUM) + sizeof(char) + 1;
@@ -1872,7 +1865,7 @@ cmd_else:
       {
         nest++;
       }
-      else if (txtpos[sizeof(LINENUM) + sizeof(char)] == KW_FI)
+      else if (txtpos[sizeof(LINENUM) + sizeof(char)] == KW_END)
       {
         if (!nest)
         {
@@ -2061,6 +2054,11 @@ gosub_return:
     sp += ((stack_header*)sp)->frame_size;
   }
   // Didn't find the variable we've been looking for
+  // If we're returning from the main entry point, then we're done
+  if (txtpos[-1] == KW_RETURN)
+  {
+    goto print_error_or_ok;
+  }
   goto qwhat;
 
 //
@@ -2159,7 +2157,7 @@ list:
           indent++;
           break;
         case KW_NEXT:
-        case KW_FI:
+        case KW_END:
           indent--;
           // Fall through
         default:

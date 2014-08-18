@@ -18,7 +18,6 @@ struct keyword
   { "IF", "KW_IF" },
   { "ELSE", "KW_ELSE" },
   { "ELIF", "KW_ELIF" },
-  { "FI", "KW_FI" },
   { "GOTO", "KW_GOTO" },
   { "GOSUB", "KW_GOSUB" },
   { "RETURN", "KW_RETURN" },

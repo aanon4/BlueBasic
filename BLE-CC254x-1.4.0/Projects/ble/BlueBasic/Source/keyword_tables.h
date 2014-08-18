@@ -80,7 +80,6 @@ static const unsigned char keywords_5[] =
 {
   'F','A','L','L','I','N','G',PM_FALLING,
   'F','A','L','S','E',KW_CONSTANT,CO_FALSE,
-  'F','I',KW_FI,
   'F','O','R',KW_FOR,
   'S','A','V','E',KW_SAVE,
   'S','C','A','N',KW_SCAN,
