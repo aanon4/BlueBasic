@@ -77,7 +77,7 @@ static const char memorymsg[]         = " bytes free.";
 #else
 #define VAR_TYPE    int
 #endif
-#define VAR_SIZE    (4)
+#define VAR_SIZE    (sizeof(VAR_TYPE))
 
 
 // Start enum at 128 so we get instant token values.
@@ -627,7 +627,7 @@ static void tokenize(void)
 //
 // Print a number (base 10)
 //
-void printnum(VAR_TYPE num)
+void printnum(signed char fieldsize, VAR_TYPE num)
 {
   VAR_TYPE size = 10;
 
@@ -636,8 +636,12 @@ void printnum(VAR_TYPE num)
     OS_putchar('-');
     num = -num;
   }
-  for (; size <= num; size *= 10)
+  for (; size <= num; size *= 10, fieldsize--)
     ;
+  while (fieldsize-- > 0)
+  {
+    OS_putchar(WS_SPACE);
+  }
   for (size /= 10; size != 0; size /= 10)
   {
     OS_putchar('0' + num / size % 10);
@@ -760,7 +764,7 @@ static unsigned char* findtxtline(void)
 // it is expanded as it's printed, including the addition of whitespace
 // to make it more readable.
 //
-static void printline(unsigned char indent)
+static void printline(unsigned char nindent, unsigned char indent)
 {
   LINENUM line_num;
   unsigned char lc = WS_SPACE;
@@ -769,7 +773,7 @@ static void printline(unsigned char indent)
   list_line += sizeof(LINENUM) + sizeof(char);
 
   // Output the line */
-  printnum(line_num);
+  printnum(nindent, line_num);
   while (indent-- != 0)
   {
     OS_putchar(WS_SPACE);
@@ -1444,7 +1448,7 @@ void interpreter_init()
 void interpreter_banner(void)
 {
   printmsg(initmsg);
-  printnum((VAR_TYPE)(sp - program_end));
+  printnum(0, (VAR_TYPE)(sp - program_end));
   printmsg(memorymsg);
   printmsg(error_msgs[ERROR_OK]);
 }
@@ -1780,7 +1784,7 @@ print_error_or_ok:
     OS_putchar('>');
     OS_putchar('>');
     OS_putchar(WS_SPACE);
-    printline(1);
+    printline(0, 1);
     OS_putchar(NL);
   }
   return error_num == ERROR_OOM ? IX_OUTOFMEMORY : IX_PROMPT;
@@ -2132,6 +2136,9 @@ assignment:
 list:
   {
     unsigned char indent = 1;
+    unsigned char nindent = 1;
+    unsigned char* line;
+    LINENUM lineno = 1;
 
     testlinenum();
 
@@ -2140,28 +2147,40 @@ list:
     {
       goto qwhat;
     }
+    
+    // Find biggest line number
+    for (line = program_start; line != program_end; line += line[sizeof(LINENUM)])
+    {
+      lineno = *(LINENUM*)line;
+    }
+    for (; lineno; nindent++, lineno /= 10)
+      ;
 
-    // Find the line
+    // Find the line to start listing from
     list_line = findline();
+    lineno = *(LINENUM*)list_line;
+    for (; lineno; nindent--, lineno /= 10)
+      ;
+    
     while(list_line != program_end)
     {
       switch (list_line[sizeof(LINENUM) + sizeof(char)])
       {
         case KW_ELSE:
         case KW_ELIF:
-          indent--;
+          indent = (indent > 1 ? indent - 1 : indent);
           // Fall through
         case KW_IF:
         case KW_FOR:
-          printline(indent);
+          printline(nindent, indent);
           indent++;
           break;
         case KW_NEXT:
         case KW_END:
-          indent--;
+          indent = (indent > 1 ? indent - 1 : indent);
           // Fall through
         default:
-          printline(indent);
+          printline(nindent, indent);
           break;
       }
     }
@@ -2193,7 +2212,7 @@ print:
         {
           goto qwhat;
         }
-        printnum(e);
+        printnum(0, e);
       }
     }
   }
@@ -2205,7 +2224,7 @@ print:
 // Print the current free memory.
 //
 mem:
-  printnum((VAR_TYPE)(sp - program_end));
+  printnum(0, (VAR_TYPE)(sp - program_end));
   printmsg(memorymsg);
   goto run_next_statement;
 
