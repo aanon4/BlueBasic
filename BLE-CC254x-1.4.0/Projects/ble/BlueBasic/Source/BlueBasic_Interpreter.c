@@ -3559,7 +3559,7 @@ static void pin_wire_parse(void)
         // If the next line is also a WIRE, we continue building.
         if (txtpos[sizeof(LINENUM) + sizeof(char)] == KW_WIRE)
         {
-          txtpos += sizeof(LINENUM) + sizeof(char);
+          txtpos += sizeof(LINENUM) + sizeof(char) + sizeof(char);
           break;
         }
         txtpos--;
@@ -3608,9 +3608,10 @@ static void pin_wire_parse(void)
         break;
       case PM_PULLUP:
       case PM_PULLDOWN:
+      case PM_ADC:
         if (doneInput && ptr[-1] == WIRE_INPUT_NORMAL)
         {
-          ptr[-1] = (op == PM_PULLUP ? WIRE_INPUT_PULLUP : WIRE_INPUT_PULLDOWN);
+          ptr[-1] = (op == PM_PULLUP ? WIRE_INPUT_PULLUP : op == PM_ADC ? WIRE_INPUT_ADC : WIRE_INPUT_PULLDOWN);
         }
         else
         {
