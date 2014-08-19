@@ -10,8 +10,13 @@
 //	      Scott Lawrence <yorgle@gmail.com>
 //
 
-#define kVersion "v0.2"
+#define kVersion "v0.3"
 
+// v0.3: 2014-08-19
+//      New version time. Lots more I/O options available, including SPI, I2C and a general WIRE signalling protocol
+//      for talking to random other devices. Also, a new non-recursive expression evaluator which is a bit faster and
+//      much more flexible. Speed improvements and general bug fixes.
+//
 // v0.2: 2014-08-01
 //      Seems like a good place to declare 0.2. Work is complete enough to have a pre-flashed device which can
 //      be connected to over BLE and then program, including setting up services and characteristics, and attaching
