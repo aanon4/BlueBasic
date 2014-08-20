@@ -152,7 +152,6 @@ static const unsigned char keywords_11[] =
 {
   '%',OP_REM,
   'L','E','N','(',FUNC_LEN,
-  'L','E','T',KW_LET,
   'L','I','M','I','T','E','D',BLE_LIMITED,
   'L','I','M','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','A','X',KW_CONSTANT,CO_LIM_DISC_INT_MAX,
   'L','I','M','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','I','N',KW_CONSTANT,CO_LIM_DISC_INT_MIN,

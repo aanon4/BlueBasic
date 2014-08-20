@@ -14,7 +14,6 @@ struct keyword
   { "RUN", "KW_RUN" },
   { "SAVE", "KW_SAVE" },
   { "NEXT", "KW_NEXT" },
-  { "LET", "KW_LET" },
   { "IF", "KW_IF" },
   { "ELSE", "KW_ELSE" },
   { "ELIF", "KW_ELIF" },

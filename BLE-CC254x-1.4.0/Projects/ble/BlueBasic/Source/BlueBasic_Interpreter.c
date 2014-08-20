@@ -104,7 +104,6 @@ enum
   KW_NEW,
   KW_RUN,
   KW_NEXT,
-  KW_LET,
   KW_IF,
   KW_ELIF,
   KW_ELSE,
@@ -445,6 +444,17 @@ static void pin_wire(unsigned char* start, unsigned char* end);
 #define PIN_MAKE(A,I) (((A) << 6) | ((I) << 3))
 #define PIN_MAJOR(P)  ((P) >> 6)
 #define PIN_MINOR(P)  (((P) >> 3) & 7)
+
+typedef struct pin_wire_var
+{
+  unsigned char size;
+  unsigned char* var;
+  struct pin_wire_var* next;
+}  pin_wire_var;
+
+static unsigned char pinParseCurrent;
+static pin_wire_var* pinParseHead;
+static unsigned char* pinParsePtr;
 
 static VAR_TYPE expression(unsigned char mode);
 #define EXPRESSION_STACK_SIZE 8
@@ -1529,6 +1539,9 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
     goto interperate;
   }
 
+  // Remove any pending WIRE parsing.
+  pinParsePtr = NULL;
+
   txtpos = program_end + sizeof(LINENUM);
   tokenize();
 
@@ -1677,8 +1690,6 @@ interperate:
       goto interperate;
     case KW_NEXT:
       goto next;
-    case KW_LET:
-      goto assignment;
     case KW_IF:
     case KW_ELIF:
       goto cmd_elif;
@@ -2502,19 +2513,19 @@ cmd_pinmode:
         {
           *cmd++ = WIRE_INPUT_PULLDOWN;
         }
+        else if (pinMode == PM_ADC)
+        {
+          if (PIN_MAJOR(cmd[1]) != 0)
+          {
+            goto qwhat;
+          }
+          *cmd++ = WIRE_INPUT_ADC;
+        }
         else
         {
           txtpos--;
           goto qwhat;
         }
-        break;
-      case PM_ADC:
-        if (PIN_MAJOR(cmd[1]) != 0)
-        {
-          goto qwhat;
-        }
-        *cmd++ = WIRE_INPUT;
-        *cmd++ = WIRE_INPUT_ADC;
         break;
       case PM_OUTPUT:
         *cmd++ = WIRE_OUTPUT;
@@ -3545,15 +3556,13 @@ static VAR_TYPE pin_read(unsigned char major, unsigned char minor)
 //
 static void pin_wire_parse(void)
 {
-  unsigned char* ptr = program_end;
-  unsigned char input = 0;
-  unsigned char doneInput = 0;
-  struct wire_var
+  // Starting a new set of WIRE operations?
+  if (pinParsePtr == NULL)
   {
-    unsigned char size;
-    unsigned char* var;
-    struct wire_var* next;
-  }* head = NULL;
+    pinParsePtr = program_end;
+    pinParseCurrent = 0;
+    pinParseHead = 0;
+  }
 
   for (;;)
   {
@@ -3561,72 +3570,52 @@ static void pin_wire_parse(void)
     switch (op)
     {
       case NL:
-        // If the next line is also a WIRE, we continue building.
-        if (txtpos[sizeof(LINENUM) + sizeof(char)] == KW_WIRE)
-        {
-          txtpos += sizeof(LINENUM) + sizeof(char) + sizeof(char);
-          break;
-        }
         txtpos--;
-        pin_wire(program_end, ptr);
-        if (!error_num)
-        {
-          for (; head; head = head->next)
-          {
-            if (head->size == 1)
-            {
-              *head->var = *((unsigned char*)head + sizeof(struct wire_var) + 1) ? 1 : 0;
-            }
-            else
-            {
-              *(unsigned short*)head->var = *(unsigned short*)((unsigned char*)head + sizeof(struct wire_var) + 1);
-            }
-          }
-        }
         return;
       case WS_SPACE:
       case ',':
         break;
+      case KW_END:
+        pin_wire(program_end, pinParsePtr);
+        if (!error_num)
+        {
+          for (; pinParseHead; pinParseHead = pinParseHead->next)
+          {
+            if (pinParseHead->size == 1)
+            {
+              *pinParseHead->var = *((unsigned char*)pinParseHead + sizeof(pin_wire_var) + 1) ? 1 : 0;
+            }
+            else
+            {
+              *(unsigned short*)pinParseHead->var = *(unsigned short*)((unsigned char*)pinParseHead + sizeof(pin_wire_var) + 1);
+            }
+          }
+        }
+        pinParsePtr = NULL;
+        pinParseHead = NULL;
+        return;
       case KW_PIN_P0:
       case KW_PIN_P1:
       case KW_PIN_P2:
         txtpos--;
-        *ptr++ = WIRE_PIN;
-        *ptr++ = pin_parse();
+        *pinParsePtr++ = WIRE_PIN;
+        pinParseCurrent = pin_parse();
+        *pinParsePtr++ = pinParseCurrent;
         if (error_num)
         {
           goto wire_error;
         }
         break;
       case PM_OUTPUT:
-        *ptr++ = WIRE_OUTPUT;
-        input = 0;
+        *pinParsePtr++ = WIRE_OUTPUT;
         break;
       case PM_INPUT:
-        *ptr++ = WIRE_INPUT;
-        if (!doneInput)
-        {
-          *ptr++ = WIRE_INPUT_NORMAL;
-          doneInput = 1;
-        }
-        input = 1;
-        break;
-      case PM_PULLUP:
-      case PM_PULLDOWN:
-      case PM_ADC:
-        if (doneInput && ptr[-1] == WIRE_INPUT_NORMAL)
-        {
-          ptr[-1] = (op == PM_PULLUP ? WIRE_INPUT_PULLUP : op == PM_ADC ? WIRE_INPUT_ADC : WIRE_INPUT_PULLDOWN);
-        }
-        else
-        {
-          goto wire_error;
-        }
+        *pinParsePtr++ = WIRE_INPUT;
         break;
       case PM_TIMEOUT:
-        *ptr++ = WIRE_TIMEOUT;
-        *(unsigned short*)ptr = expression(EXPR_COMMA);
-        ptr += sizeof(unsigned short);
+        *pinParsePtr++ = WIRE_TIMEOUT;
+        *(unsigned short*)pinParsePtr = expression(EXPR_COMMA);
+        pinParsePtr += sizeof(unsigned short);
         if (error_num)
         {
           goto wire_error;
@@ -3637,22 +3626,22 @@ static void pin_wire_parse(void)
         {
           if (txtpos[1] == CO_HIGH)
           {
-            *ptr++ = WIRE_WAIT_HIGH;
-            *ptr++ = 0;
+            *pinParsePtr++ = WIRE_WAIT_HIGH;
+            *pinParsePtr++ = 0;
             txtpos += 2;
             break;
           }
           else if (txtpos[1] == CO_LOW)
           {
-            *ptr++ = WIRE_WAIT_LOW;
-            *ptr++ = 0;
+            *pinParsePtr++ = WIRE_WAIT_LOW;
+            *pinParsePtr++ = 0;
             txtpos += 2;
             break;
           }
         }
-        *ptr++ = WIRE_WAIT_TIME;
-        *(unsigned short*)ptr = expression(EXPR_COMMA);
-        ptr += sizeof(unsigned short);
+        *pinParsePtr++ = WIRE_WAIT_TIME;
+        *(unsigned short*)pinParsePtr = expression(EXPR_COMMA);
+        pinParsePtr += sizeof(unsigned short);
         if (error_num)
         {
           goto wire_error;
@@ -3668,7 +3657,7 @@ static void pin_wire_parse(void)
         }
         stack_variable_frame* vframe;
         unsigned char* vptr = parse_variable_address(&vframe);
-        if (!input || !vptr)
+        if (!vptr)
         {
           goto wire_error;
         }
@@ -3680,65 +3669,58 @@ static void pin_wire_parse(void)
         {
           *(VAR_TYPE*)vptr = 0;
         }
-        *ptr++ = WIRE_METADATA;
-        *ptr++ = sizeof(struct wire_var);
-        ((struct wire_var*)ptr)->size = (adc && vframe->type != VAR_DIM_BYTE ? 2 : 1);
-        ((struct wire_var*)ptr)->var = vptr;
-        ((struct wire_var*)ptr)->next = head;
-        head = (struct wire_var*)ptr;
-        ptr += sizeof(struct wire_var);
+        *pinParsePtr++ = WIRE_METADATA;
+        *pinParsePtr++ = sizeof(pin_wire_var);
+        ((pin_wire_var*)pinParsePtr)->size = (adc && vframe->type != VAR_DIM_BYTE ? 2 : 1);
+        ((pin_wire_var*)pinParsePtr)->var = vptr;
+        ((pin_wire_var*)pinParsePtr)->next = pinParseHead;
+        pinParseHead = (pin_wire_var*)pinParsePtr;
+        pinParsePtr += sizeof(pin_wire_var);
         if (adc)
         {
-          *ptr++ = WIRE_INPUT_READ_ADC;
-          *ptr++ = 0;
-          *ptr++ = 0;
+          *pinParsePtr++ = WIRE_INPUT_READ_ADC;
+          *pinParsePtr++ = 0;
+          *pinParsePtr++ = 0;
         }
         else
         {
-          *ptr++ = WIRE_INPUT_READ;
-          *ptr++ = 0;
+          *pinParsePtr++ = WIRE_INPUT_READ;
+          *pinParsePtr++ = 0;
         }
         break;
       }
       case PM_PULSE:
       {
-        if (input)
+        unsigned char v = *txtpos++;
+        if (v >= 'A' && v <= 'Z')
         {
-          unsigned char v = *txtpos++;
-          if (v >= 'A' && v <= 'Z')
+          stack_variable_frame* vframe;
+          unsigned char* vptr = get_variable_frame(v, &vframe);
+          *pinParsePtr++ = WIRE_INPUT_PULSE;
+          if (vframe->type == VAR_DIM_BYTE)
           {
-            stack_variable_frame* vframe;
-            unsigned char* vptr = get_variable_frame(v, &vframe);
-            *ptr++ = WIRE_INPUT_PULSE;
-            if (vframe->type == VAR_DIM_BYTE)
-            {
-              OS_memset(vptr, 0, vframe->header.frame_size - sizeof(stack_variable_frame));
-              *ptr++ = sizeof(unsigned char);
-              *ptr++ = vframe->header.frame_size - sizeof(stack_variable_frame);
-            }
-            else
-            {
-              *vptr = 0;
-              *ptr++ = 1;
-              *ptr++ = sizeof(unsigned short);
-            }
-            *(unsigned char**)ptr = vptr;
-            ptr += sizeof(unsigned char*);
-            break;
+            OS_memset(vptr, 0, vframe->header.frame_size - sizeof(stack_variable_frame));
+            *pinParsePtr++ = sizeof(unsigned char);
+            *pinParsePtr++ = vframe->header.frame_size - sizeof(stack_variable_frame);
           }
+          else
+          {
+            *vptr = 0;
+            *pinParsePtr++ = 1;
+            *pinParsePtr++ = sizeof(unsigned short);
+          }
+          *(unsigned char**)pinParsePtr = vptr;
+          pinParsePtr += sizeof(unsigned char*);
+          break;
         }
-        goto wire_error;
       }
       default:
-        if (!input)
+        txtpos--;
+        VAR_TYPE val = expression(EXPR_COMMA);
+        if (!error_num)
         {
-          txtpos--;
-          VAR_TYPE val = expression(EXPR_COMMA);
-          if (!error_num)
-          {
-            *ptr++ = (val ? WIRE_HIGH : WIRE_LOW);
-            break;
-          }
+          *pinParsePtr++ = (val ? WIRE_HIGH : WIRE_LOW);
+          break;
         }
         goto wire_error;
     }
