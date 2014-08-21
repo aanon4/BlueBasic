@@ -309,6 +309,7 @@ enum
   WIRE_PIN_INPUT = 2,
   WIRE_PIN_HIGH = 3,
   WIRE_PIN_LOW = 4,
+  WIRE_PIN_READ = 5,
   
   WIRE_PIN_GENERAL = 0,
   
@@ -328,7 +329,7 @@ enum
   WIRE_WAIT_LOW = 0x70,
   WIRE_INPUT_READ = 0x78,
   WIRE_INPUT_READ_ADC = 0x80,
-  WIRE_METADATA = 0x88,
+  WIRE_INPUT_SET = 0x88,
 };
 #define WIRE_CASE(C)  ((C) >> 3)
 
@@ -445,16 +446,9 @@ static void pin_wire(unsigned char* start, unsigned char* end);
 #define PIN_MAJOR(P)  ((P) >> 6)
 #define PIN_MINOR(P)  (((P) >> 3) & 7)
 
-typedef struct pin_wire_var
-{
-  unsigned char size;
-  unsigned char* var;
-  struct pin_wire_var* next;
-}  pin_wire_var;
-
 static unsigned char pinParseCurrent;
-static pin_wire_var* pinParseHead;
 static unsigned char* pinParsePtr;
+static unsigned char* pinParseReadAddr;
 
 static VAR_TYPE expression(unsigned char mode);
 #define EXPRESSION_STACK_SIZE 8
@@ -3297,14 +3291,17 @@ cmd_i2c:
 
       unsigned char* ptr = program_end;
 
-      unsigned char cpin = i2cSda;
-      unsigned char cdata = 1;
-#define WIRE_SDA_LOW() if (cdata) { cdata = 0; if (cpin != i2cSda) { cpin = i2cSda; *ptr++ = WIRE_PIN_OUTPUT|cpin; } else { *ptr++ = WIRE_OUTPUT; } }
-#define WIRE_SCL_LOW() if (cpin != i2cScl) { cpin = i2cScl; *ptr++ = WIRE_PIN_OUTPUT | cpin; } else { *ptr++ = WIRE_OUTPUT; }
-#define WIRE_SDA_HIGH() if (!cdata) { cdata = 1; if (cpin != i2cSda) { cpin = i2cSda; *ptr++ = WIRE_PIN_INPUT | cpin; } else { *ptr++ = WIRE_INPUT; } }
-#define WIRE_SCL_HIGH() if (cpin != i2cScl) { cpin = i2cScl; *ptr++ = WIRE_PIN_INPUT | cpin; } else { *ptr++ = WIRE_INPUT; }
-#define WIRE_SCL_WAIT() *ptr++ = WIRE_WAIT_HIGH; *ptr++ = 0
-#define WIRE_SDA_READ(P) if (cpin != i2cSda) { cpin = i2cSda; *ptr++ = WIRE_PIN_INPUT | cpin; } *ptr++ = WIRE_INPUT_READ; *ptr++ = 0
+#define WIRE_SDA_LOW()    *ptr++ = WIRE_PIN_OUTPUT | i2cSda;
+#define WIRE_SCL_LOW()    *ptr++ = WIRE_PIN_OUTPUT | i2cScl;
+#define WIRE_SDA_HIGH()   *ptr++ = WIRE_PIN_INPUT | i2cSda;
+#define WIRE_SCL_HIGH()   *ptr++ = WIRE_PIN_INPUT | i2cScl;
+#define WIRE_SCL_WAIT()   *ptr++ = WIRE_WAIT_HIGH;
+#define WIRE_SDA_READ()   *ptr++ = WIRE_PIN_READ | i2cSda;
+      
+      *ptr++ = WIRE_INPUT_SET;
+      *(unsigned char**)ptr = NULL;
+      ptr += sizeof(unsigned char*);
+      *ptr++ = 0;
 
       // Start
       WIRE_SDA_LOW();
@@ -3367,6 +3364,11 @@ cmd_i2c:
         *(VAR_TYPE*)rdata = 0;
         len = 1;
       }
+
+      *ptr++ = WIRE_INPUT_SET;
+      data = ptr;
+      ptr += sizeof(unsigned char*);
+      *ptr++ = sizeof(unsigned char);
       
       // Read bits
       WIRE_SCL_LOW();
@@ -3393,6 +3395,8 @@ i2c_end:
       WIRE_SDA_LOW();
       WIRE_SCL_HIGH();
       WIRE_SDA_HIGH();
+
+      *(unsigned char**)data = ptr;
       
       pin_wire(program_end, ptr);
       if (error_num)
@@ -3403,18 +3407,15 @@ i2c_end:
       if (rdata)
       {
         unsigned char v = 0;
-        unsigned idx = 0;
-        len *= 8;
-        for (idx = 0; data < ptr && idx < len; )
+        unsigned char idx = 0;
+        len *= 8 * 2;
+        for (idx = 0; idx < len; idx += 2, ptr += 2)
         {
-          if (*data++ == WIRE_INPUT_READ)
+          v = (v << 1) | (*ptr ? 1 : 0);
+          if (!(idx & 15))
           {
-            v = (v << 1) | (*data++ ? 1 : 0);
-            if (!(++idx & 7))
-            {
-              *rdata++ = v;
-              v = 0;
-            }
+            *rdata++ = v;
+            v = 0;
           }
         }
       }
@@ -3561,7 +3562,7 @@ static void pin_wire_parse(void)
   {
     pinParsePtr = program_end;
     pinParseCurrent = 0;
-    pinParseHead = 0;
+    pinParseReadAddr = NULL;
   }
 
   for (;;)
@@ -3577,22 +3578,7 @@ static void pin_wire_parse(void)
         break;
       case KW_END:
         pin_wire(program_end, pinParsePtr);
-        if (!error_num)
-        {
-          for (; pinParseHead; pinParseHead = pinParseHead->next)
-          {
-            if (pinParseHead->size == 1)
-            {
-              *pinParseHead->var = *((unsigned char*)pinParseHead + sizeof(pin_wire_var) + 1) ? 1 : 0;
-            }
-            else
-            {
-              *(unsigned short*)pinParseHead->var = *(unsigned short*)((unsigned char*)pinParseHead + sizeof(pin_wire_var) + 1);
-            }
-          }
-        }
         pinParsePtr = NULL;
-        pinParseHead = NULL;
         return;
       case KW_PIN_P0:
       case KW_PIN_P1:
@@ -3622,22 +3608,41 @@ static void pin_wire_parse(void)
         }
         break;
       case PM_WAIT:
-        if (*txtpos == KW_CONSTANT)
+      {
+        const unsigned char op = txtpos[1];
+        if (*txtpos == KW_CONSTANT && (op == CO_HIGH || op == CO_LOW))
         {
-          if (txtpos[1] == CO_HIGH)
+          txtpos += 2;
+
+          unsigned char size;
+          stack_variable_frame* vframe;
+          unsigned char* vptr = parse_variable_address(&vframe);
+          if (!vptr)
           {
-            *pinParsePtr++ = WIRE_WAIT_HIGH;
-            *pinParsePtr++ = 0;
-            txtpos += 2;
-            break;
+            goto wire_error;
           }
-          else if (txtpos[1] == CO_LOW)
+          if (vframe->type == VAR_DIM_BYTE)
           {
-            *pinParsePtr++ = WIRE_WAIT_LOW;
-            *pinParsePtr++ = 0;
-            txtpos += 2;
-            break;
+            *vptr = 0;
+            size = sizeof(unsigned char);
           }
+          else
+          {
+            *(VAR_TYPE*)vptr = 0;
+            size = sizeof(VAR_TYPE);
+          }
+          if (pinParseReadAddr != vptr)
+          {
+            *pinParsePtr++ = WIRE_INPUT_SET;
+            *(unsigned char**)pinParsePtr = vptr;
+            pinParsePtr += sizeof(unsigned char*);
+            *pinParsePtr++ = size;
+            pinParseReadAddr = vptr;
+          }
+          pinParseReadAddr += size;
+
+          *pinParsePtr++ = (op == CO_HIGH ? WIRE_WAIT_HIGH : WIRE_WAIT_LOW);
+          break;
         }
         *pinParsePtr++ = WIRE_WAIT_TIME;
         *(unsigned short*)pinParsePtr = expression(EXPR_COMMA);
@@ -3647,9 +3652,11 @@ static void pin_wire_parse(void)
           goto wire_error;
         }
         break;
+      }
       case BLE_READ:
       {
         unsigned char adc = 0;
+        unsigned char size = 0;
         if (*txtpos == PM_ADC)
         {
           adc = 1;
@@ -3664,28 +3671,29 @@ static void pin_wire_parse(void)
         if (vframe->type == VAR_DIM_BYTE)
         {
           *vptr = 0;
+          size = sizeof(unsigned char);
         }
         else
         {
           *(VAR_TYPE*)vptr = 0;
+          size = sizeof(VAR_TYPE);
         }
-        *pinParsePtr++ = WIRE_METADATA;
-        *pinParsePtr++ = sizeof(pin_wire_var);
-        ((pin_wire_var*)pinParsePtr)->size = (adc && vframe->type != VAR_DIM_BYTE ? 2 : 1);
-        ((pin_wire_var*)pinParsePtr)->var = vptr;
-        ((pin_wire_var*)pinParsePtr)->next = pinParseHead;
-        pinParseHead = (pin_wire_var*)pinParsePtr;
-        pinParsePtr += sizeof(pin_wire_var);
+        if (pinParseReadAddr != vptr)
+        {
+          *pinParsePtr++ = WIRE_INPUT_SET;
+          *(unsigned char**)pinParsePtr = vptr;
+          pinParsePtr += sizeof(unsigned char*);
+          *pinParsePtr++ = size;
+          pinParseReadAddr = vptr;
+        }
+        pinParseReadAddr += size;
         if (adc)
         {
           *pinParsePtr++ = WIRE_INPUT_READ_ADC;
-          *pinParsePtr++ = 0;
-          *pinParsePtr++ = 0;
         }
         else
         {
           *pinParsePtr++ = WIRE_INPUT_READ;
-          *pinParsePtr++ = 0;
         }
         break;
       }
@@ -3696,23 +3704,30 @@ static void pin_wire_parse(void)
         {
           stack_variable_frame* vframe;
           unsigned char* vptr = get_variable_frame(v, &vframe);
-          *pinParsePtr++ = WIRE_INPUT_PULSE;
-          if (vframe->type == VAR_DIM_BYTE)
+          
+          const unsigned char size = (vframe->type == VAR_DIM_BYTE ? sizeof(unsigned char) : sizeof(VAR_TYPE));
+          if (pinParseReadAddr != vptr)
           {
-            OS_memset(vptr, 0, vframe->header.frame_size - sizeof(stack_variable_frame));
-            *pinParsePtr++ = sizeof(unsigned char);
+            *pinParsePtr++ = WIRE_INPUT_SET;
+            *(unsigned char**)pinParsePtr = vptr;
+            pinParsePtr += sizeof(unsigned char*);
+            *pinParsePtr++ = size;
+            pinParseReadAddr = vptr;
+          }
+          pinParseReadAddr += size;
+
+          *pinParsePtr++ = WIRE_INPUT_PULSE;
+          if (size == sizeof(unsigned char))
+          {
             *pinParsePtr++ = vframe->header.frame_size - sizeof(stack_variable_frame);
           }
           else
           {
-            *vptr = 0;
             *pinParsePtr++ = 1;
-            *pinParsePtr++ = sizeof(unsigned short);
           }
-          *(unsigned char**)pinParsePtr = vptr;
-          pinParsePtr += sizeof(unsigned char*);
           break;
         }
+        goto wire_error;
       }
       default:
         txtpos--;
@@ -3741,9 +3756,10 @@ static void pin_wire(unsigned char* ptr, unsigned char* end)
   unsigned short ptimeout = 256;
   unsigned char major = 0;
   unsigned char dbit = 1;
-  unsigned char size;
   unsigned char len;
   unsigned short count;
+  unsigned char* dptr = NULL;
+  unsigned char dstep = 0;
 
   while (ptr < end)
   {
@@ -3763,6 +3779,8 @@ static void pin_wire(unsigned char* ptr, unsigned char* end)
           goto wire_high;
         case WIRE_PIN_LOW:
           goto wire_low;
+        case WIRE_PIN_READ:
+          goto wire_read;
         default:
           goto wire_error;
       }
@@ -3921,10 +3939,7 @@ static void pin_wire(unsigned char* ptr, unsigned char* end)
           break;
         case WIRE_CASE(WIRE_INPUT_PULSE):
         {
-          size = *ptr++;
           len = *ptr++;
-          unsigned char* data = *(unsigned char**)ptr;
-          ptr += sizeof(unsigned char*);
           while (len--)
           {
             count = 1;
@@ -3952,36 +3967,35 @@ static void pin_wire(unsigned char* ptr, unsigned char* end)
                 break;
               }
             }
-            if (size)
+            if (dstep)
             {
-              if (size == 1)
+              if (dstep == 1)
               {
-                *data++ = count;
+                *dptr = count;
               }
               else
               {
-                *(unsigned short*)data = count;
-                data += sizeof(unsigned short);
+                *(unsigned short*)dptr = count;
               }
+              dptr += dstep;
             }
           }
           // Calibrate
-          if (size)
+          if (dstep)
           {
-            len = *(unsigned char*)(ptr - sizeof(unsigned char*) - sizeof(unsigned char));
-            data = *(unsigned char**)(ptr - sizeof(unsigned char*));
-            if (size == 1)
+            len = ptr[-1];
+            if (dstep == 1)
             {
+              unsigned char* data = dptr;
               while (len--)
               {
+                data--;
                 *data = WIRE_COUNT_TO_USEC(*data);
-                data++;
               }
             }
             else
             {
-              *(unsigned short*)data = WIRE_COUNT_TO_USEC(*(unsigned short*)data);
-              data += sizeof(unsigned short);
+              *(VAR_TYPE*)(dptr - dstep) = WIRE_COUNT_TO_USEC(*(unsigned short*)(dptr - dstep));
             }
           }
           break;
@@ -3989,7 +4003,6 @@ static void pin_wire(unsigned char* ptr, unsigned char* end)
         case WIRE_CASE(WIRE_WAIT_HIGH):
         {
           count = 1;
-          size = *ptr++;
           switch (major)
           {
             case 0:
@@ -4010,7 +4023,6 @@ static void pin_wire(unsigned char* ptr, unsigned char* end)
         case WIRE_CASE(WIRE_WAIT_LOW):
         {
           count = 1;
-          size = *ptr++;
           switch (major)
           {
             case 0:
@@ -4027,38 +4039,40 @@ static void pin_wire(unsigned char* ptr, unsigned char* end)
               break;
           }
         wire_store:
-          if (size)
+          if (dstep)
           {
             count = WIRE_COUNT_TO_USEC(count);
-            if (size == 1)
+            if (dstep == 1)
             {
-              **(unsigned char**)ptr = count;
+              **(unsigned char**)dptr = count;
             }
             else
             {
-              **(unsigned short**)ptr = count;
+              **(VAR_TYPE**)dptr = count;
             }
-            ptr += sizeof(unsigned char*);
+            dptr += dstep;
           }
           break;
         }
         case WIRE_CASE(WIRE_INPUT_READ):
+        wire_read:
         {
           switch (major)
           {
             case 0:
-              *ptr++ = P0 & dbit;
+              *dptr = P0 & dbit;
 #ifdef SIMULATE_PINS
-              ptr[-1] = 1;
+              *dptr = dbit;
 #endif
               break;
             case 1:
-              *ptr++ = P1 & dbit;
+              *dptr = P1 & dbit;
               break;
             case 2:
-              *ptr++ = P2 & dbit;
+              *dptr = P2 & dbit;
               break;
           }
+          dptr += dstep;
           break;
         }
         case WIRE_CASE(WIRE_INPUT_READ_ADC):
@@ -4075,13 +4089,22 @@ static void pin_wire(unsigned char* ptr, unsigned char* end)
             ;
           count = ADCL;
           count |= ADCH << 8;
-          *(short*)ptr = ((short)count) >> (8 - (analogResolution >> 3));
-          ptr += sizeof(short);
+          count = ((short)count) >> (8 - (analogResolution >> 3));
+          if (dstep == sizeof(unsigned char))
+          {
+            *dptr = count;
+          }
+          else
+          {
+            *(short*)dptr = count;
+          }
+          dptr += dstep;
           break;
         }
-        case WIRE_CASE(WIRE_METADATA):
-          size = *ptr++;
-          ptr += size;
+        case WIRE_CASE(WIRE_INPUT_SET):
+          dptr = *(unsigned char**)ptr;
+          ptr += sizeof(unsigned char*);
+          dstep = *ptr++;
           break;
         default:
           goto wire_error;
