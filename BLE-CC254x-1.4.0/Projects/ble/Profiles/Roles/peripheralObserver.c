@@ -391,9 +391,11 @@ bStatus_t GAPRole_SetParameter( uint16 param, uint32 val, uint8 len, void *pValu
           case 0:
             HCI_EXT_SetTxPowerCmd(HCI_EXT_TX_POWER_0_DBM);
             break;
+#ifdef TARGET_CC2540
           case 4:
             HCI_EXT_SetTxPowerCmd(HCI_EXT_TX_POWER_4_DBM);
             break;
+#endif
           default:
             ret = bleInvalidRange;
             break;
