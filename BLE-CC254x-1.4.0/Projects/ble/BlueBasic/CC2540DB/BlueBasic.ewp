@@ -280,6 +280,7 @@
           <state>HAL_ADC=FALSE</state>
           <state>HAL_AES=FALSE</state>
           <state>xZAPP_P2=TRUE</state>
+          <state>TARGET_CC2540=TRUE</state>
         </option>
         <option>
           <name>CCPreprocFile</name>

@@ -107,7 +107,6 @@
 				22BC3709197CEABC00828C73 /* bleadvert03.test */,
 				22BC370B197CEC5100828C73 /* bleadvert04.test */,
 				22BC370C197CEE7E00828C73 /* bleadvert05.test */,
-				22BC370D197CF78000828C73 /* example01.test */,
 				226D1CF919837AB2006B289B /* blescan01.test */,
 				2233458E199440C800B2141A /* blescan10.test */,
 				226D1CFA1983845A006B289B /* parsehex01.test */,
@@ -118,6 +117,7 @@
 				226D1CFF19847030006B289B /* if05.test */,
 				226D1D0019847093006B289B /* if06.test */,
 				2233458F19948C4000B2141A /* spi01.test */,
+				22BC370D197CF78000828C73 /* example01.test */,
 				22FA500C199C669600535BCE /* example02.test */,
 			);
 			path = Tests;

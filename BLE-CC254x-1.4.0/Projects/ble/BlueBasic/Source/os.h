@@ -164,7 +164,11 @@ extern unsigned char GAPObserverRole_CancelDiscovery(void);
 #include "linkdb.h"
 #include "hci.h"
 
+#if TARGET_CC2540 || TARGET_CC2541
 #define TARGET_CC254X   1
+#else
+#error "Unknown TARGET_XXX"
+#endif
 #define ENABLE_DEBUG_INTERFACE  1
 #define ENABLE_BLE_CONSOLE  1
 

@@ -278,7 +278,7 @@
           <state>HAL_KEY=FALSE</state>
           <state>HAL_ADC=FALSE</state>
           <state>HAL_AES=FALSE</state>
-          <state>CC2540</state>
+          <state>TARGET_CC2541=TRUE</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -6661,7 +6661,7 @@
       <name>$PROJ_DIR$\..\..\..\..\Components\ble\include\bcomdef.h</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\..\..\Components\osal\common\OSAL.c</name>
+      <name>$PROJ_DIR$\..\..\..\..\COMPONENTS\osal\common\OSAL.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\..\..\Components\osal\common\osal_bufmgr.c</name>
@@ -6712,7 +6712,7 @@
       <name>$PROJ_DIR$\..\..\Include\gapgattserver.h</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\..\..\Components\ble\host\gatt_uuid.c</name>
+      <name>$PROJ_DIR$\..\..\..\..\COMPONENTS\ble\host\gatt_uuid.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\Include\gattservapp.h</name>
