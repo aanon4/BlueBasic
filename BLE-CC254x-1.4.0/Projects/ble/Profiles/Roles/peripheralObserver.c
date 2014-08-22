@@ -968,6 +968,13 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
           DevInfo_SetParameter(DEVINFO_SYSTEM_ID, DEVINFO_SYSTEM_ID_LEN, systemId);
 
           gapRole_state = GAPROLE_STARTED;
+          
+          // This should match the original advertising setup in BlueBasic.c:consoleAdvert
+          if (gapRole_AdvertDataLen == 31 && osal_memcmp(&gapRole_AdvertData[23], "BASIC#??", 8))
+          {
+            gapRole_AdvertData[29] = (gapRole_bdAddr[5] >> 4) + (gapRole_bdAddr[5] >= 0xA0 ? 'A' - 0xA : '0');
+            gapRole_AdvertData[30] = (gapRole_bdAddr[5] & 15) + ((gapRole_bdAddr[5] & 15) >= 0x0A ? 'A' - 0xA : '0');
+          }
 
           // Update the advertising data
           stat = GAP_UpdateAdvertisingData( gapRole_TaskID,
