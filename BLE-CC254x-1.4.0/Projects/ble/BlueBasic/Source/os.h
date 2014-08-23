@@ -174,8 +174,10 @@ extern unsigned char GAPObserverRole_CancelDiscovery(void);
 
 extern unsigned char blueBasic_TaskID;
 
+#ifndef ENABLE_BLE_CONSOLE
 #define OS_UART_PORT           HAL_UART_PORT_1
 #define OS_UART_BAUDRATE       HAL_UART_BR_115200
+#endif
 
 // Task Events
 #define BLUEBASIC_START_DEVICE_EVT 0x0001
