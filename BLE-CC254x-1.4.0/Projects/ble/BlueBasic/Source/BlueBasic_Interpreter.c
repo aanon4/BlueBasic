@@ -3274,7 +3274,7 @@ cmd_spi:
 //
 // I2C MASTER <scl pin> <sda pin>
 //  or
-// I2C WRITE <addr>, <data, ...>
+// I2C WRITE <addr>, <data, ...> [, READ <variable>|<array>]
 //  or
 // I2C READ <addr>, <variable>|<array>, ...
 //  note: The CC2541 has i2c hardware which we are not yet using.
@@ -3317,7 +3317,7 @@ cmd_i2c:
     case BLE_READ:
     {
       unsigned char* rdata = NULL;
-      unsigned char* data = NULL;
+      unsigned char* data;
       unsigned char len = 0;
       unsigned char i = 0;
       unsigned char* ptr = program_end;
@@ -3333,18 +3333,43 @@ cmd_i2c:
       WIRE_SCL_LOW();
       
       // Encode data we want to write
-      for (;;)
+      for (;; len++)
       {
         unsigned char b;
+        unsigned char d;
         if (*txtpos == NL)
         {
           goto i2c_end;
         }
-        const unsigned char d = expression(EXPR_COMMA) | rnw;
-        if (error_num)
+        else if (*txtpos == BLE_READ)
         {
-          goto qwhat;
+          txtpos++;
+          if (rnw || !len)
+          {
+            goto qwhat;
+          }
+          // Switch from WRITE to READ
+          // Re-start
+          WIRE_SCL_HIGH();
+          WIRE_SDA_LOW();
+          WIRE_SCL_LOW();
+          rnw = 1;
+          d = i;
         }
+        else
+        {
+          d = expression(EXPR_COMMA);
+          if (error_num)
+          {
+            goto qwhat;
+          }
+          // Remember the address
+          if (len == 0)
+          {
+            i = d;
+          }
+        }
+        d |= rnw;
         for (b = 128; b; b >>= 1)
         {
           if (d & b)
