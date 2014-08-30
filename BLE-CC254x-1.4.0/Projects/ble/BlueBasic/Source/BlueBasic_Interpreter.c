@@ -483,10 +483,23 @@ static unsigned char ble_read_callback(unsigned short handle, gattAttribute_t* a
 static unsigned char ble_write_callback(unsigned short handle, gattAttribute_t* attr, unsigned char* value, unsigned char len, unsigned short offset);
 static void ble_notify_assign(gatt_variable_ref* vref);
 
+#ifdef TARGET_CC254X
+
+#include "gatt_uuid.h"
+
+#define ble_primary_service_uuid                primaryServiceUUID
+#define ble_characteristic_uuid                 characterUUID
+#define ble_characteristic_description_uuid     charUserDescUUID
+#define ble_client_characteristic_config_uuid   clientCharCfgUUID
+
+#else // TARGET_CC254X
+
 static const unsigned char ble_primary_service_uuid[] = { 0x00, 0x28 };
 static const unsigned char ble_characteristic_uuid[] = { 0x03, 0x28 };
 static const unsigned char ble_characteristic_description_uuid[] = { 0x01, 0x29 };
 static const unsigned char ble_client_characteristic_config_uuid[] = { 0x02, 0x29 };
+
+#endif // TARGET_CC254X
 
 static LINENUM servicestart;
 static unsigned short servicecount;
@@ -3340,9 +3353,12 @@ cmd_i2c:
           WIRE_SCL_WAIT();
           WIRE_SCL_LOW();
         }
+
         // Ack
         WIRE_SDA_HIGH();
         WIRE_SCL_HIGH();
+        WIRE_SCL_WAIT();
+        WIRE_SCL_LOW();
       }
 
       // Encode data we want to read
@@ -3373,7 +3389,6 @@ cmd_i2c:
       // Read bits
       WIRE_SCL_LOW();
       WIRE_SDA_HIGH();
-      data = ptr;
       for (i = len; i--; )
       {
         unsigned char b;
@@ -3385,7 +3400,15 @@ cmd_i2c:
           WIRE_SCL_LOW();
         }
         // Ack
-        WIRE_SDA_LOW();
+        if (i)
+        {
+          WIRE_SDA_LOW();
+        }
+        // Nack
+        else
+        {
+          WIRE_SDA_HIGH();
+        }
         WIRE_SCL_HIGH();
         WIRE_SCL_LOW();
         WIRE_SDA_HIGH();
@@ -3396,7 +3419,11 @@ i2c_end:
       WIRE_SCL_HIGH();
       WIRE_SDA_HIGH();
 
-      *(unsigned char**)data = ptr;
+      if (data)
+      {
+        *(unsigned char**)data = ptr;
+        OS_memset(ptr, 0, len * 8 * 2);
+      }
       
       pin_wire(program_end, ptr);
       if (error_num)
@@ -3404,15 +3431,15 @@ i2c_end:
         break;
       }
       // If we read data, reassemble it
-      if (rdata)
+      if (data)
       {
         unsigned char v = 0;
         unsigned char idx = 0;
-        len *= 8 * 2;
-        for (idx = 0; idx < len; idx += 2, ptr += 2)
+        len *= 8;
+        for (idx = 1, ptr++; idx <= len; idx++, ptr += 2)
         {
           v = (v << 1) | (*ptr ? 1 : 0);
-          if (!(idx & 15))
+          if (!(idx & 7))
           {
             *rdata++ = v;
             v = 0;
@@ -3489,6 +3516,8 @@ static unsigned char pin_parse(void)
   {
     return 0;
   }
+  
+  ignore_blanks();
   
   major = *txtpos++;
   if (major < KW_PIN_P0 || major > KW_PIN_P2)
@@ -4044,11 +4073,11 @@ static void pin_wire(unsigned char* ptr, unsigned char* end)
             count = WIRE_COUNT_TO_USEC(count);
             if (dstep == 1)
             {
-              **(unsigned char**)dptr = count;
+              *(unsigned char*)dptr = count;
             }
             else
             {
-              **(VAR_TYPE**)dptr = count;
+              *(VAR_TYPE*)dptr = count;
             }
             dptr += dstep;
           }
