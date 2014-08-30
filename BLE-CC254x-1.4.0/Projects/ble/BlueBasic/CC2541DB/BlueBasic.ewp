@@ -6571,7 +6571,7 @@
             </excluded>
           </file>
           <file>
-            <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2540EB\hal_sleep.c</name>
+            <name>$PROJ_DIR$\..\..\..\..\COMPONENTS\hal\target\CC2540EB\hal_sleep.c</name>
           </file>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2540EB\hal_startup.c</name>
@@ -6649,6 +6649,12 @@
   <group>
     <name>LIB</name>
     <file>
+      <name>$PROJ_DIR$\..\..\Libraries\CC2541DB\bin\CC2541_BLE.lib</name>
+      <excluded>
+        <configuration>CC2541</configuration>
+      </excluded>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\..\Libraries\CC2541DB\bin\CC2541_BLE_peri_observ.lib</name>
     </file>
     <file>
@@ -6676,7 +6682,7 @@
       <name>$PROJ_DIR$\..\..\..\..\Components\osal\common\OSAL_Memory.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\..\..\Components\osal\common\OSAL_PwrMgr.c</name>
+      <name>$PROJ_DIR$\..\..\..\..\COMPONENTS\osal\common\OSAL_PwrMgr.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\..\..\Components\osal\mcu\cc2540\osal_snv.c</name>
