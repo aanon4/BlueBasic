@@ -844,11 +844,14 @@ static void printline(unsigned char nindent, unsigned char indent)
             {
               OS_putchar(c);
             }
-            c = begin[-2];
-            if (c != '(' && *list_line != ',')
+            if (begin[-2] != '(' && *list_line != ',' && begin[-1] != FUNC_HEX)
             {
               OS_putchar(WS_SPACE);
               c = WS_SPACE;
+            }
+            else
+            {
+              c = begin[-2];
             }
             goto found;
           }
@@ -1682,10 +1685,21 @@ interperate:
     case KW_RUN:
       while (sp < variables_begin)
       {
-        if (((stack_header*)sp)->frame_type == STACK_SERVICE_FLAG)
+        switch (((stack_header*)sp)->frame_type)
         {
-          gattAttribute_t* attr;
-          GATTServApp_DeregisterService(((stack_service_frame*)sp)->attrs[0].handle, &attr);
+          case STACK_SERVICE_FLAG:
+          {
+            gattAttribute_t* attr;
+            GATTServApp_DeregisterService(((stack_service_frame*)sp)->attrs[0].handle, &attr);
+            break;
+          }
+          case STACK_VARIABLE_FLAG:
+          {
+            unsigned char vname;
+            VARIABLE_FLAGS_SET(((stack_variable_frame*)sp)->name, ((stack_variable_frame*)sp)->oflags);
+            cache_name = 0;
+            break;
+          }
         }
         sp += ((stack_header*)sp)->frame_size;
       }
@@ -3260,7 +3274,9 @@ cmd_spi:
 //
 // I2C MASTER <scl pin> <sda pin>
 //  or
-// I2C TRANSFER WRITE <data, data, ...> [READ <variable>|<array>]
+// I2C WRITE <addr>, <data, ...>
+//  or
+// I2C READ <addr>, <variable>|<array>, ...
 //  note: The CC2541 has i2c hardware which we are not yet using.
 //
 cmd_i2c:
@@ -3289,20 +3305,6 @@ cmd_i2c:
       pin_wire(program_end, ptr);
       break;
     }
-    case SPI_TRANSFER:
-    {
-      unsigned char* rdata = NULL;
-      unsigned char* data = NULL;
-      unsigned char len = 0;
-      unsigned char i = 0;
-
-      if (*txtpos != BLE_WRITE)
-      {
-        goto qwhat;
-      }
-      txtpos++;
-
-      unsigned char* ptr = program_end;
 
 #define WIRE_SDA_LOW()    *ptr++ = WIRE_PIN_OUTPUT | i2cSda;
 #define WIRE_SCL_LOW()    *ptr++ = WIRE_PIN_OUTPUT | i2cScl;
@@ -3310,7 +3312,17 @@ cmd_i2c:
 #define WIRE_SCL_HIGH()   *ptr++ = WIRE_PIN_INPUT | i2cScl;
 #define WIRE_SCL_WAIT()   *ptr++ = WIRE_WAIT_HIGH;
 #define WIRE_SDA_READ()   *ptr++ = WIRE_PIN_READ | i2cSda;
-      
+
+    case BLE_WRITE:
+    case BLE_READ:
+    {
+      unsigned char* rdata = NULL;
+      unsigned char* data = NULL;
+      unsigned char len = 0;
+      unsigned char i = 0;
+      unsigned char* ptr = program_end;
+      unsigned char rnw = (txtpos[-1] == BLE_READ ? 1 : 0);
+
       *ptr++ = WIRE_INPUT_SET;
       *(unsigned char**)ptr = NULL;
       ptr += sizeof(unsigned char*);
@@ -3324,17 +3336,11 @@ cmd_i2c:
       for (;;)
       {
         unsigned char b;
-        const unsigned char c = *txtpos;
-        if (c == NL)
+        if (*txtpos == NL)
         {
           goto i2c_end;
         }
-        if (c == BLE_READ)
-        {
-          txtpos++;
-          break;
-        }
-        const unsigned char d = expression(EXPR_COMMA);
+        const unsigned char d = expression(EXPR_COMMA) | rnw;
         if (error_num)
         {
           goto qwhat;
@@ -3359,10 +3365,17 @@ cmd_i2c:
         WIRE_SCL_HIGH();
         WIRE_SCL_WAIT();
         WIRE_SCL_LOW();
+        
+        // If this is a read we have no more to write, so we go and read instead.
+        if (rnw)
+        {
+          break;
+        }
       }
 
       // Encode data we want to read
       stack_variable_frame* vframe;
+      ignore_blanks();
       i = *txtpos;
       if (i < 'A' || i > 'Z')
       {
