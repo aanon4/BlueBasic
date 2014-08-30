@@ -58,6 +58,7 @@
 		22BC370C197CEE7E00828C73 /* bleadvert05.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleadvert05.test; sourceTree = "<group>"; };
 		22BC370D197CF78000828C73 /* example01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = example01.test; sourceTree = "<group>"; };
 		22C5B9011985AAA40069D0C7 /* bleservice02.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleservice02.test; sourceTree = "<group>"; };
+		22E3960C19B1A542003A7892 /* i2c01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = i2c01.test; sourceTree = "<group>"; };
 		22FA2DB3197331050049CDB8 /* BlueBasic */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = BlueBasic; sourceTree = BUILT_PRODUCTS_DIR; };
 		22FA2DB6197331050049CDB8 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		22FA2DBF1973315F0049CDB8 /* BlueBasic_Interpreter.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = BlueBasic_Interpreter.c; path = "../../../BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Source/BlueBasic_Interpreter.c"; sourceTree = "<group>"; };
@@ -119,6 +120,7 @@
 				2233458F19948C4000B2141A /* spi01.test */,
 				22BC370D197CF78000828C73 /* example01.test */,
 				22FA500C199C669600535BCE /* example02.test */,
+				22E3960C19B1A542003A7892 /* i2c01.test */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
