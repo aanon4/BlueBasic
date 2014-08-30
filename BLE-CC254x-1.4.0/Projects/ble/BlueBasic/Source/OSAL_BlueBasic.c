@@ -87,7 +87,9 @@ const pTaskEventHandlerFn tasksArr[] =
 {
   LL_ProcessEvent,                                                  // task 0
   Hal_ProcessEvent,                                                 // task 1
+#if 0
   HCI_ProcessEvent,                                                 // task 2
+#endif
 #if defined ( OSAL_CBTIMER_NUM_TASKS )
   OSAL_CBTIMER_PROCESS_EVENT( osal_CbTimerProcessEvent ),           // task 3
 #endif
@@ -132,8 +134,10 @@ void osalInitTasks( void )
   /* Hal Task */
   Hal_Init( taskID++ );
 
+#if 0
   /* HCI Task */
   HCI_Init( taskID++ );
+#endif
 
 #if defined ( OSAL_CBTIMER_NUM_TASKS )
   /* Callback Timer Tasks */

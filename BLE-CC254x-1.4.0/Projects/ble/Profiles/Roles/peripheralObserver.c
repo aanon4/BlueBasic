@@ -70,12 +70,12 @@
 #define START_CONN_UPDATE_EVT         0x0004  // Start Connection Update Procedure
 #define CONN_PARAM_TIMEOUT_EVT        0x0008  // Connection Parameters Update Timeout
 
-#define DEFAULT_ADVERT_OFF_TIME       30000   // 30 seconds
+#define DEFAULT_ADVERT_OFF_TIME       1       // 1ms
 
 #define RSSI_NOT_AVAILABLE            127
 
-#define DEFAULT_MIN_CONN_INTERVAL     0x0006  // 100 milliseconds
-#define DEFAULT_MAX_CONN_INTERVAL     0x0C80  // 4 seconds
+#define DEFAULT_MIN_CONN_INTERVAL     80      // 100 milliseconds (units of 1.25ms)
+#define DEFAULT_MAX_CONN_INTERVAL     800     // 1 second
 
 #define MIN_CONN_INTERVAL             0x0006
 #define MAX_CONN_INTERVAL             0x0C80
@@ -152,7 +152,7 @@ static uint16 gapRole_RSSIReadRate = 0;
 
 static uint8  gapRole_ConnectedDevAddr[B_ADDR_LEN] = {0};
 
-static uint8  gapRole_ParamUpdateEnable = FALSE;
+static uint8  gapRole_ParamUpdateEnable = TRUE;
 static uint16 gapRole_MinConnInterval = DEFAULT_MIN_CONN_INTERVAL;
 static uint16 gapRole_MaxConnInterval = DEFAULT_MAX_CONN_INTERVAL;
 static uint16 gapRole_SlaveLatency = MIN_SLAVE_LATENCY;
@@ -181,7 +181,6 @@ static gapRolesParamUpdateCB_t *pGapRoles_ParamUpdateCB = NULL;
  */
 static void gapRole_ProcessOSALMsg( osal_event_hdr_t *pMsg );
 static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg );
-static void gapRole_SetupGAP( void );
 static void gapRole_HandleParamUpdateNoSuccess( void );
 static void gapRole_startConnUpdate( uint8 handleFailure );
 
@@ -674,7 +673,14 @@ bStatus_t GAPRole_StartDevice( gapRolesCBs_t *pAppCallbacks )
     }
 
     // Start the GAP
-    gapRole_SetupGAP();
+    GAP_DeviceInit(
+          gapRole_TaskID,
+          gapRole_profileRole,
+          gapObserverRoleMaxScanRes,
+          gapRole_IRK,
+          gapRole_SRK,
+          &gapRole_signCounter
+    );
 
     return ( SUCCESS );
   }
@@ -731,7 +737,9 @@ void GAPRole_Init( uint8 task_id )
   gapRole_state = GAPROLE_INIT;
   gapRole_ConnectionHandle = INVALID_CONNHANDLE;
 
+#if 0
   GAP_RegisterForHCIMsgs( gapRole_TaskID );
+#endif
 
   // Initialize the Profile Advertising and Connection Parameters
   gapRole_profileRole = GAP_PROFILE_PERIPHERAL|GAP_PROFILE_OBSERVER;
@@ -1244,28 +1252,6 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
 }
 
 /*********************************************************************
- * @fn      gapRole_SetupGAP
- *
- * @brief   Call the GAP Device Initialization function using the
- *          Profile Parameters.
- *
- * @param   none
- *
- * @return  none
- */
-static void gapRole_SetupGAP( void )
-{
-  VOID GAP_DeviceInit(
-          gapRole_TaskID,
-          gapRole_profileRole,
-          gapObserverRoleMaxScanRes,
-          gapRole_IRK,
-          gapRole_SRK,
-          &gapRole_signCounter
-  );
-}
-
-/*********************************************************************
  * @fn      gapRole_HandleParamUpdateNoSuccess
  *
  * @brief   Handle unsuccessful connection parameters update.
@@ -1356,13 +1342,13 @@ bStatus_t GAPRole_SendUpdateParam( uint16 minConnInterval, uint16 maxConnInterva
   }
   
   // Check that all parameters are in range before sending request
-  if ( ( minConnInterval >= DEFAULT_MIN_CONN_INTERVAL ) &&
-       ( minConnInterval < DEFAULT_MAX_CONN_INTERVAL  ) &&
-       ( maxConnInterval >= DEFAULT_MIN_CONN_INTERVAL ) &&
-       ( maxConnInterval < DEFAULT_MAX_CONN_INTERVAL  ) &&
-       ( latency         < MAX_SLAVE_LATENCY          ) &&
-       ( connTimeout     >= MIN_TIMEOUT_MULTIPLIER    ) &&
-       ( connTimeout     < MAX_TIMEOUT_MULTIPLIER     ) )
+  if ( ( minConnInterval >= MIN_CONN_INTERVAL ) &&
+       ( minConnInterval < MAX_CONN_INTERVAL  ) &&
+       ( maxConnInterval >= MIN_CONN_INTERVAL ) &&
+       ( maxConnInterval < MAX_CONN_INTERVAL  ) &&
+       ( latency         < MAX_SLAVE_LATENCY  ) &&
+       ( connTimeout     >= MIN_TIMEOUT_MULTIPLIER ) &&
+       ( connTimeout     < MAX_TIMEOUT_MULTIPLIER ) )
   {
     gapRole_MinConnInterval = minConnInterval;
     gapRole_MaxConnInterval = maxConnInterval;

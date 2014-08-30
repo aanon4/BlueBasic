@@ -87,20 +87,11 @@
 // Limited discoverable mode advertises for 30.72s, and then stops
 // General discoverable mode advertises indefinitely
 
-// Minimum connection interval (units of 1.25ms, 80=100ms) if automatic parameter update request is enabled
-#define DEFAULT_DESIRED_MIN_CONN_INTERVAL     80
-
-// Maximum connection interval (units of 1.25ms, 800=1000ms) if automatic parameter update request is enabled
-#define DEFAULT_DESIRED_MAX_CONN_INTERVAL     800
-
 // Slave latency to use if automatic parameter update request is enabled
 #define DEFAULT_DESIRED_SLAVE_LATENCY         0
 
 // Supervision timeout value (units of 10ms, 1000=10s) if automatic parameter update request is enabled
 #define DEFAULT_DESIRED_CONN_TIMEOUT          1000
-
-// Whether to enable automatic parameter update request when a connection is formed
-#define DEFAULT_ENABLE_UPDATE_REQUEST         TRUE
 
 // Connection Pause Peripheral time value (in seconds)
 #define DEFAULT_CONN_PAUSE_PERIPHERAL         6
@@ -235,52 +226,18 @@ void BlueBasic_Init( uint8 task_id )
   blueBasic_TaskID = task_id;
 
   // Setup the GAP
-  VOID GAP_SetParamValue( TGAP_CONN_PAUSE_PERIPHERAL, DEFAULT_CONN_PAUSE_PERIPHERAL );
-  VOID GAP_ConfigDeviceAddr(ADDRTYPE_PRIVATE_RESOLVE, NULL);
+  GAP_SetParamValue( TGAP_CONN_PAUSE_PERIPHERAL, DEFAULT_CONN_PAUSE_PERIPHERAL );
+  GAP_ConfigDeviceAddr(ADDRTYPE_PRIVATE_RESOLVE, NULL);
 
-  // Setup the GAP Peripheral Role Profile
-  {
 #ifdef ENABLE_BLE_CONSOLE
-    uint8 initial_advertising_enable = TRUE;
-    uint16 gapRole_AdvertOffTime = 1;
-#else
-    uint8 initial_advertising_enable = FALSE;
-
-    // By setting this to zero, the device will go into the waiting state after
-    // being discoverable for 30.72 second, and will not being advertising again
-    // until the enabler is set back to TRUE
-    uint16 gapRole_AdvertOffTime = 0;
+  GAPRole_SetParameter( GAPROLE_ADVERT_DATA, 0, sizeof(consoleAdvert), (void*)consoleAdvert );
 #endif
-
-    uint8 enable_update_request = DEFAULT_ENABLE_UPDATE_REQUEST;
-    uint16 desired_min_interval = DEFAULT_DESIRED_MIN_CONN_INTERVAL;
-    uint16 desired_max_interval = DEFAULT_DESIRED_MAX_CONN_INTERVAL;
-    uint16 desired_slave_latency = DEFAULT_DESIRED_SLAVE_LATENCY;
-    uint16 desired_conn_timeout = DEFAULT_DESIRED_CONN_TIMEOUT;
-
-    // Set the GAP Role Parameters
-    GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, initial_advertising_enable, 0, NULL );
-#ifdef ENABLE_BLE_CONSOLE
-    GAPRole_SetParameter( GAPROLE_ADVERT_DATA, 0, sizeof(consoleAdvert), (void*)consoleAdvert );
-#endif
-    GAPRole_SetParameter( GAPROLE_ADVERT_OFF_TIME, gapRole_AdvertOffTime, 0, NULL );
-
-    GAPRole_SetParameter( GAPROLE_PARAM_UPDATE_ENABLE,enable_update_request, 0, NULL );
-    GAPRole_SetParameter( GAPROLE_MIN_CONN_INTERVAL, desired_min_interval, 0, NULL );
-    GAPRole_SetParameter( GAPROLE_MAX_CONN_INTERVAL, desired_max_interval, 0, NULL );
-    GAPRole_SetParameter( GAPROLE_SLAVE_LATENCY, desired_slave_latency, 0, NULL );
-    GAPRole_SetParameter( GAPROLE_TIMEOUT_MULTIPLIER, desired_conn_timeout, 0, NULL );
-  }
 
   // Set advertising interval
-  {
-    uint16 advInt = DEFAULT_ADVERTISING_INTERVAL;
-
-    GAP_SetParamValue( TGAP_LIM_DISC_ADV_INT_MIN, advInt );
-    GAP_SetParamValue( TGAP_LIM_DISC_ADV_INT_MAX, advInt );
-    GAP_SetParamValue( TGAP_GEN_DISC_ADV_INT_MIN, advInt );
-    GAP_SetParamValue( TGAP_GEN_DISC_ADV_INT_MAX, advInt );
-  }
+  GAP_SetParamValue( TGAP_LIM_DISC_ADV_INT_MIN, DEFAULT_ADVERTISING_INTERVAL );
+  GAP_SetParamValue( TGAP_LIM_DISC_ADV_INT_MAX, DEFAULT_ADVERTISING_INTERVAL );
+  GAP_SetParamValue( TGAP_GEN_DISC_ADV_INT_MIN, DEFAULT_ADVERTISING_INTERVAL );
+  GAP_SetParamValue( TGAP_GEN_DISC_ADV_INT_MAX, DEFAULT_ADVERTISING_INTERVAL );
 
 #ifdef GAP_BOND_MGR
   // Setup the GAP Bond Manager
@@ -516,7 +473,7 @@ static bStatus_t consoleProfile_WriteAttrCB(uint16 connHandle, gattAttribute_t *
   unsigned char i;
   bStatus_t status;
 
-  if (pAttr->type.len == ATT_BT_UUID_SIZE && BUILD_UINT16( pAttr->type.uuid[0], pAttr->type.uuid[1]) == GATT_CLIENT_CHAR_CFG_UUID)
+  if (pAttr->type.len == ATT_BT_UUID_SIZE && BUILD_UINT16(pAttr->type.uuid[0], pAttr->type.uuid[1]) == GATT_CLIENT_CHAR_CFG_UUID)
   {
     status = GATTServApp_ProcessCCCWriteReq(connHandle, pAttr, pValue, len, offset, GATT_CLIENT_CFG_NOTIFY);
     if (status == SUCCESS)

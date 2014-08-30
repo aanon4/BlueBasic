@@ -94,11 +94,13 @@ CONST uint8 secondaryServiceUUID[ATT_BT_UUID_SIZE] =
   LO_UINT16( GATT_SECONDARY_SERVICE_UUID ), HI_UINT16( GATT_SECONDARY_SERVICE_UUID )
 };
 
+#if 0
 // Include UUID
 CONST uint8 includeUUID[ATT_BT_UUID_SIZE] =
 {
   LO_UINT16( GATT_INCLUDE_UUID ), HI_UINT16( GATT_INCLUDE_UUID )
 };
+#endif
 
 // Characteristic UUID
 CONST uint8 characterUUID[ATT_BT_UUID_SIZE] =
@@ -106,6 +108,7 @@ CONST uint8 characterUUID[ATT_BT_UUID_SIZE] =
   LO_UINT16( GATT_CHARACTER_UUID ), HI_UINT16( GATT_CHARACTER_UUID )
 };
 
+#if 0
 /**
  * GATT Descriptors
  */
@@ -114,6 +117,7 @@ CONST uint8 charExtPropsUUID[ATT_BT_UUID_SIZE] =
 {
   LO_UINT16( GATT_CHAR_EXT_PROPS_UUID ), HI_UINT16( GATT_CHAR_EXT_PROPS_UUID )
 };
+#endif
 
 // Characteristic User Description UUID
 CONST uint8 charUserDescUUID[ATT_BT_UUID_SIZE] =
@@ -126,6 +130,8 @@ CONST uint8 clientCharCfgUUID[ATT_BT_UUID_SIZE] =
 {
   LO_UINT16( GATT_CLIENT_CHAR_CFG_UUID ), HI_UINT16( GATT_CLIENT_CHAR_CFG_UUID )
 };
+
+#if 0
 
 // Server Characteristic Configuration UUID
 CONST uint8 servCharCfgUUID[ATT_BT_UUID_SIZE] =
@@ -144,6 +150,8 @@ CONST uint8 charAggFormatUUID[ATT_BT_UUID_SIZE] =
 {
   LO_UINT16( GATT_CHAR_AGG_FORMAT_UUID ), HI_UINT16( GATT_CHAR_AGG_FORMAT_UUID )
 };
+
+#endif
 
 /**
  * GATT Characteristics
@@ -184,6 +192,8 @@ CONST uint8 serviceChangedUUID[ATT_BT_UUID_SIZE] =
   LO_UINT16( SERVICE_CHANGED_UUID ), HI_UINT16( SERVICE_CHANGED_UUID )
 };
 
+#if 0
+
 // Valid Range UUID
 CONST uint8 validRangeUUID[ATT_BT_UUID_SIZE] =
 {
@@ -201,6 +211,8 @@ CONST uint8 reportRefUUID[ATT_BT_UUID_SIZE] =
 {
   LO_UINT16( GATT_REPORT_REF_UUID ), HI_UINT16( GATT_REPORT_REF_UUID )
 };
+
+#endif
 
 /*********************************************************************
  * GLOBAL FUNCTIONS
