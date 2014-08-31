@@ -87,6 +87,10 @@
 // Limited discoverable mode advertises for 30.72s, and then stops
 // General discoverable mode advertises indefinitely
 
+// Connection interval (units of 1.25ms)
+#define DEFAULT_MIN_CONN_INTERVAL             16 // 20ms
+#define DEFAULT_MAX_CONN_INTERVAL             32 // 40ms
+
 // Slave latency to use if automatic parameter update request is enabled
 #define DEFAULT_DESIRED_SLAVE_LATENCY         0
 
@@ -139,9 +143,9 @@ unsigned char ble_console_enabled;
 
 static struct
 {
-  short writelen;
-  char writepending;
-  uint8 write[64];
+  uint8 write[128];
+  uint8* writein;
+  uint8* writeout;
 } io;
 
 static gattAttribute_t consoleProfile[] =
@@ -271,9 +275,8 @@ void BlueBasic_Init( uint8 task_id )
   HCI_EXT_ClkDivOnHaltCmd(HCI_EXT_ENABLE_CLK_DIVIDE_ON_HALT);
 #endif
 
-  // Startup with standard power settings
-  HCI_EXT_SetTxPowerCmd(HCI_EXT_TX_POWER_0_DBM);
-  HCI_EXT_SetRxGainCmd(HCI_EXT_RX_GAIN_STD);
+  // Overlap enabled
+  HCI_EXT_OverlappedProcessingCmd(HCI_EXT_ENABLE_OVERLAPPED_PROCESSING);
 
   // Setup a delayed profile startup
   osal_set_event( blueBasic_TaskID, BLUEBASIC_START_DEVICE_EVT );
@@ -338,15 +341,13 @@ uint16 BlueBasic_ProcessEvent( uint8 task_id, uint16 events )
 #ifdef ENABLE_BLE_CONSOLE
   if ( events & BLUEBASIC_CONNECTION_EVENT )
   {
-    if (io.writepending)
+    while (io.writein != io.writeout)
     {
-      if (io.writelen > 0)
+      uint8* save = io.writeout;
+      if (GATTServApp_ProcessCharCfg(consoleProfileCharCfg, io.write, FALSE, consoleProfile, GATT_NUM_ATTRS(consoleProfile), INVALID_TASK_ID) != SUCCESS)
       {
-        GATTServApp_ProcessCharCfg(consoleProfileCharCfg, io.write, FALSE, consoleProfile, GATT_NUM_ATTRS(consoleProfile), INVALID_TASK_ID);
-      }
-      else
-      {
-        io.writepending = 0;
+        io.writeout = save;
+        break;
       }
     }
     return ( events ^ BLUEBASIC_CONNECTION_EVENT );
@@ -416,55 +417,40 @@ static void blueBasic_RSSIUpdate(int8 rssi)
 
 uint8 ble_console_write(uint8 ch)
 {
-  static char entered;
-
   if (ble_console_enabled)
   {
-    if (entered && io.writelen >= sizeof(io.write))
-    {
-      io.write[sizeof(io.write) - 1] = '*';
-      return 0;
-    }
-    entered = 1;
-
-    while (io.writelen >= sizeof(io.write))
+    while (io.writein - io.writeout + 1 == 0 || io.writein - io.writeout + 1 == sizeof(io.write))
     {
       osal_run_system();
     }
-
-    io.write[io.writelen++] = ch;
-
-    if (!io.writepending && (ch == '\n' || io.writelen == sizeof(io.write)))
+    
+    if (io.writein == io.writeout)
     {
-      io.writepending = 1;
-      GATTServApp_ProcessCharCfg(consoleProfileCharCfg, io.write, FALSE, consoleProfile, GATT_NUM_ATTRS(consoleProfile), INVALID_TASK_ID);
+      osal_set_event( blueBasic_TaskID, BLUEBASIC_CONNECTION_EVENT );
     }
-
-    entered = 0;
+ 
+    *io.writein++ = ch;
+    if (io.writein == &io.write[sizeof(io.write)])
+    {
+      io.writein = io.write;
+    }
   }
   return 1;
 }
 
 static bStatus_t consoleProfile_ReadAttrCB(uint16 connHandle, gattAttribute_t *pAttr, uint8 *pValue, uint8 *pLen, uint16 offset, uint8 maxLen)
 {
-  if (io.writelen > 0)
+  uint8 len;
+  for (len = 0; io.writein != io.writeout && len < maxLen; len++)
   {
-    if (maxLen > io.writelen)
+    *pValue++ = *io.writeout++;
+    if (io.writeout == &io.write[sizeof(io.write)])
     {
-      maxLen = io.writelen;
-    }
-    OS_memcpy(pValue, io.write, maxLen);
-    *pLen = maxLen;
-    io.writelen -= maxLen;
-    if (io.writelen > 0)
-    {
-      OS_memcpy(io.write, io.write + maxLen, io.writelen);
+      io.writeout = io.write;
     }
   }
-  else
-  {
-    *pLen = 0;
-  }
+  *pLen = len;
+
   return SUCCESS;
 }
 
@@ -476,15 +462,14 @@ static bStatus_t consoleProfile_WriteAttrCB(uint16 connHandle, gattAttribute_t *
   if (pAttr->type.len == ATT_BT_UUID_SIZE && BUILD_UINT16(pAttr->type.uuid[0], pAttr->type.uuid[1]) == GATT_CLIENT_CHAR_CFG_UUID)
   {
     status = GATTServApp_ProcessCCCWriteReq(connHandle, pAttr, pValue, len, offset, GATT_CLIENT_CFG_NOTIFY);
-    if (status == SUCCESS)
-    {
-      status = GAPRole_SendUpdateParam(32, 64, DEFAULT_DESIRED_SLAVE_LATENCY, DEFAULT_DESIRED_CONN_TIMEOUT, GAPROLE_RESEND_PARAM_UPDATE);
-      io.writelen = 0;
-      io.writepending = 0;
-      ble_console_enabled = 1;
-      OS_timer_stop(DELAY_TIMER);
-      interpreter_banner();
-    }
+ 
+    GAPRole_SendUpdateParam(DEFAULT_MIN_CONN_INTERVAL, DEFAULT_MAX_CONN_INTERVAL, DEFAULT_DESIRED_SLAVE_LATENCY, DEFAULT_DESIRED_CONN_TIMEOUT, GAPROLE_RESEND_PARAM_UPDATE);
+    io.writein = io.write;
+    io.writeout = io.write;
+    ble_console_enabled = 1;
+    OS_timer_stop(DELAY_TIMER);
+    interpreter_banner();
+ 
     return status;
   }
   for (i = 0; i < len; i++)
