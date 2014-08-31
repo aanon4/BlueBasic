@@ -403,6 +403,16 @@ static void blueBasic_HandleConnStatusCB(uint16 connHandle, uint8 changeType)
   if (changeType == LINKDB_STATUS_UPDATE_REMOVED || (changeType == LINKDB_STATUS_UPDATE_STATEFLAGS && !linkDB_Up(connHandle)))
   {
     GATTServApp_InitCharCfg(connHandle, consoleProfileCharCfg);
+    uint8 i;
+    for (i = 0; i < GATT_MAX_NUM_CONN; i++)
+    {
+      if (consoleProfileCharCfg[i].value == 1)
+      {
+        goto done;
+      }
+    }
+    ble_console_enabled = 0;
+  done:;
   }
 #endif
   ble_connection_status(connHandle, changeType, 0);
@@ -462,14 +472,22 @@ static bStatus_t consoleProfile_WriteAttrCB(uint16 connHandle, gattAttribute_t *
   if (pAttr->type.len == ATT_BT_UUID_SIZE && BUILD_UINT16(pAttr->type.uuid[0], pAttr->type.uuid[1]) == GATT_CLIENT_CHAR_CFG_UUID)
   {
     status = GATTServApp_ProcessCCCWriteReq(connHandle, pAttr, pValue, len, offset, GATT_CLIENT_CFG_NOTIFY);
- 
-    GAPRole_SendUpdateParam(DEFAULT_MIN_CONN_INTERVAL, DEFAULT_MAX_CONN_INTERVAL, DEFAULT_DESIRED_SLAVE_LATENCY, DEFAULT_DESIRED_CONN_TIMEOUT, GAPROLE_RESEND_PARAM_UPDATE);
-    io.writein = io.write;
-    io.writeout = io.write;
-    ble_console_enabled = 1;
-    OS_timer_stop(DELAY_TIMER);
-    interpreter_banner();
- 
+    // Setup console if we're connected, otherwise disable
+    for (i = 0; i < GATT_MAX_NUM_CONN; i++)
+    {
+      if (consoleProfileCharCfg[i].value == 1)
+      {
+        GAPRole_SendUpdateParam(DEFAULT_MIN_CONN_INTERVAL, DEFAULT_MAX_CONN_INTERVAL, DEFAULT_DESIRED_SLAVE_LATENCY, DEFAULT_DESIRED_CONN_TIMEOUT, GAPROLE_RESEND_PARAM_UPDATE);
+        io.writein = io.write;
+        io.writeout = io.write;
+        ble_console_enabled = 1;
+        OS_timer_stop(DELAY_TIMER);
+        interpreter_banner();
+        goto done;
+      }
+    }
+    ble_console_enabled = 0;
+  done:
     return status;
   }
   for (i = 0; i < len; i++)
