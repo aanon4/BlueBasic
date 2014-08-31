@@ -30,4 +30,6 @@ bleserviceadvert01
 blescan01
 blescan10
 spi01
+i2c01
 example01
+example02

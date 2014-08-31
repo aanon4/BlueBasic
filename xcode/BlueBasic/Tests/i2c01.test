@@ -1,6 +1,17 @@
 10 REM "Simple I2C to RTC chip test"
 20 I2C MASTER P0(4) P0(7)
 25 REM "Set address pointer to 0 then read the first byte back - the BCD seconds"
-30 I2C WRITE 0XD0, 0x00, READ D
+30 I2C WRITE 0XD0, 0X00, READ D
 35 REM "And print"
 40 PRINT D
+RUN
+.
+10 REM "Simple I2C to RTC chip test"
+20 I2C MASTER P0(4) P0(7)
+25 REM "Set address pointer to 0 then read the first byte back - the BCD seconds"
+30 I2C WRITE 0XD0, 0X00, READ D
+35 REM "And print"
+40 PRINT D
+RUN
+255
+OK
