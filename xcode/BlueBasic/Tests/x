@@ -1,0 +1,33 @@
+10 //
+11 // "Read DHT-22"
+12 //
+100 DIM V(5)
+110 GOSUB 1000
+120 PRINT "Raw: ", V(0), " ", V(1), " ", V(2), " ", V(3), " ", V(4)
+130 PRINT "Temperature: ", ((V(2) & 127) * 256 + V(3)) / 10
+140 PRINT "Humidity: ", (V(0) * 256 + V(1)) / 10
+150 RETURN
+1000 //
+1001 // "Read data into V(0-5)"
+1002 // "-- modifies: B, Z, M, V"
+1003 //
+1010 DIM B(83)
+1011 //
+1012 // "Tell device to send data and record what it sends"
+1013 //
+1015 PINMODE P1(4) INPUT PULLUP
+1020 WIRE P1(4) OUTPUT, HIGH, LOW, WAIT 1000, INPUT, PULSE B, OUTPUT HIGH, END
+1121 //
+1122 // "Assemble bits into V"
+1123 //
+1130 M = 128
+1140 FOR Z = 4 TO 82 STEP 2
+1150  IF B(Z) > 40
+1160   V(Z - 4 >> 4) = V(Z - 4 >> 4) | M
+1170  END
+1180  M = M >> 1
+1190  IF M = 0
+1200   M = 128
+1210  END
+1220 NEXT Z
+1230 RETURN

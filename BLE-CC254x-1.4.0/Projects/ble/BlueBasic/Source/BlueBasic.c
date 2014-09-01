@@ -97,9 +97,6 @@
 // Supervision timeout value (units of 10ms, 1000=10s) if automatic parameter update request is enabled
 #define DEFAULT_DESIRED_CONN_TIMEOUT          1000
 
-// Connection Pause Peripheral time value (in seconds)
-#define DEFAULT_CONN_PAUSE_PERIPHERAL         6
-
 #define INVALID_CONNHANDLE                    0xFFFF
 
 /*********************************************************************
@@ -229,10 +226,6 @@ void BlueBasic_Init( uint8 task_id )
 {
   blueBasic_TaskID = task_id;
 
-  // Setup the GAP
-  GAP_SetParamValue( TGAP_CONN_PAUSE_PERIPHERAL, DEFAULT_CONN_PAUSE_PERIPHERAL );
-  GAP_ConfigDeviceAddr(ADDRTYPE_PRIVATE_RESOLVE, NULL);
-
 #ifdef ENABLE_BLE_CONSOLE
   GAPRole_SetParameter( GAPROLE_ADVERT_DATA, 0, sizeof(consoleAdvert), (void*)consoleAdvert );
 #endif
@@ -270,7 +263,7 @@ void BlueBasic_Init( uint8 task_id )
   // Enable clock divide on halt
   // This reduces active current while radio is active and CC254x MCU
   // is halted
-#ifndef ENABLE_BLE_CONSOLE
+#ifdef ENABLE_BLE_CONSOLE
   // See: http://e2e.ti.com/support/wireless_connectivity/f/538/p/169944/668822.aspx#664740
   HCI_EXT_ClkDivOnHaltCmd(HCI_EXT_ENABLE_CLK_DIVIDE_ON_HALT);
 #endif
