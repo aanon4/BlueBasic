@@ -54,8 +54,6 @@
 #include "peripheral.h"
 #include "gapbondmgr.h"
 #include "devinfoservice.h"
-   
-#include "os.h"
 
 /*********************************************************************
  * MACROS

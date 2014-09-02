@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<workspace>
+  <project>
+    <path>$WS_DIR$\BlueBasic.ewp</path>
+  </project>
+  <batchBuild>
+    <batchDefinition>
+      <name>All</name>
+      <member>
+        <project>BlueBasic</project>
+        <configuration>CC2541</configuration>
+      </member>
+      <member>
+        <project>BlueBasic</project>
+        <configuration>CC2540</configuration>
+      </member>
+    </batchDefinition>
+  </batchBuild>
+</workspace>
+
+
