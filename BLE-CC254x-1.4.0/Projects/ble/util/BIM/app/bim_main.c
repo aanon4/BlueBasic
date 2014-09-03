@@ -54,7 +54,7 @@
  */
 
 #define BIM_IMG_A_PAGE        1
-#define BIM_IMG_A_AREA        62
+#define BIM_IMG_A_AREA        46
 
 #define BIM_IMG_B_PAGE        8
 #define BIM_IMG_B_AREA       (124 - BIM_IMG_A_AREA)
