@@ -57,7 +57,7 @@ extern "C"
 
 #if !defined OAD_IMG_A_PAGE
 #define OAD_IMG_A_PAGE        1
-#define OAD_IMG_A_AREA        62
+#define OAD_IMG_A_AREA        46
 #endif
 
 #if !defined OAD_IMG_B_PAGE

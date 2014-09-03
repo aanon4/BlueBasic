@@ -4,15 +4,29 @@ xcode/BlueBasic/BlueBasic.xcodeproj/project.xcworkspace/xcuserdata/
 xcode/BlueBasic/BlueBasic.xcodeproj/project.xcworkspace/xcshareddata/
 xcode/BlueBasic/BlueBasic.xcodeproj/xcuserdata/
 
+BLE-CC254x-1.4.0/Projects/ble/util/BIM/cc254x/settings/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/settings/
+BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/settings/
+
+BLE-CC254x-1.4.0/Projects/ble/util/BIM/cc254x/CC254xF256/Exe/
+BLE-CC254x-1.4.0/Projects/ble/util/BIM/cc254x/CC254xF256/Obj/
+BLE-CC254x-1.4.0/Projects/ble/util/BIM/cc254x/CC254xF256/List/
+
 BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2540/Exe/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2540/Obj/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2540/List/
 
-BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/settings/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2541/Exe/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2541/Obj/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2541/List/
+
+BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2541-ImgB/Exe/
+BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2541-ImgB/Obj/
+BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2541-ImgB/List/
+
+BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2541-ImgA/Exe/
+BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2541-ImgA/Obj/
+BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2541-ImgA/List/
 
 *.tmp
 

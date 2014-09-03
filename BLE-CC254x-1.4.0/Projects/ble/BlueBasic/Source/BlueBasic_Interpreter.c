@@ -74,7 +74,13 @@ static const char* const error_msgs[] =
   "Not in direct",
 };
 
-static const char initmsg[]           = "BlueBasic " kVersion;
+#ifdef FEATURE_OAD_HEADER
+#define kOAD    "(OAD) "
+#else
+#define kOAD    " "
+#endif
+
+static const char initmsg[]           = "BlueBasic " kOAD kVersion;
 static const char memorymsg[]         = " bytes free.";
 
 #ifdef TARGET_CC254X

@@ -728,7 +728,7 @@ bStatus_t GAPRole_TerminateConnection( void )
  *
  * Internal function defined in peripheral.h.
  */
-void GAPRole_Init( uint8 task_id )
+void GAPRole_Init( uint8 task_id, uint8 role )
 {
   gapRole_TaskID = task_id;
 
@@ -740,7 +740,8 @@ void GAPRole_Init( uint8 task_id )
 #endif
 
   // Initialize the Profile Advertising and Connection Parameters
-  gapRole_profileRole = GAP_PROFILE_PERIPHERAL|GAP_PROFILE_OBSERVER;
+  gapRole_profileRole = role;
+
   VOID osal_memset( gapRole_IRK, 0, KEYLEN );
   VOID osal_memset( gapRole_SRK, 0, KEYLEN );
   gapRole_signCounter = 0;
@@ -950,7 +951,9 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
   {
     case GAP_DEVICE_INIT_DONE_EVENT:
       {
+#ifdef FEATURE_DEVINFO
         uint8 systemId[DEVINFO_SYSTEM_ID_LEN];
+#endif
         gapDeviceInitDoneEvent_t *pPkt = (gapDeviceInitDoneEvent_t *)pMsg;
         bStatus_t stat = pPkt->hdr.status;
 
@@ -962,6 +965,7 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
 
           // Save off the information
           VOID osal_memcpy( gapRole_bdAddr, pPkt->devAddr, B_ADDR_LEN );
+#ifdef FEATURE_DEVINFO
           // use 6 bytes of device address for 8 bytes of system ID value
           systemId[0] = gapRole_bdAddr[0];
           systemId[1] = gapRole_bdAddr[1];
@@ -974,6 +978,7 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
           systemId[6] = gapRole_bdAddr[4];
           systemId[5] = gapRole_bdAddr[3];
           DevInfo_SetParameter(DEVINFO_SYSTEM_ID, DEVINFO_SYSTEM_ID_LEN, systemId);
+#endif
 
           gapRole_state = GAPROLE_STARTED;
           

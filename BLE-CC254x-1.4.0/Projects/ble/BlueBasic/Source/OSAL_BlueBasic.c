@@ -158,7 +158,7 @@ void osalInitTasks( void )
   SM_Init( taskID++ );
 
   /* Profiles */
-  GAPRole_Init( taskID++ );
+  GAPRole_Init( taskID++, GAP_PROFILE_PERIPHERAL|GAP_PROFILE_OBSERVER );
 
 #ifdef GAP_BOND_MGR
   GAPBondMgr_Init( taskID++ );

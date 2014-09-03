@@ -1049,8 +1049,10 @@ uint8 osal_init_system( void )
   // Initialize the timers
   osalTimerInit();
 
+#ifdef POWER_SAVING
   // Initialize the Power Management System
   osal_pwrmgr_init();
+#endif
 
   // Initialize the system tasks.
   osalInitTasks();

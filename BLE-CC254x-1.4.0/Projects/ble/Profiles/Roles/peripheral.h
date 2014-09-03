@@ -265,7 +265,7 @@ extern void GAPRole_RegisterAppCBs( gapRolesParamUpdateCB_t *pParamUpdateCB );
  *
  * @return      void
  */
-extern void GAPRole_Init( uint8 task_id );
+extern void GAPRole_Init( uint8 task_id, uint8 role );
 
 /**
  * @internal

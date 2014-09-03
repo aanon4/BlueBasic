@@ -59,6 +59,39 @@
  **************************************************************************************************/
 
 /**************************************************************************************************
+ * Image header (for OAD builds)
+ **************************************************************************************************/
+
+#ifdef FEATURE_OAD_HEADER
+
+typedef uint8 bStatus_t;
+
+#include "oad.h"
+#include "oad_target.h"
+
+#define OAD_FLASH_PAGE_MULT  ((uint16)(HAL_FLASH_PAGE_SIZE / HAL_FLASH_WORD_SIZE))
+
+#pragma location="IMAGE_HEADER"
+const __code img_hdr_t _imgHdr = {
+  0xFFFF,                     // CRC-shadow must be 0xFFFF for everything else
+  OAD_IMG_VER( OAD_IMAGE_VERSION ), // 15-bit Version #, left-shifted 1; OR with Image-B/Not-A bit.
+  OAD_IMG_R_AREA * OAD_FLASH_PAGE_MULT,
+  {'B', 'B', 'B', 'B'},       // ImgB User-Id
+  { 0xFF, 0xFF, 0xFF, 0xFF }  // Reserved
+};
+#pragma required=_imgHdr
+
+#pragma location="AES_HEADER"
+static const __code aes_hdr_t _aesHdr = {
+ { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF },
+ { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B },  // Dummy Nonce
+ { 0xFF, 0xFF, 0xFF, 0xFF }   // Spare
+};
+#pragma required=_aesHdr
+
+#endif
+
+/**************************************************************************************************
  * @fn          main
  *
  * @brief       Start of application.
