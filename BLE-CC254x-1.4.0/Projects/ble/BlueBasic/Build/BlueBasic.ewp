@@ -2370,6 +2370,15 @@
     <name>LIB</name>
     <file>
       <name>$PROJ_DIR$\..\..\Libraries\CC2540DB\bin\CC2540_BLE_peri_observ.lib</name>
+      <excluded>
+        <configuration>CC2541</configuration>
+      </excluded>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\Libraries\CC2541DB\bin\CC2541_BLE_peri_observ.lib</name>
+      <excluded>
+        <configuration>CC2540</configuration>
+      </excluded>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\Libraries\Common\bin\CC254x_BLE_HCI_TL_None.lib</name>
