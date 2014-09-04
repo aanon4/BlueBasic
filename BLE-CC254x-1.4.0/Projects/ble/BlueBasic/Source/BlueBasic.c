@@ -84,19 +84,6 @@
 // What is the advertising interval when device is discoverable (units of 625us, 160=100ms, 1600=1s)
 #define DEFAULT_ADVERTISING_INTERVAL          160
 
-// Limited discoverable mode advertises for 30.72s, and then stops
-// General discoverable mode advertises indefinitely
-
-// Connection interval (units of 1.25ms)
-#define DEFAULT_MIN_CONN_INTERVAL             16 // 20ms
-#define DEFAULT_MAX_CONN_INTERVAL             32 // 40ms
-
-// Slave latency to use if automatic parameter update request is enabled
-#define DEFAULT_DESIRED_SLAVE_LATENCY         0
-
-// Supervision timeout value (units of 10ms, 1000=10s) if automatic parameter update request is enabled
-#define DEFAULT_DESIRED_CONN_TIMEOUT          1000
-
 #define INVALID_CONNHANDLE                    0xFFFF
 
 /*********************************************************************
@@ -470,7 +457,6 @@ static bStatus_t consoleProfile_WriteAttrCB(uint16 connHandle, gattAttribute_t *
     {
       if (consoleProfileCharCfg[i].value == 1)
       {
-        GAPRole_SendUpdateParam(DEFAULT_MIN_CONN_INTERVAL, DEFAULT_MAX_CONN_INTERVAL, DEFAULT_DESIRED_SLAVE_LATENCY, DEFAULT_DESIRED_CONN_TIMEOUT, GAPROLE_RESEND_PARAM_UPDATE);
         io.writein = io.write;
         io.writeout = io.write;
         ble_console_enabled = 1;

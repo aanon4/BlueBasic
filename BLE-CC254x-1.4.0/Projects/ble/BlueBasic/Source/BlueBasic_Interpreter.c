@@ -2391,27 +2391,18 @@ dsave_error:
   }
   
 //
-// REBOOT [firmware version]
-//  Note: If the firmware version is given, and it is equal to the current
-//  firmware version, the device will flip into upgrade mode when it reboots.
-//  This is a minor saftey measure to stop accidentally rebooting into the upgrade mode.
+// REBOOT [UP]
+//  Reboot the device. If the UP option is present, reboot into upgrade mode.
 //
 cmd_reboot:
-  {
 #ifdef OAD_IMAGE_VERSION
-    VAR_TYPE firmware;
-    
-    firmware = expression(EXPR_NORMAL);
-    if (!error_num && firmware == OAD_IMAGE_VERSION)
-    {
-      OS_reboot(1);
-    }
-    else
-#endif
-    {
-      OS_reboot(0);
-    }
+  if (txtpos[0] == 'U' && txtpos[1] == 'P' && txtpos[2] == NL)
+  {
+    OS_reboot(1);
   }
+#endif
+  OS_reboot(0);
+  goto qwhat; // Not reached
 
 //
 // DIM <var>(<size>)
