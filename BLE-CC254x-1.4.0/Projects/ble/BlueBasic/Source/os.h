@@ -8,6 +8,8 @@
 // os.h
 //
 
+#define kVersion "v0.3"
+
 #if __APPLE__
 
 #include <stdio.h>
@@ -29,7 +31,7 @@
 #define OS_free(A)            free(A)
 #define OS_putchar(A)         putchar(A)
 #define OS_breakcheck()       (0)
-#define OS_reboot()
+#define OS_reboot(F)
 #define OS_millis()           (time(0) * 1000)
 #define OS_interrupt_attach(A, B) 0
 #define OS_interrupt_detach(A)    0
@@ -215,7 +217,6 @@ extern os_timer_t blueBasic_timers[OS_MAX_TIMER];
 #define OS_rand()              osal_rand()
 #define OS_malloc(A)           osal_mem_alloc(A)
 #define OS_free(A)             osal_mem_free(A)
-#define OS_reboot()            SystemReset()
 
 extern void OS_init(void);
 extern void OS_openserial(void);
@@ -236,6 +237,7 @@ extern void OS_autorun_set(unsigned char autorun);
 extern char OS_autorun_get(void);
 extern long OS_millis(void);
 extern void OS_delaymicroseconds(short micros);
+extern void OS_reboot(char flash);
 
 extern void interpreter_devicefound(unsigned char addtype, unsigned char* address, signed char rssi, unsigned char eventtype, unsigned char len, unsigned char* data);
 

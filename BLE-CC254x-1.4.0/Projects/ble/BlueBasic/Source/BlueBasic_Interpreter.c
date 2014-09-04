@@ -10,8 +10,6 @@
 //	      Scott Lawrence <yorgle@gmail.com>
 //
 
-#define kVersion "v0.3"
-
 // v0.3: 2014-08-19
 //      New version time. Lots more I/O options available, including SPI, I2C and a general WIRE signalling protocol
 //      for talking to random other devices. Also, a new non-recursive expression evaluator which is a bit faster and
@@ -1746,7 +1744,7 @@ interperate:
     case KW_PRINT:
       goto print;
     case KW_REBOOT:
-      OS_reboot();
+      goto cmd_reboot;
     case KW_END:
       goto run_next_statement;
     case KW_DIM:
@@ -2390,6 +2388,29 @@ cmd_dsave:
 dsave_error:
     OS_file_close();
     goto qwhat;
+  }
+  
+//
+// REBOOT [firmware version]
+//  Note: If the firmware version is given, and it is equal to the current
+//  firmware version, the device will flip into upgrade mode when it reboots.
+//  This is a minor saftey measure to stop accidentally rebooting into the upgrade mode.
+//
+cmd_reboot:
+  {
+#ifdef OAD_IMAGE_VERSION
+    VAR_TYPE firmware;
+    
+    firmware = expression(EXPR_NORMAL);
+    if (!error_num && firmware == OAD_IMAGE_VERSION)
+    {
+      OS_reboot(1);
+    }
+    else
+#endif
+    {
+      OS_reboot(0);
+    }
   }
 
 //

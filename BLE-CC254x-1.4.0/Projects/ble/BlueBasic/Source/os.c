@@ -13,6 +13,11 @@
 #include "osal_snv.h"
 #include "hal_uart.h"
 #include "OSAL_PwrMgr.h"
+#ifdef FEATURE_OAD_HEADER
+#include "oad.h"
+#include "oad_target.h"
+#include "hal_flash.h"
+#endif
 
 #define FILE_HANDLE_PROGRAM     0
 #define FILE_HANDLE_DATA        1
@@ -433,6 +438,21 @@ long OS_millis(void)
 {
   osalTimeUpdate();
   return osal_GetSystemClock();
+}
+
+void OS_reboot(char flash)
+{
+ #ifdef FEATURE_OAD_HEADER
+  if (flash)
+  {
+    short zero = 0;
+    uint16 addr = OAD_IMG_B_PAGE * (HAL_FLASH_PAGE_SIZE / HAL_FLASH_WORD_SIZE);
+    HalFlashWrite(addr, (uint8*)&zero, sizeof(zero));
+  }
+#else
+  VOID flash;
+#endif
+  SystemReset();
 }
 
 #pragma optimize=none

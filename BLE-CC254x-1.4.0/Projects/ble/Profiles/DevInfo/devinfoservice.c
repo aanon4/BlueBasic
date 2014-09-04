@@ -48,7 +48,7 @@
 #include "gatt_uuid.h"
 #include "gatt_profile_uuid.h"
 #include "gattservapp.h"
-
+#include "os.h"
 #include "devinfoservice.h"
 
 /*********************************************************************
@@ -152,27 +152,35 @@ static uint8 devInfoSystemId[DEVINFO_SYSTEM_ID_LEN] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 // Model Number String characteristic
 static uint8 devInfoModelNumberProps = GATT_PROP_READ;
-static const uint8 devInfoModelNumber[] = "Model Number";
+static const uint8 devInfoModelNumber[] = "-";
 
 // Serial Number String characteristic
 static uint8 devInfoSerialNumberProps = GATT_PROP_READ;
-static const uint8 devInfoSerialNumber[] = "Serial Number";
+static const uint8 devInfoSerialNumber[] = "-";
 
 // Firmware Revision String characteristic
 static uint8 devInfoFirmwareRevProps = GATT_PROP_READ;
-static const uint8 devInfoFirmwareRev[] = "Firmware Revision";
+#ifdef FEATURE_OAD_HEADER
+#define __STR(X) #X
+#define _STR(X) __STR(X)
+static const uint8 devInfoFirmwareRev[] = _STR(OAD_IMAGE_VERSION);
+#undef _STR
+#undef __STR
+#else
+static const uint8 devInfoFirmwareRev[] = "-";
+#endif
 
 // Hardware Revision String characteristic
 static uint8 devInfoHardwareRevProps = GATT_PROP_READ;
-static const uint8 devInfoHardwareRev[] = "Hardware Revision";
+static const uint8 devInfoHardwareRev[] = "-";
 
 // Software Revision String characteristic
 static uint8 devInfoSoftwareRevProps = GATT_PROP_READ;
-static const uint8 devInfoSoftwareRev[] = "Software Revision";
+static const uint8 devInfoSoftwareRev[] = "BlueBasic " kVersion;
 
 // Manufacturer Name String characteristic
 static uint8 devInfoMfrNameProps = GATT_PROP_READ;
-static const uint8 devInfoMfrName[] = "Manufacturer Name";
+static const uint8 devInfoMfrName[] = "-";
 
 // IEEE 11073-20601 Regulatory Certification Data List characteristic
 static uint8 devInfo11073CertProps = GATT_PROP_READ;
