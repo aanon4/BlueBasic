@@ -72,8 +72,13 @@
 
 #define RSSI_NOT_AVAILABLE            127
 
+#ifdef FEATURE_OAD
+#define DEFAULT_MIN_CONN_INTERVAL     16      // 20 milliseconds (units of 1.25ms)
+#define DEFAULT_MAX_CONN_INTERVAL     32      // 40 milliseconds
+#else
 #define DEFAULT_MIN_CONN_INTERVAL     80      // 100 milliseconds (units of 1.25ms)
 #define DEFAULT_MAX_CONN_INTERVAL     800     // 1 second
+#endif
 
 #define MIN_CONN_INTERVAL             0x0006
 #define MAX_CONN_INTERVAL             0x0C80
