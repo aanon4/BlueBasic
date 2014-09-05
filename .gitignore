@@ -1,8 +1,14 @@
 *.dep
+*.tmp
 
 xcode/BlueBasic/BlueBasic.xcodeproj/project.xcworkspace/xcuserdata/
 xcode/BlueBasic/BlueBasic.xcodeproj/project.xcworkspace/xcshareddata/
 xcode/BlueBasic/BlueBasic.xcodeproj/xcuserdata/
+
+Console/osx/BlueBasicConsole/BlueBasicConsole.xcodeproj/project.xcworkspace/xcshareddata/
+Console/osx/BlueBasicConsole/BlueBasicConsole.xcodeproj/project.xcworkspace/xcuserdata/
+Console/osx/BlueBasicConsole/BlueBasicConsole.xcodeproj/xcuserdata/
+Console/osx/BlueBasicConsole/Builds/
 
 BLE-CC254x-1.4.0/Projects/ble/util/BIM/cc254x/settings/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/settings/
@@ -27,6 +33,3 @@ BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2541-ImgB/List/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2541-ImgA/Exe/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2541-ImgA/Obj/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2541-ImgA/List/
-
-*.tmp
-
