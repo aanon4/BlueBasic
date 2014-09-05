@@ -10,6 +10,9 @@
 //	      Scott Lawrence <yorgle@gmail.com>
 //
 
+// v.04: 2014-09-05
+//      New version time again. Mostly this is support for over-the-air updates.
+//
 // v0.3: 2014-08-19
 //      New version time. Lots more I/O options available, including SPI, I2C and a general WIRE signalling protocol
 //      for talking to random other devices. Also, a new non-recursive expression evaluator which is a bit faster and
