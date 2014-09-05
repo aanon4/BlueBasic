@@ -165,6 +165,7 @@ extern unsigned char GAPObserverRole_CancelDiscovery(void);
 #include "peripheral.h"
 #include "linkdb.h"
 #include "hci.h"
+#include "timestamp.h"
 
 #if TARGET_CC2540 || TARGET_CC2541
 #define TARGET_CC254X   1

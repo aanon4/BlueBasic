@@ -72,13 +72,15 @@ static const char* const error_msgs[] =
   "Not in direct",
 };
 
+#ifdef BUILD_TIMESTAMP
 #ifdef FEATURE_OAD_HEADER
-#define kOAD    "(OAD) "
+static const char initmsg[]           = "BlueBasic " BUILD_TIMESTAMP "/OAD " kVersion;
 #else
-#define kOAD    " "
+static const char initmsg[]           = "BlueBasic " BUILD_TIMESTAMP " " kVersion;
 #endif
-
-static const char initmsg[]           = "BlueBasic " kOAD kVersion;
+#else
+static const char initmsg[]           = "BlueBasic " kVersion;
+#endif
 static const char memorymsg[]         = " bytes free.";
 
 #ifdef TARGET_CC254X
