@@ -54,6 +54,7 @@
 #include "peripheral.h"
 #include "gapbondmgr.h"
 #include "devinfoservice.h"
+#include "os.h"
 
 /*********************************************************************
  * MACROS
@@ -1115,7 +1116,7 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
             VOID osal_start_timerEx( gapRole_TaskID, RSSI_READ_EVT, gapRole_RSSIReadRate );
           }
 
-#if ENABLE_BLE_CONSOLE
+#ifdef ENABLE_BLE_CONSOLE
           HCI_EXT_ConnEventNoticeCmd(blueBasic_TaskID, BLUEBASIC_CONNECTION_EVENT);
 #endif // ENABLE_BLE_CONSOLE
 
