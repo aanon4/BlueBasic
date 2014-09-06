@@ -719,7 +719,7 @@
       <archiveVersion>1</archiveVersion>
       <data>
         <prebuild>cmd /c echo #define BUILD_TIMESTAMP "$CONFIG_NAME$/%date:~-4%%date:~4,2%%date:~7,2%%time:~0,2%%time:~3,2%%time:~6,2%" &gt; "$OBJ_DIR$\timestamp.h</prebuild>
-        <postbuild>cmd /c "copy /y $PROJ_DIR$\CC2541\Exe\BlueBasic.hex $PROJ_DIR$\..\..\..\..\..\hex\BlueBasic-CC2541.hex"</postbuild>
+        <postbuild></postbuild>
       </data>
     </settings>
     <settings>
@@ -1795,7 +1795,7 @@
       <archiveVersion>1</archiveVersion>
       <data>
         <prebuild>cmd /c echo #define BUILD_TIMESTAMP "$CONFIG_NAME$/%date:~-4%%date:~4,2%%date:~7,2%%time:~0,2%%time:~3,2%%time:~6,2%" &gt; "$OBJ_DIR$\timestamp.h</prebuild>
-        <postbuild>cmd /c "copy /y $PROJ_DIR$\CC2541\Exe\BlueBasic.hex $PROJ_DIR$\..\..\..\..\..\hex\BlueBasic-CC2540.hex"</postbuild>
+        <postbuild></postbuild>
       </data>
     </settings>
     <settings>
@@ -2879,7 +2879,7 @@
       <archiveVersion>1</archiveVersion>
       <data>
         <prebuild>"$PROJ_DIR$\..\..\common\CC2540\timestamp.bat" $CONFIG_NAME$ "$OBJ_DIR$"</prebuild>
-        <postbuild>"$PROJ_DIR$\..\..\common\CC2540\convert.bat" "$PROJ_DIR$" "$PROJ_DIR$\CC2541-ImgB\Exe\BlueBasic"</postbuild>
+        <postbuild>"$PROJ_DIR$\..\..\common\CC2540\convert-and-merge.bat" "$PROJ_DIR$" CC2541</postbuild>
       </data>
     </settings>
     <settings>
