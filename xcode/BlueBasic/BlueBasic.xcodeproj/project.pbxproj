@@ -36,6 +36,12 @@
 		226D1CFE19846E88006B289B /* if04.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = if04.test; sourceTree = "<group>"; };
 		226D1CFF19847030006B289B /* if05.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = if05.test; sourceTree = "<group>"; };
 		226D1D0019847093006B289B /* if06.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = if06.test; sourceTree = "<group>"; };
+		22869BB319BAC72E0052B9AA /* ble_onoff.bbasic */ = {isa = PBXFileReference; lastKnownFileType = text; name = ble_onoff.bbasic; path = ../../Examples/ble_onoff.bbasic; sourceTree = "<group>"; };
+		22869BB419BAC7360052B9AA /* wire_dht22.bbasic */ = {isa = PBXFileReference; lastKnownFileType = text; name = wire_dht22.bbasic; path = ../../Examples/wire_dht22.bbasic; sourceTree = "<group>"; };
+		22869BB519BAC7C20052B9AA /* spi_mb85rs64v.bbasic */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = spi_mb85rs64v.bbasic; path = ../../Examples/spi_mb85rs64v.bbasic; sourceTree = "<group>"; };
+		22869BB619BAC8650052B9AA /* i2c_ds3231.bbasic */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = i2c_ds3231.bbasic; path = ../../Examples/i2c_ds3231.bbasic; sourceTree = "<group>"; };
+		22869BB719BAC9560052B9AA /* example01.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = example01.test; sourceTree = "<group>"; };
+		22869BB819BAC9560052B9AA /* example02.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = example02.test; sourceTree = "<group>"; };
 		22BC36F819760C9E00828C73 /* print01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = print01.test; sourceTree = "<group>"; };
 		22BC36F919760CD900828C73 /* testrunner.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = testrunner.sh; sourceTree = "<group>"; };
 		22BC36FA19763A4400828C73 /* tests */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tests; sourceTree = "<group>"; };
@@ -56,7 +62,6 @@
 		22BC3709197CEABC00828C73 /* bleadvert03.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleadvert03.test; sourceTree = "<group>"; };
 		22BC370B197CEC5100828C73 /* bleadvert04.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleadvert04.test; sourceTree = "<group>"; };
 		22BC370C197CEE7E00828C73 /* bleadvert05.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleadvert05.test; sourceTree = "<group>"; };
-		22BC370D197CF78000828C73 /* example01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = example01.test; sourceTree = "<group>"; };
 		22C5B9011985AAA40069D0C7 /* bleservice02.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleservice02.test; sourceTree = "<group>"; };
 		22E3960C19B1A542003A7892 /* i2c01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = i2c01.test; sourceTree = "<group>"; };
 		22FA2DB3197331050049CDB8 /* BlueBasic */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = BlueBasic; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -66,7 +71,6 @@
 		22FA2DC3197335CE0049CDB8 /* os.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = os.c; sourceTree = "<group>"; };
 		22FA500A199BCF8800535BCE /* add03.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = add03.test; sourceTree = "<group>"; };
 		22FA500B199BD02300535BCE /* add04.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = add04.test; sourceTree = "<group>"; };
-		22FA500C199C669600535BCE /* example02.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = example02.test; sourceTree = "<group>"; };
 		B81A7E5619774A81007DFEC6 /* add10.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = add10.test; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -81,6 +85,17 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		22869BB219BAC6AC0052B9AA /* Examples */ = {
+			isa = PBXGroup;
+			children = (
+				22869BB319BAC72E0052B9AA /* ble_onoff.bbasic */,
+				22869BB419BAC7360052B9AA /* wire_dht22.bbasic */,
+				22869BB519BAC7C20052B9AA /* spi_mb85rs64v.bbasic */,
+				22869BB619BAC8650052B9AA /* i2c_ds3231.bbasic */,
+			);
+			name = Examples;
+			sourceTree = "<group>";
+		};
 		22BC36F719760C3600828C73 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
@@ -118,9 +133,9 @@
 				226D1CFF19847030006B289B /* if05.test */,
 				226D1D0019847093006B289B /* if06.test */,
 				2233458F19948C4000B2141A /* spi01.test */,
-				22BC370D197CF78000828C73 /* example01.test */,
-				22FA500C199C669600535BCE /* example02.test */,
 				22E3960C19B1A542003A7892 /* i2c01.test */,
+				22869BB719BAC9560052B9AA /* example01.test */,
+				22869BB819BAC9560052B9AA /* example02.test */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -128,6 +143,7 @@
 		22FA2DAA197331050049CDB8 = {
 			isa = PBXGroup;
 			children = (
+				22869BB219BAC6AC0052B9AA /* Examples */,
 				22BC36F719760C3600828C73 /* Tests */,
 				22FA2DB5197331050049CDB8 /* BlueBasic */,
 				22FA2DB4197331050049CDB8 /* Products */,

@@ -1,0 +1,10 @@
+5 //
+6 // "Read the vendor info from the MB85RS64V FRAM memory chip"
+7 //
+10 DIM D(5)
+20 D(0) = 0X9F
+30 PINMODE P0(1) OUTPUT
+40 P0(1) = 1
+50 SPI MASTER 3,0, MSB 1
+60 SPI TRANSFER P0(1) D
+70 PRINT D(0)," ",D(1)," ",D(2)," ",D(3)," ",D(4)
