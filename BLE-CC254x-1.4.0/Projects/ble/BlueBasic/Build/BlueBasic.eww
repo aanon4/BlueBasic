@@ -15,6 +15,14 @@
         <project>BlueBasic</project>
         <configuration>CC2540</configuration>
       </member>
+      <member>
+        <project>BlueBasic</project>
+        <configuration>CC2540-ImgB</configuration>
+      </member>
+      <member>
+        <project>BlueBasic</project>
+        <configuration>CC2541-ImgB</configuration>
+      </member>
     </batchDefinition>
   </batchBuild>
 </workspace>

@@ -26,9 +26,25 @@ BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2541/Exe/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2541/Obj/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2541/List/
 
+BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2540-ImgB/Exe/
+BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2540-ImgB/Obj/
+BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2540-ImgB/List/
+
 BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2541-ImgB/Exe/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2541-ImgB/Obj/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Build/CC2541-ImgB/List/
+
+BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2540/Exe/
+BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2540/Obj/
+BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2540/List/
+
+BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2541/Exe/
+BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2541/Obj/
+BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2541/List/
+
+BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2540-ImgA/Exe/
+BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2540-ImgA/Obj/
+BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2540-ImgA/List/
 
 BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2541-ImgA/Exe/
 BLE-CC254x-1.4.0/Projects/ble/BlueBasicLoader/Build/CC2541-ImgA/Obj/
