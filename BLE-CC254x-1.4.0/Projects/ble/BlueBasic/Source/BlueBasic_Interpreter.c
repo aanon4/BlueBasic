@@ -105,8 +105,6 @@ enum
 
   KW_CONSTANT = 0x80,
   KW_LIST,
-  KW_LOAD,
-  KW_SAVE,
   KW_DLOAD,
   KW_DSAVE,
   KW_MEM,
@@ -364,13 +362,13 @@ typedef struct stack_for_frame
   char for_var;
   VAR_TYPE terminal;
   VAR_TYPE step;
-  unsigned char *txtpos;
+  unsigned char** line;
 } stack_for_frame;
 
 typedef struct stack_gosub_frame
 {
   stack_header header;
-  unsigned char *txtpos;
+  unsigned char** line;
 } stack_gosub_frame;
 
 typedef struct stack_event_frame
@@ -407,14 +405,15 @@ enum
   VAR_DIM_BYTE = 0x04,
 };
 
+static __data unsigned char** lineptr;
 static __data unsigned char* txtpos;
-static __data unsigned char* program_end;
+static __data unsigned char** program_end;
 static __data unsigned char error_num;
 static __data unsigned char* variables_begin;
 static __data unsigned char* sp;
 
 static unsigned char* list_line;
-static unsigned char* program_start;
+static unsigned char** program_start;
 static LINENUM linenum;
 
 static unsigned char cache_name;
@@ -427,6 +426,8 @@ static stack_variable_frame normal_variable = { { STACK_VARIABLE_FLAG, 0 }, VAR_
 #define VARIABLE_INT_SET(F,V)   (*VARIABLE_INT_ADDR(F) = (V))
 #define VARIABLE_FLAGS_GET(F)   (vname = (F) - 'A', (((*(variables_begin + 26 * VAR_SIZE + vname / 8)) >> (vname % 8)) & 0x01))
 #define VARIABLE_FLAGS_SET(F,V) do { vname = (F) - 'A'; unsigned char* v = variables_begin + 26 * VAR_SIZE + vname / 8; *v = (*v & (255 - (1 << (vname % 8)))) | ((V) << (vname % 8)); } while(0)
+
+#define CHECK_SP_OOM(S)  if (sp - (S) < (unsigned char*)program_end) goto qoom; else sp -= (S)
 
 #ifdef SIMULATE_PINS
 static unsigned char P0DIR, P1DIR, P2DIR;
@@ -756,37 +757,11 @@ void printmsg(const char *msg)
 }
 
 //
-// Find the line nearest the given linenum.
+// Find pointer in the lineref for the given linenum.
 //
-static unsigned char* findline(void)
+static unsigned char** findlineptr(void)
 {
-  unsigned char *line;
-
-  for (line = program_start; ; line += line[sizeof(LINENUM)])
-  {
-    if (line == program_end || *(LINENUM*)line >= linenum)
-    {
-      return line;
-    }
-  }
-}
-
-//
-// Find the line contain the current txtpos.
-//
-static unsigned char* findtxtline(void)
-{
-  unsigned char *line;
-  unsigned char* nline;
-  
-  for (line = program_start; ; line = nline)
-  {
-    nline = line + line[sizeof(LINENUM)];
-    if (line == program_end || (txtpos >= line && txtpos < nline))
-    {
-      return line;
-    }
-  }
+  return (unsigned char**)flashstore_findclosest(linenum);
 }
 
 //
@@ -799,7 +774,7 @@ static void printline(unsigned char nindent, unsigned char indent)
   LINENUM line_num;
   unsigned char lc = WS_SPACE;
 
-  line_num = *(LINENUM *)list_line;
+  line_num = *(LINENUM*)list_line;
   list_line += sizeof(LINENUM) + sizeof(char);
 
   // Output the line */
@@ -991,32 +966,28 @@ static unsigned char* parse_variable_address(stack_variable_frame** vframe)
 void create_dim(unsigned char name, VAR_TYPE size, unsigned char* data)
 {
   unsigned char vname;
-  
-  if (sp - sizeof(stack_variable_frame) - size < program_end)
+  CHECK_SP_OOM(sizeof(stack_variable_frame) + size);
+  stack_variable_frame *f = (stack_variable_frame *)sp;
+  f->header.frame_type = STACK_VARIABLE_FLAG;
+  f->header.frame_size = sizeof(stack_variable_frame) + size;
+  f->type = VAR_DIM_BYTE;
+  f->name = name;
+  f->oflags = VARIABLE_FLAGS_GET(name);
+  f->ble = NULL;
+  VARIABLE_FLAGS_SET(name, VAR_VARIABLE);
+  if (data)
   {
-    error_num = ERROR_OOM;
+    OS_memcpy(sp + sizeof(stack_variable_frame), data, size);
   }
   else
   {
-    sp -= sizeof(stack_variable_frame) + size;
-    stack_variable_frame *f = (stack_variable_frame *)sp;
-    f->header.frame_type = STACK_VARIABLE_FLAG;
-    f->header.frame_size = sizeof(stack_variable_frame) + size;
-    f->type = VAR_DIM_BYTE;
-    f->name = name;
-    f->oflags = VARIABLE_FLAGS_GET(name);
-    f->ble = NULL;
-    VARIABLE_FLAGS_SET(name, VAR_VARIABLE);
-    if (data)
-    {
-      OS_memcpy(sp + sizeof(stack_variable_frame), data, size);
-    }
-    else
-    {
-      OS_memset(sp + sizeof(stack_variable_frame), 0, size);
-    }
-    cache_name = 0;
+    OS_memset(sp + sizeof(stack_variable_frame), 0, size);
   }
+  cache_name = 0;
+  return;
+qoom:
+  error_num = ERROR_OOM;
+  return;
 }
 
 // -------------------------------------------------------------------------------------------
@@ -1472,16 +1443,16 @@ void interpreter_init()
 {
   program_start = OS_malloc(kRamSize);
   OS_memset(program_start, 0, kRamSize);
-  program_end = program_start;
-  variables_begin = program_start + kRamSize - 26 * VAR_SIZE - 4; // 4 bytes = 32 bits of flags
+  variables_begin = (unsigned char*)program_start + kRamSize - 26 * VAR_SIZE - 4; // 4 bytes = 32 bits of flags
   sp = variables_begin;
+  program_end = flashstore_init(program_start);
   interpreter_banner();
 }
 
 void interpreter_banner(void)
 {
   printmsg(initmsg);
-  printnum(0, (VAR_TYPE)(sp - program_end));
+  printnum(0, (VAR_TYPE)(sp - (unsigned char*)program_end));
   printmsg(memorymsg);
   printmsg(error_msgs[ERROR_OK]);
 }
@@ -1495,22 +1466,15 @@ void interpreter_setup(void)
 {
   OS_init();
   interpreter_init();
-  OS_prompt_buffer(program_end + sizeof(LINENUM), sp);
+  OS_prompt_buffer((unsigned char*)program_end + sizeof(LINENUM), sp);
   
   if (OS_autorun_get())
   {
-    short len = OS_file_open(0, 'r');
-    if (len > 0)
-    {
-      program_end = program_start + len;
-      OS_file_read(program_start, len);
-    }
-    OS_file_close();
     if (program_end > program_start)
     {
       OS_timer_start(DELAY_TIMER, OS_AUTORUN_TIMEOUT, 0, *(LINENUM*)program_start);
     }
-    OS_prompt_buffer(program_end + sizeof(LINENUM), sp);
+    OS_prompt_buffer((unsigned char*)program_end + sizeof(LINENUM), sp);
   }
 }
 
@@ -1522,7 +1486,7 @@ void interpreter_loop(void)
   while (OS_prompt_available())
   {
     interpreter_run(0, 0);
-    OS_prompt_buffer(program_end + sizeof(LINENUM), sp);
+    OS_prompt_buffer((unsigned char*)program_end + sizeof(LINENUM), sp);
   }
 }
 
@@ -1540,18 +1504,14 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
     linenum = gofrom;
     if (canreturn)
     {
-      if (sp - sizeof(stack_event_frame) < program_end)
-      {
-        goto qoom;
-      }
-      
-      sp -= sizeof(stack_event_frame);
+      CHECK_SP_OOM(sizeof(stack_event_frame));
       f = (stack_event_frame *)sp;
       f->header.frame_type = STACK_EVENT_FLAG;
       f->header.frame_size = sizeof(stack_event_frame);
     }
-    txtpos = findline() + sizeof(LINENUM) + sizeof(char);
-    if (txtpos >= program_end)
+    lineptr = findlineptr();
+    txtpos = *lineptr + sizeof(LINENUM) + sizeof(char);
+    if (lineptr >= program_end)
     {
       goto print_error_or_ok;
     }
@@ -1561,12 +1521,11 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
   // Remove any pending WIRE parsing.
   pinParsePtr = NULL;
 
-  txtpos = program_end + sizeof(LINENUM);
+  txtpos = (unsigned char*)program_end + sizeof(LINENUM);
   tokenize();
 
   {
     unsigned char linelen;
-    unsigned char* start;
 
     // Move it to the end of program_memory
     // Find the end of the freshly entered line
@@ -1580,6 +1539,7 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
     ignore_blanks();
     if (linenum == 0)
     {
+      lineptr = program_end;
       goto direct;
     }
     if (linenum == 0xFFFF)
@@ -1596,34 +1556,15 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
     // Now we have the number, add the line header.
     *((LINENUM*)txtpos) = linenum;
     txtpos[sizeof(LINENUM)] = linelen;
-
-    // Merge it into the rest of the program
-    start = findline();
-
-    // If a line with that number exists, then remove it
-    if (start != program_end && *((LINENUM *)start) == linenum)
-    {
-      unsigned char olinelen = start[sizeof(LINENUM)];
-      program_end -= olinelen;
-      OS_memcpy(start, start + olinelen, program_end - start);
-    }
-
+    
     if (txtpos[sizeof(LINENUM) + sizeof(char)] == NL) // If the line has no txt, it was just a delete
     {
-      return IX_PROMPT;
+      program_end = flashstore_deleteline(linenum);
     }
-
-    // Make room for new line if we can
-    if ((unsigned short)(txtpos - program_end) < linelen)
+    else
     {
-      return IX_OUTOFMEMORY;
+      program_end = flashstore_addline(txtpos, linelen);
     }
-
-    // Move program up to make space
-    OS_rmemcpy(start + linelen, start, program_end - start);
-    // Insert new line
-    OS_memcpy(start, txtpos, linelen);
-    program_end += linelen;
   }
 
   return IX_PROMPT;
@@ -1631,7 +1572,7 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
 // -- Commands ---------------------------------------------------------------
 
 direct:
-  txtpos = program_end + sizeof(LINENUM);
+  txtpos = (unsigned char*)program_end + sizeof(LINENUM);
   if (*txtpos == NL)
   {
     return IX_PROMPT;
@@ -1643,21 +1584,9 @@ direct:
 
 // ---------------------------------------------------------------------------
 
-execnextline:
-  while (*txtpos != NL)
-  {
-    txtpos++;
-  }
-  // Fall through ...
-  
 run_next_statement:
-  if (*txtpos != NL)
-  {
-    error_num = ERROR_GENERAL;
-    goto print_error_or_ok;
-  }
-  txtpos += sizeof(LINENUM) + sizeof(char) + sizeof(char);
-  if (txtpos >= program_end) // Out of lines to run
+  txtpos = *++lineptr + sizeof(LINENUM) + sizeof(char);
+  if (lineptr >= program_end) // Out of lines to run
   {
     goto print_error_or_ok;
   }
@@ -1674,10 +1603,6 @@ interperate:
       goto qwhat;
     case KW_LIST:
       goto list;
-    case KW_LOAD:
-      goto load;
-    case KW_SAVE:
-      goto save;
     case KW_DLOAD:
       goto cmd_dload;
     case KW_DSAVE:
@@ -1689,7 +1614,7 @@ interperate:
       {
         goto qwhat;
       }
-      program_end = program_start;
+      program_end = flashstore_deleteall();
       // Fall through
     case KW_RUN:
       while (sp < variables_begin)
@@ -1712,11 +1637,12 @@ interperate:
         }
         sp += ((stack_header*)sp)->frame_size;
       }
-      txtpos = program_start + sizeof(LINENUM) + sizeof(char);
-      if (txtpos >= program_end)
+      lineptr = program_start;
+      if (lineptr >= program_end)
       {
         goto print_error_or_ok;
       }
+      txtpos = *lineptr + sizeof(LINENUM) + sizeof(char);
       goto interperate;
     case KW_NEXT:
       goto next;
@@ -1731,11 +1657,12 @@ interperate:
       {
         goto qwhat;
       }
-      txtpos = findline() + sizeof(LINENUM) + sizeof(char);
-      if (txtpos >= program_end)
+      lineptr = findlineptr();
+      if (lineptr >= program_end)
       {
         goto print_error_or_ok;
       }
+      txtpos = *lineptr + sizeof(LINENUM) + sizeof(char);
       goto interperate;
     case KW_GOSUB:
       goto cmd_gosub;
@@ -1743,7 +1670,7 @@ interperate:
       goto gosub_return;
     case KW_REM:
     case KW_SLASHSLASH:
-      goto execnextline;	// Ignore line completely
+      goto run_next_statement;
     case KW_FOR:
       goto forloop;
     case KW_PRINT:
@@ -1821,9 +1748,9 @@ qwhat:
 
 print_error_or_ok:
   printmsg(error_msgs[error_num]);
-  if (txtpos < program_end && error_num != ERROR_OK)
+  if (lineptr < program_end && error_num != ERROR_OK)
   {
-    list_line = findtxtline();
+    list_line = *lineptr;
     OS_putchar('>');
     OS_putchar('>');
     OS_putchar(WS_SPACE);
@@ -1850,10 +1777,10 @@ cmd_elif:
     else
     {
       unsigned char nest = 0;
-      txtpos++;
       for (;;)
       {
-        if (txtpos >= program_end)
+        txtpos = *++lineptr;
+        if (lineptr >= program_end)
         {
           printmsg(error_msgs[ERROR_OK]);
           return IX_PROMPT;
@@ -1888,7 +1815,6 @@ cmd_elif:
           default:
             break;
         }
-        txtpos += txtpos[sizeof(LINENUM)];
       }
     }
  
@@ -1900,10 +1826,10 @@ cmd_else:
     {
       goto qwhat;
     }
-    txtpos++;
     for (;;)
     {
-      if (txtpos >= program_end)
+      txtpos = *++lineptr;
+      if (lineptr >= program_end)
       {
         printmsg(error_msgs[ERROR_OK]);
         return IX_PROMPT;
@@ -1921,7 +1847,6 @@ cmd_else:
         }
         nest--;
       }
-      txtpos +=	txtpos[sizeof(LINENUM)];
     }
   }
 
@@ -1981,12 +1906,7 @@ forloop:
       goto qwhat;
     }
 
-    if (sp - sizeof(stack_for_frame) < program_end)
-    {
-      goto qoom;
-    }
-
-    sp -= sizeof(stack_for_frame);
+    CHECK_SP_OOM(sizeof(stack_for_frame));
     f = (stack_for_frame *)sp;
     VARIABLE_INT_SET(var, initial);
     f->header.frame_type = STACK_FOR_FLAG;
@@ -1994,7 +1914,7 @@ forloop:
     f->for_var = var;
     f->terminal = terminal;
     f->step = step;
-    f->txtpos = txtpos;
+    f->line = lineptr;
     goto run_next_statement;
   }
 
@@ -2007,20 +1927,17 @@ cmd_gosub:
     {
       goto qwhat;
     }
-    if (sp + sizeof(stack_gosub_frame) < program_end)
-    {
-      goto qoom;
-    }
-    sp -= sizeof(stack_gosub_frame);
+    CHECK_SP_OOM(sizeof(stack_gosub_frame));
     f = (stack_gosub_frame *)sp;
     f->header.frame_type = STACK_GOSUB_FLAG;
     f->header.frame_size = sizeof(stack_gosub_frame);
-    f->txtpos = txtpos;
-    txtpos = findline() + sizeof(LINENUM) + sizeof(char);
-    if (txtpos >= program_end)
+    f->line = lineptr;
+    lineptr = findlineptr();
+    if (lineptr >= program_end)
     {
       goto print_error_or_ok;
     }
+    txtpos = *lineptr + sizeof(LINENUM) + sizeof(char);
     goto interperate;
   }
   
@@ -2041,7 +1958,7 @@ gosub_return:
         if (txtpos[-1] == KW_RETURN)
         {
           stack_gosub_frame *f = (stack_gosub_frame *)sp;
-          txtpos = f->txtpos;
+          lineptr = f->line;
           sp += f->header.frame_size;
           goto run_next_statement;
         }
@@ -2068,7 +1985,7 @@ gosub_return:
             if ((f->step > 0 && v <= f->terminal) || (f->step < 0 && v >= f->terminal))
             {
               // We have to loop so don't pop the stack
-              txtpos = f->txtpos;
+              lineptr = f->line;
             }
             else
             {
@@ -2179,9 +2096,6 @@ assignment:
 list:
   {
     unsigned char indent = 1;
-    unsigned char nindent = 1;
-    unsigned char* line;
-    LINENUM lineno = 1;
 
     testlinenum();
 
@@ -2191,22 +2105,9 @@ list:
       goto qwhat;
     }
     
-    // Find biggest line number
-    for (line = program_start; line != program_end; line += line[sizeof(LINENUM)])
+    for(lineptr = findlineptr(); lineptr < program_end; lineptr++)
     {
-      lineno = *(LINENUM*)line;
-    }
-    for (; lineno; nindent++, lineno /= 10)
-      ;
-
-    // Find the line to start listing from
-    list_line = findline();
-    lineno = *(LINENUM*)list_line;
-    for (; lineno; nindent--, lineno /= 10)
-      ;
-    
-    while(list_line != program_end)
-    {
+      list_line = *lineptr;
       switch (list_line[sizeof(LINENUM) + sizeof(char)])
       {
         case KW_ELSE:
@@ -2218,7 +2119,7 @@ list:
           // Fall through
         case KW_IF:
         case KW_FOR:
-          printline(nindent, indent);
+          printline(0, indent);
           indent++;
           break;
         case KW_NEXT:
@@ -2229,7 +2130,7 @@ list:
           }
           // Fall through
         default:
-          printline(nindent, indent);
+          printline(0, indent);
           break;
       }
     }
@@ -2273,42 +2174,9 @@ print:
 // Print the current free memory.
 //
 mem:
-  printnum(0, (VAR_TYPE)(sp - program_end));
+  printnum(0, (VAR_TYPE)(sp - (unsigned char*)program_end));
   printmsg(memorymsg);
   goto run_next_statement;
-
-//
-// LOAD
-// Load any program in the persistent store back into memory.
-//
-load:
-  {
-    short len;
-    // clear the program
-    program_end = program_start;
-    
-    // load from a file into memory
-    len = OS_file_open(0, 'r');
-    if (len > 0)
-    {
-      program_end = program_start + len;
-      OS_file_read(program_start, len);
-    }
-    OS_file_close();
-    txtpos = program_end;
-    goto print_error_or_ok;
-  }
-
-//
-// SAVE
-// Save the current program to persistent store.
-// 
-save:
-  OS_file_open(0, 'w');
-  OS_file_write(program_start, program_end - program_start);
-  OS_file_close();
-  txtpos = program_end;
-  goto print_error_or_ok;
 
 //
 // DLOAD <1-15> <var>
@@ -2720,7 +2588,7 @@ cmd_detachint:
 // WIRE ...
 //
 cmd_wire:
-  if (txtpos >= program_end)
+  if (lineptr >= program_end)
   {
     goto qdirect;
   }
@@ -2732,7 +2600,7 @@ cmd_wire:
   goto run_next_statement;
 
 ble_gatt:
-  if (txtpos >= program_end)
+  if (lineptr >= program_end)
   {
     goto qdirect;
   }
@@ -2774,11 +2642,7 @@ ble_gatt:
           get_variable_frame(ch, &vframe);
           if (vframe->type == STACK_VARIABLE_NORMAL)
           {
-            if (sp - sizeof(stack_variable_frame) < program_end)
-            {
-              goto qoom;
-            }
-            sp -= sizeof(stack_variable_frame);
+            CHECK_SP_OOM(sizeof(stack_variable_frame));
             vframe = (stack_variable_frame*)sp;
             vframe->header.frame_type = STACK_VARIABLE_FLAG;
             vframe->header.frame_size = sizeof(stack_variable_frame);
@@ -2812,7 +2676,7 @@ ble_gatt:
     default:
       goto qwhat;
   }
-  goto execnextline;
+  goto run_next_statement;
 
 //
 // SCAN <time> LIMITED|GENERAL [ACTIVE] [DUPLICATES] ONDISCOVER GOSUB <linenum>
@@ -3307,7 +3171,7 @@ cmd_i2c:
   {
     case SPI_MASTER:
     {
-      unsigned char* ptr = program_end;
+      unsigned char* ptr = (unsigned char*)program_end;
 
       i2cScl = pin_parse();
       i2cSda = pin_parse();
@@ -3325,7 +3189,7 @@ cmd_i2c:
       *ptr++ = WIRE_INPUT_PULLUP;
       *ptr++ = WIRE_LOW;
       
-      pin_wire(program_end, ptr);
+      pin_wire((unsigned char*)program_end, ptr);
       break;
     }
 
@@ -3343,7 +3207,7 @@ cmd_i2c:
       unsigned char* data;
       unsigned char len = 0;
       unsigned char i = 0;
-      unsigned char* ptr = program_end;
+      unsigned char* ptr = (unsigned char*)program_end;
       unsigned char rnw = (txtpos[-1] == BLE_READ ? 1 : 0);
 
       *ptr++ = WIRE_INPUT_SET;
@@ -3486,7 +3350,7 @@ i2c_end:
         OS_memset(ptr, 0, len * 8 * 2);
       }
       
-      pin_wire(program_end, ptr);
+      pin_wire((unsigned char*)program_end, ptr);
       if (error_num)
       {
         break;
@@ -3650,7 +3514,7 @@ static void pin_wire_parse(void)
   // Starting a new set of WIRE operations?
   if (pinParsePtr == NULL)
   {
-    pinParsePtr = program_end;
+    pinParsePtr = (unsigned char*)program_end;
     pinParseCurrent = 0;
     pinParseReadAddr = NULL;
   }
@@ -3667,7 +3531,7 @@ static void pin_wire_parse(void)
       case ',':
         break;
       case KW_END:
-        pin_wire(program_end, pinParsePtr);
+        pin_wire((unsigned char*)program_end, pinParsePtr);
         pinParsePtr = NULL;
         return;
       case KW_PIN_P0:
@@ -4215,7 +4079,7 @@ wire_error:
 //
 static char ble_build_service(void)
 {
-  unsigned char* line;
+  unsigned char** line;
   unsigned char* origsp;
   gattAttribute_t* attributes;
   unsigned char ch;
@@ -4228,16 +4092,12 @@ static char ble_build_service(void)
   LINENUM onconnect = 0;
 
   linenum = servicestart;
-  line = findline();
-  txtpos = line + sizeof(LINENUM) + sizeof(char);
+  line = findlineptr();
+  txtpos = *line + sizeof(LINENUM) + sizeof(char);
 
   origsp = sp;
   // Allocate space on the stack for the service attributes
-  sp -= sizeof(gattAttribute_t) * servicecount + sizeof(unsigned short);
-  if (sp < program_end)
-  {
-    goto oom;
-  }
+  CHECK_SP_OOM(sizeof(gattAttribute_t) * servicecount + sizeof(unsigned short));
   attributes = (gattAttribute_t*)(sp + sizeof(unsigned short));
   
   for (count = 0; count < servicecount; count++)
@@ -4274,11 +4134,7 @@ static char ble_build_service(void)
         if (cmd == BLE_SERVICE)
         {
           attributes[count].type.uuid = ble_primary_service_uuid;
-          sp -= ble_uuid_len + sizeof(gattAttrType_t);
-          if (sp < program_end)
-          {
-            goto oom;
-          }
+          CHECK_SP_OOM(ble_uuid_len + sizeof(gattAttrType_t));
           OS_memcpy(sp + sizeof(gattAttrType_t), ble_uuid, ble_uuid_len);
           ((gattAttrType_t*)sp)->len = ble_uuid_len;
           ((gattAttrType_t*)sp)->uuid = sp + sizeof(gattAttrType_t);
@@ -4358,11 +4214,7 @@ static char ble_build_service(void)
         }
       }
 done:
-      sp--;
-      if (sp < program_end)
-      {
-        goto oom;
-      }
+      CHECK_SP_OOM(1);
       sp[0] = ch;
       *(unsigned char**)&attributes[count - 1].pValue = sp;
       
@@ -4379,11 +4231,7 @@ done:
       if (*txtpos != WS_SPACE && *txtpos != NL && *txtpos < 0x80)
         goto error;
       
-      sp -= ble_uuid_len + sizeof(gatt_variable_ref);
-      if (sp < program_end)
-      {
-        goto oom;
-      }
+      CHECK_SP_OOM(ble_uuid_len + sizeof(gatt_variable_ref));
       vref = (gatt_variable_ref*)(sp + ble_uuid_len);
       vref->read = 0;
       vref->write = 0;
@@ -4435,11 +4283,7 @@ done:
 
       if ((attributes[count - 1].pValue[0] & (GATT_PROP_INDICATE|GATT_PROP_NOTIFY)) != 0)
       {
-        sp -= sizeof(gattCharCfg_t) * GATT_MAX_NUM_CONN;
-        if (sp < program_end)
-        {
-          goto oom;
-        }
+        CHECK_SP_OOM(sizeof(gattCharCfg_t) * GATT_MAX_NUM_CONN);
         GATTServApp_InitCharCfg(INVALID_CONNHANDLE, (gattCharCfg_t*)sp);
 
         count++;
@@ -4450,11 +4294,7 @@ done:
         *(unsigned char**)&attributes[count].pValue = sp;
         vref->cfg = sp;
 
-        sp -= sizeof(stack_service_frame);
-        if (sp < program_end)
-        {
-          goto oom;
-        }
+        CHECK_SP_OOM(sizeof(stack_service_frame));
         frame = (stack_service_frame*)sp;
         frame->header.frame_type = STACK_SERVICE_FLAG;
         frame->header.frame_size = origsp - sp;
@@ -4471,11 +4311,7 @@ done:
         attributes[count].permissions = GATT_PERMIT_READ;
         attributes[count].handle = 0;
 
-        sp -= chardesclen + 1;
-        if (sp < program_end)
-        {
-          goto oom;
-        }
+        CHECK_SP_OOM(chardesclen + 1);
         OS_memcpy(sp, chardesc, chardesclen);
         sp[chardesclen] = 0;
         *(unsigned char**)&attributes[count].pValue = sp;
@@ -4487,16 +4323,11 @@ done:
       goto error;
     }
 
-    line += line[sizeof(LINENUM)];
-    txtpos = line + sizeof(LINENUM) + sizeof(char);
+    txtpos = *++line + sizeof(LINENUM) + sizeof(char);
   }
 
   // Build a stack header for this service
-  sp -= sizeof(stack_service_frame);
-  if (sp < program_end)
-  {
-    goto oom;
-  }
+  CHECK_SP_OOM(sizeof(stack_service_frame));
   frame = (stack_service_frame*)sp;
   frame->header.frame_type = STACK_SERVICE_FLAG;
   frame->header.frame_size = origsp - sp;
@@ -4515,11 +4346,11 @@ done:
 
 error:
   sp = origsp;
-  txtpos = line + sizeof(LINENUM) + sizeof(char);
+  txtpos = *line + sizeof(LINENUM) + sizeof(char);
   return 1;
-oom:
+qoom:
   sp = origsp;
-  txtpos = line + sizeof(LINENUM) + sizeof(char);
+  txtpos = *line + sizeof(LINENUM) + sizeof(char);
   return 2;
 }
 

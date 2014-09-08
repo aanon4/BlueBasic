@@ -19,7 +19,8 @@
 
 #define __data
 
-#define  SIMULATE_PINS 1
+#define SIMULATE_PINS   1
+#define SIMULATE_FLASH  1
 
 #define OS_init()
 #define OS_memset(A, B, C)    memset(A, B, C)
@@ -152,7 +153,6 @@ extern unsigned char GAPObserverRole_StartDiscovery(unsigned char mode, unsigned
 extern unsigned char GAPObserverRole_CancelDiscovery(void);
 
 #else /* __APPLE__ --------------------------------------------------------------------------- */
-
 
 #include "OSAL.h"
 #include "hal_board.h"
@@ -290,3 +290,9 @@ extern void interpreter_banner(void);
 extern void interpreter_loop(void);
 extern unsigned char interpreter_run(unsigned short gofrom, unsigned char canreturn);
 extern void interpreter_timer_event(unsigned short id);
+
+extern unsigned char** flashstore_init(unsigned char** startmem);
+extern unsigned char** flashstore_addline(unsigned char* line, unsigned char len);
+extern unsigned char** flashstore_deleteline(unsigned short id);
+extern unsigned char** flashstore_deleteall(void);
+extern unsigned short** flashstore_findclosest(unsigned short id);

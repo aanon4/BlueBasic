@@ -9,10 +9,8 @@ struct keyword
 } keywords[] =
 {
   { "LIST", "KW_LIST" },
-  { "LOAD", "KW_LOAD" },
   { "NEW", "KW_NEW" },
   { "RUN", "KW_RUN" },
-  { "SAVE", "KW_SAVE" },
   { "NEXT", "KW_NEXT" },
   { "IF", "KW_IF" },
   { "ELSE", "KW_ELSE" },
