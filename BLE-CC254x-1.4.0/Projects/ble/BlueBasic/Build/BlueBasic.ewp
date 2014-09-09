@@ -4332,6 +4332,9 @@
       <name>$PROJ_DIR$\..\Source\BlueBasic.h</name>
     </file>
     <file>
+      <name>$PROJ_DIR$\..\Source\BlueBasic_Flashstore.c</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\Source\BlueBasic_Interpreter.c</name>
     </file>
     <file>

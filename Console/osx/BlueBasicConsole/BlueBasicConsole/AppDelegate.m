@@ -150,7 +150,7 @@
         [watcher send:line];
         [watcher send:@"\n"];
       }
-      [watcher send:@"SAVE\n"];
+      [watcher send:@"END\n"];
       BOOL running = YES;
       while (okcount < 2 && running)
       {

@@ -963,31 +963,71 @@ static unsigned char* parse_variable_address(stack_variable_frame** vframe)
 //
 // Create an array
 //
-void create_dim(unsigned char name, VAR_TYPE size, unsigned char* data)
+static void create_dim(unsigned char name, VAR_TYPE size, unsigned char* data)
 {
   unsigned char vname;
   CHECK_SP_OOM(sizeof(stack_variable_frame) + size);
-  stack_variable_frame *f = (stack_variable_frame *)sp;
-  f->header.frame_type = STACK_VARIABLE_FLAG;
-  f->header.frame_size = sizeof(stack_variable_frame) + size;
-  f->type = VAR_DIM_BYTE;
-  f->name = name;
-  f->oflags = VARIABLE_FLAGS_GET(name);
-  f->ble = NULL;
-  VARIABLE_FLAGS_SET(name, VAR_VARIABLE);
-  if (data)
   {
-    OS_memcpy(sp + sizeof(stack_variable_frame), data, size);
+    stack_variable_frame *f = (stack_variable_frame *)sp;
+    f->header.frame_type = STACK_VARIABLE_FLAG;
+    f->header.frame_size = sizeof(stack_variable_frame) + size;
+    f->type = VAR_DIM_BYTE;
+    f->name = name;
+    f->oflags = VARIABLE_FLAGS_GET(name);
+    f->ble = NULL;
+    VARIABLE_FLAGS_SET(name, VAR_VARIABLE);
+    if (data)
+    {
+      OS_memcpy(sp + sizeof(stack_variable_frame), data, size);
+    }
+    else
+    {
+      OS_memset(sp + sizeof(stack_variable_frame), 0, size);
+    }
+    cache_name = 0;
   }
-  else
-  {
-    OS_memset(sp + sizeof(stack_variable_frame), 0, size);
-  }
-  cache_name = 0;
   return;
 qoom:
   error_num = ERROR_OOM;
   return;
+}
+
+//
+// Clean the stack
+//
+static void clean_stack(void)
+{
+  // Use the 'lineptr' to track if we've done this before (so we dont keep doing it)
+  if (!lineptr)
+  {
+    return;
+  }
+  lineptr = NULL;
+
+  // Kill array cache
+  cache_name = 0;
+  // Remove any persistent info from the stack. This includes array and services.
+  while (sp < variables_begin)
+  {
+    switch (((stack_header*)sp)->frame_type)
+    {
+      case STACK_SERVICE_FLAG:
+      {
+        gattAttribute_t* attr;
+        GATTServApp_DeregisterService(((stack_service_frame*)sp)->attrs[0].handle, &attr);
+        break;
+      }
+      case STACK_VARIABLE_FLAG:
+      {
+        unsigned char vname;
+        VARIABLE_FLAGS_SET(((stack_variable_frame*)sp)->name, ((stack_variable_frame*)sp)->oflags);
+        break;
+      }
+    }
+    sp += ((stack_header*)sp)->frame_size;
+  }
+  // Reset all variables to 0 and remove all types
+  OS_memset(variables_begin, 0, 26 * VAR_SIZE + 4);
 }
 
 // -------------------------------------------------------------------------------------------
@@ -1445,14 +1485,14 @@ void interpreter_init()
   OS_memset(program_start, 0, kRamSize);
   variables_begin = (unsigned char*)program_start + kRamSize - 26 * VAR_SIZE - 4; // 4 bytes = 32 bits of flags
   sp = variables_begin;
-  program_end = flashstore_init(program_start);
+  program_end = flashstore_init(program_start, kRamSize);
   interpreter_banner();
 }
 
 void interpreter_banner(void)
 {
   printmsg(initmsg);
-  printnum(0, (VAR_TYPE)(sp - (unsigned char*)program_end));
+  printnum(0, flashstore_freemem());
   printmsg(memorymsg);
   printmsg(error_msgs[ERROR_OK]);
 }
@@ -1546,12 +1586,17 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
     {
       goto qwhat;
     }
+    
+    // Clean the stack if we're modifying the code
+    clean_stack();
 
     // Allow space for line header
     txtpos -= sizeof(LINENUM) + sizeof(char);
 
     // Calculate the length of what is left, including the (yet-to-be-populated) line header
     linelen = sp - txtpos;
+    // Round up
+    linelen = (linelen + 3) & -4;
 
     // Now we have the number, add the line header.
     *((LINENUM*)txtpos) = linenum;
@@ -1563,7 +1608,22 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
     }
     else
     {
-      program_end = flashstore_addline(txtpos, linelen);
+      unsigned char** newend = flashstore_addline(txtpos, linelen);
+      if (!newend)
+      {
+        // No space - attempt to compact flash
+        flashstore_compact(linelen);
+        // Will corrupt stack space so force clean it
+        lineptr = program_end;
+        clean_stack();
+        newend = flashstore_addline(txtpos, linelen);
+        if (!newend)
+        {
+          // Still no space
+          return IX_OUTOFMEMORY;
+        }
+      }
+      program_end = newend;
     }
   }
 
@@ -1617,26 +1677,7 @@ interperate:
       program_end = flashstore_deleteall();
       // Fall through
     case KW_RUN:
-      while (sp < variables_begin)
-      {
-        switch (((stack_header*)sp)->frame_type)
-        {
-          case STACK_SERVICE_FLAG:
-          {
-            gattAttribute_t* attr;
-            GATTServApp_DeregisterService(((stack_service_frame*)sp)->attrs[0].handle, &attr);
-            break;
-          }
-          case STACK_VARIABLE_FLAG:
-          {
-            unsigned char vname;
-            VARIABLE_FLAGS_SET(((stack_variable_frame*)sp)->name, ((stack_variable_frame*)sp)->oflags);
-            cache_name = 0;
-            break;
-          }
-        }
-        sp += ((stack_header*)sp)->frame_size;
-      }
+      clean_stack();
       lineptr = program_start;
       if (lineptr >= program_end)
       {
@@ -2174,7 +2215,7 @@ print:
 // Print the current free memory.
 //
 mem:
-  printnum(0, (VAR_TYPE)(sp - (unsigned char*)program_end));
+  printnum(0, flashstore_freemem());
   printmsg(memorymsg);
   goto run_next_statement;
 

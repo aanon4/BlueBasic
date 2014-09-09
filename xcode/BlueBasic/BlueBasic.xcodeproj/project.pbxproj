@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		2202216D19BD6AF600DA830A /* BluseBasic_Flashstore.c in Sources */ = {isa = PBXBuildFile; fileRef = 2202216C19BD6AF600DA830A /* BluseBasic_Flashstore.c */; };
+		222635F019BE5AD60031438D /* BlueBasic_Flashstore.c in Sources */ = {isa = PBXBuildFile; fileRef = 222635EF19BE5AD60031438D /* BlueBasic_Flashstore.c */; };
 		22FA2DB7197331050049CDB8 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 22FA2DB6197331050049CDB8 /* main.c */; };
 		22FA2DC01973315F0049CDB8 /* BlueBasic_Interpreter.c in Sources */ = {isa = PBXBuildFile; fileRef = 22FA2DBF1973315F0049CDB8 /* BlueBasic_Interpreter.c */; };
 		22FA2DC4197335CE0049CDB8 /* os.c in Sources */ = {isa = PBXBuildFile; fileRef = 22FA2DC3197335CE0049CDB8 /* os.c */; };
@@ -26,7 +26,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		2202216C19BD6AF600DA830A /* BluseBasic_Flashstore.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = BluseBasic_Flashstore.c; sourceTree = "<group>"; };
+		222635EF19BE5AD60031438D /* BlueBasic_Flashstore.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = BlueBasic_Flashstore.c; path = "../../../BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Source/BlueBasic_Flashstore.c"; sourceTree = "<group>"; };
 		2233458D19920FC200B2141A /* keyword_tables.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = keyword_tables.h; path = "../../../BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Source/keyword_tables.h"; sourceTree = "<group>"; };
 		2233458E199440C800B2141A /* blescan10.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = blescan10.test; sourceTree = "<group>"; };
 		2233458F19948C4000B2141A /* spi01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = spi01.test; sourceTree = "<group>"; };
@@ -163,12 +163,12 @@
 		22FA2DB5197331050049CDB8 /* BlueBasic */ = {
 			isa = PBXGroup;
 			children = (
+				222635EF19BE5AD60031438D /* BlueBasic_Flashstore.c */,
 				2233458D19920FC200B2141A /* keyword_tables.h */,
 				22FA2DC2197333170049CDB8 /* os.h */,
 				22FA2DBF1973315F0049CDB8 /* BlueBasic_Interpreter.c */,
 				22FA2DB6197331050049CDB8 /* main.c */,
 				22FA2DC3197335CE0049CDB8 /* os.c */,
-				2202216C19BD6AF600DA830A /* BluseBasic_Flashstore.c */,
 			);
 			path = BlueBasic;
 			sourceTree = "<group>";
@@ -227,7 +227,7 @@
 				22FA2DC4197335CE0049CDB8 /* os.c in Sources */,
 				22FA2DB7197331050049CDB8 /* main.c in Sources */,
 				22FA2DC01973315F0049CDB8 /* BlueBasic_Interpreter.c in Sources */,
-				2202216D19BD6AF600DA830A /* BluseBasic_Flashstore.c in Sources */,
+				222635F019BE5AD60031438D /* BlueBasic_Flashstore.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

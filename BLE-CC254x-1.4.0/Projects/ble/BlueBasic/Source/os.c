@@ -462,3 +462,12 @@ void OS_delaymicroseconds(short micros)
   while (micros-- > 0)
     ;
 }
+
+void OS_flashstore_init(void)
+{
+  // If flashstore is uninitialized, deleting all the pages will set it up correctly.
+  if (*(unsigned long*)FLASHSTORE_CPU_BASEADDR == 0xFFFFFFFF)
+  {
+    flashstore_deleteall();
+  }
+}

@@ -8,24 +8,29 @@
 
 #include "os.h"
 
-#define FLASHSTORE_NRPAGES    4
-#define FLASHSTORE_PAGESIZE   2048
-#define FLASHSTORE_WRITESIZE  4
-
-#define FLASHSTORE_LEN        (FLASHSTORE_NRPAGES * FLASHSTORE_PAGESIZE)
+#define FLASHSTORE_WORDS(LEN)     ((LEN) >> 2)
 
 #ifdef SIMULATE_FLASH
-static unsigned char __store[FLASHSTORE_LEN];
-static unsigned char* flashstore = __store;
+unsigned char __store[FLASHSTORE_LEN];
+#define FLASHSTORE_CPU_BASEADDR (__store)
+#define FLASHSTORE_DMA_BASEADDR (0)
 #endif
+
+static const unsigned char* flashstore = (unsigned char*)FLASHSTORE_CPU_BASEADDR;
+#define FLASHSTORE_FADDR(ADDR)  ((((unsigned char*)(ADDR) - FLASHSTORE_CPU_BASEADDR) + FLASHSTORE_DMA_BASEADDR) >> 2)
+#define FLASHSTORE_FPAGE(ADDR)  (FLASHSTORE_FADDR(ADDR) >> 9)
+
 static unsigned short** lineindexstart;
 static unsigned short** lineindexend;
+static unsigned short lineindexmaxlen;
 static struct
 {
   unsigned short free;
   unsigned short waste;
 } orderedpages[FLASHSTORE_NRPAGES];
+
 #define FLASHSTORE_PAGEBASE(IDX)  &flashstore[FLASHSTORE_PAGESIZE * (IDX)]
+
 
 //
 // Flash page structure:
@@ -38,7 +43,7 @@ typedef long int flashpage_age;
 #else
 typedef unsigned int flashpage_age;
 #endif
-static flashpage_age lastage;
+static flashpage_age lastage = 1;
 
 //
 // Flash item structure:
@@ -53,11 +58,7 @@ enum
   FLASHID_FREE    = 0xFFFF,
 };
 
-static unsigned char flashstore_compact(unsigned char len);
-static void flashstore_write(unsigned char* mem, unsigned char* value, unsigned char size);
-static void flashstore_erase(unsigned char* mem);
-#define FLASHSTORE_WRITEID(MEM, ID) do { unsigned short id = (ID); flashstore_write((unsigned char*)(MEM), (unsigned char*)&id, sizeof(id)); } while(0)
-
+static void flashstore_invalidate(unsigned short* mem);
 
 //
 // Heapsort
@@ -116,35 +117,20 @@ static void flashpage_heapsort(void)
 
 
 //
-// Initializd the flashstore.
+// Initialize the flashstore.
 //  Rebuild the program store from the flash store.
 //  Called when the interpreter powers up.
 //
-unsigned char** flashstore_init(unsigned char** startmem)
+unsigned char** flashstore_init(unsigned char** startmem, unsigned short len)
 {
   lineindexstart = (unsigned short**)startmem;
   lineindexend = lineindexstart;
-  lastage = 1;
-#ifdef SIMULATE_FLASH
-  FILE* fp = fopen("/tmp/flashstore", "r");
-  if (fp)
-  {
-    fread(__store, FLASHSTORE_LEN, sizeof(char), fp);
-    fclose(fp);
-  }
-  else
-  {
-    unsigned char* ptr;
-    memset(__store, 0xFF, FLASHSTORE_LEN);
-    for (ptr = flashstore; ptr < &flashstore[FLASHSTORE_LEN]; ptr += FLASHSTORE_PAGESIZE)
-    {
-      *(flashpage_age*)ptr = lastage++;
-    }
+  lineindexmaxlen = len; // len >= FLASHSTORE_PAGESIZE
 
-  }
-#endif
+  OS_flashstore_init();
+
   unsigned char ordered = 0;
-  unsigned char* page;
+  const unsigned char* page;
   for (page = flashstore; page < &flashstore[FLASHSTORE_LEN]; page += FLASHSTORE_PAGESIZE)
   {
     orderedpages[ordered].waste = 0;
@@ -154,7 +140,7 @@ unsigned char** flashstore_init(unsigned char** startmem)
     }
 
     // Analyse page
-    unsigned char* ptr;
+    const unsigned char* ptr;
     for (ptr = page + sizeof(flashpage_age); ptr < page + FLASHSTORE_PAGESIZE; )
     {
       unsigned short id = *(unsigned short*)ptr;
@@ -223,60 +209,52 @@ unsigned char** flashstore_addline(unsigned char* line, unsigned char len)
   {
     found = 1;
   }
-  
-  for (;;)
+
+  // Find space for the new line
+  unsigned char pg;
+  for (pg = 0; pg < FLASHSTORE_NRPAGES; pg++)
   {
-    // Find space for the new line
-    unsigned char pg;
-    for (pg = 0; pg < FLASHSTORE_NRPAGES; pg++)
+    if (orderedpages[pg].free >= len)
     {
-      if (orderedpages[pg].free >= len)
+      unsigned short* mem = (unsigned short*)(FLASHSTORE_PAGEBASE(pg) + FLASHSTORE_PAGESIZE - orderedpages[pg].free);
+      OS_flashstore_write(FLASHSTORE_FADDR(mem), line, FLASHSTORE_WORDS(len));
+      orderedpages[pg].free -= len;
+      // If there was an old version, invalidate it
+      if (found)
       {
-        unsigned short* mem = (unsigned short*)(FLASHSTORE_PAGEBASE(pg) + FLASHSTORE_PAGESIZE - orderedpages[pg].free);
-        flashstore_write((unsigned char*)mem, line, len);
-        orderedpages[pg].free -= len;
         // If there was an old version, invalidate it
-        if (found)
+        flashstore_invalidate(*oldlineptr);
+
+        // Insert new line into index
+        *oldlineptr = mem;
+      }
+      else
+      {
+        // Insert new line
+        unsigned short len = sizeof(unsigned short*) * (lineindexend - oldlineptr);
+        if (len == 0)
         {
-          // If there was an old version, invalidate it
-          FLASHSTORE_WRITEID(*oldlineptr, FLASHID_INVALID);
-          // Add the waste to its page
-          orderedpages[((unsigned char*)*oldlineptr - flashstore) / FLASHSTORE_PAGESIZE].waste += ((unsigned char*)*oldlineptr)[sizeof(unsigned short)];
-          // Insert new line into index
-          *oldlineptr = mem;
+          oldlineptr[0] = mem;
         }
         else
         {
-          // Insert new line
-          unsigned short len = sizeof(unsigned short*) * (lineindexend - oldlineptr);
-          if (len == 0)
+          OS_rmemcpy(oldlineptr + 1, oldlineptr, len);
+          if (**oldlineptr > id)
           {
             oldlineptr[0] = mem;
           }
           else
           {
-            OS_rmemcpy(oldlineptr + 1, oldlineptr, len);
-            if (**oldlineptr > id)
-            {
-              oldlineptr[0] = mem;
-            }
-            else
-            {
-              oldlineptr[1] = mem;
-            }
+            oldlineptr[1] = mem;
           }
-          lineindexend++;
         }
-        return (unsigned char**)lineindexend;
+        lineindexend++;
       }
-    }
-    // No space - we need to compact
-    if (!flashstore_compact(len))
-    {
-      // Failed to find enough space
-      break;
+      return (unsigned char**)lineindexend;
     }
   }
+
+  // No space
   return NULL;
 }
 
@@ -289,8 +267,7 @@ unsigned char** flashstore_deleteline(unsigned short id)
   if (*oldlineptr != NULL && **oldlineptr == id)
   {
     lineindexend--;
-    FLASHSTORE_WRITEID(*oldlineptr, FLASHID_INVALID);
-    orderedpages[((unsigned char*)*oldlineptr - flashstore) / FLASHSTORE_PAGESIZE].waste += ((unsigned char*)*oldlineptr)[sizeof(unsigned short)];
+    flashstore_invalidate(*oldlineptr);
     OS_memcpy(oldlineptr, oldlineptr + 1, sizeof(unsigned short*) * (lineindexend - oldlineptr));
   }
   return (unsigned char**)lineindexend;
@@ -299,16 +276,16 @@ unsigned char** flashstore_deleteline(unsigned short id)
 //
 // Delete everything from the store.
 //
-extern unsigned char** flashstore_deleteall(void)
+unsigned char** flashstore_deleteall(void)
 {
   unsigned char pg;
   for (pg = 0; pg < FLASHSTORE_NRPAGES; pg++)
   {
     if (orderedpages[pg].free != FLASHSTORE_PAGESIZE - sizeof(flashpage_age))
     {
-      unsigned char* base = FLASHSTORE_PAGEBASE(pg);
-      flashstore_erase(base);
-      flashstore_write(base, (unsigned char*)&lastage, sizeof(lastage));
+      const unsigned char* base = FLASHSTORE_PAGEBASE(pg);
+      OS_flashstore_erase(FLASHSTORE_FPAGE(base));
+      OS_flashstore_write(FLASHSTORE_FADDR(base), (unsigned char*)&lastage, FLASHSTORE_WORDS(sizeof(lastage)));
       lastage++;
       orderedpages[pg].waste = 0;
       orderedpages[pg].free = FLASHSTORE_PAGESIZE - sizeof(flashpage_age);
@@ -319,31 +296,89 @@ extern unsigned char** flashstore_deleteall(void)
   return (unsigned char**)lineindexend;
 }
 
-static unsigned char flashstore_compact(unsigned char len)
+//
+// How much space is free?
+//
+unsigned int flashstore_freemem(void)
 {
-  return 0; // Not yet
+  unsigned int free = 0;
+  unsigned char pg;
+  for (pg = 0; pg < FLASHSTORE_NRPAGES; pg++)
+  {
+    free += orderedpages[pg].free;
+  }
+  return free;
 }
 
-static void flashstore_write(unsigned char* mem, unsigned char* value, unsigned char size)
+void flashstore_compact(unsigned char len)
 {
-#ifdef SIMULATE_FLASH
-  memcpy(mem, value, size);
-  FILE* fp = fopen("/tmp/flashstore", "w");
-  fwrite(__store, FLASHSTORE_LEN, sizeof(char), fp);
-  fclose(fp);
-#else
-#error "Not yet"
-#endif
+  // Find the lowest age page which this will fit in.
+  unsigned char pg;
+  unsigned char selected = 0;
+  flashpage_age age = 0xFFFFFFFF;
+  for (pg = 0; pg < FLASHSTORE_NRPAGES; pg++)
+  {
+    flashpage_age cage = *(flashpage_age*)FLASHSTORE_PAGEBASE(pg);
+    if (cage < age && orderedpages[pg].waste + orderedpages[pg].free >= len)
+    {
+      selected = pg;
+      age = cage;
+    }
+  }
+  if (age != 0xFFFFFFFF)
+  {
+    // Found enough space for the line, compact the page
+    
+    // Copy the page into RAM
+    unsigned char* ram = (unsigned char*)lineindexstart;
+    unsigned char* flash = (unsigned char*)FLASHSTORE_PAGEBASE(selected);
+    OS_memcpy(ram, flash, FLASHSTORE_PAGESIZE);
+
+    // Erase the page
+    OS_flashstore_erase(FLASHSTORE_FPAGE(flash));
+    OS_flashstore_write(FLASHSTORE_FADDR(flash), (unsigned char*)&lastage, FLASHSTORE_WORDS(sizeof(lastage)));
+    lastage++;
+    orderedpages[selected].waste = 0;
+    orderedpages[selected].free = FLASHSTORE_PAGESIZE - sizeof(flashpage_age);
+
+    // Copy the old lines back in. More efficient ways to do this, but okay for the moment
+    unsigned char* ptr;
+    for (ptr = ram + sizeof(flashpage_age); ptr < ram + FLASHSTORE_PAGESIZE; )
+    {
+      unsigned short id = *(unsigned short*)ptr;
+      unsigned char len = ptr[sizeof(unsigned short)];
+      if (id == FLASHID_FREE)
+      {
+        break;
+      }
+      else if (id != FLASHID_INVALID)
+      {
+        OS_flashstore_write(FLASHSTORE_FADDR(ptr - ram + flash), ptr, FLASHSTORE_WORDS(len));
+        orderedpages[selected].free -= len;
+      }
+      ptr += len;
+    }
+  
+    // We corrupted memory, so we need to reinitialize
+    flashstore_init((unsigned char**)lineindexstart, lineindexmaxlen);
+  }
 }
 
-static void flashstore_erase(unsigned char* mem)
+//
+// Invalidate the line entry at the given address.
+//
+static void flashstore_invalidate(unsigned short* mem)
 {
-#ifdef SIMULATE_FLASH
-  memset(mem, 0xFF, FLASHSTORE_PAGESIZE);
-  FILE* fp = fopen("/tmp/flashstore", "w");
-  fwrite(__store, FLASHSTORE_LEN, sizeof(char), fp);
-  fclose(fp);
-#else
-#error "Not yet"
-#endif
+  struct
+  {
+    unsigned short invalid;
+    unsigned char len;
+    unsigned char padding;
+  } invalid;
+  OS_memcpy(&invalid, mem, sizeof(invalid));
+  invalid.invalid = FLASHID_INVALID;
+
+  OS_flashstore_write(FLASHSTORE_FADDR(mem), (unsigned char*)&invalid, FLASHSTORE_WORDS(sizeof(invalid)));
+
+  orderedpages[((unsigned char*)mem - flashstore) / FLASHSTORE_PAGESIZE].waste += invalid.len;
 }

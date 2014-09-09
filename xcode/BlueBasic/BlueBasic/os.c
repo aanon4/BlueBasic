@@ -25,6 +25,8 @@ static FILE* filep;
 static unsigned char* bstart;
 static unsigned char* bend;
 
+extern unsigned char __store[];
+
 void OS_prompt_buffer(unsigned char* start, unsigned char* end)
 {
   bstart = start;
@@ -255,4 +257,41 @@ unsigned char GAPObserverRole_StartDiscovery(unsigned char mode, unsigned char a
 unsigned char GAPObserverRole_CancelDiscovery(void)
 {
   return SUCCESS;
+}
+
+void OS_flashstore_init(void)
+{
+  FILE* fp = fopen("/tmp/flashstore", "r");
+  if (fp)
+  {
+    fread(__store, FLASHSTORE_LEN, sizeof(char), fp);
+    fclose(fp);
+  }
+  else
+  {
+    int lastage = 1;
+    const unsigned char* ptr;
+    memset(__store, 0xFF, FLASHSTORE_LEN);
+    for (ptr = __store; ptr < &__store[FLASHSTORE_LEN]; ptr += FLASHSTORE_PAGESIZE)
+    {
+      *(int*)ptr = lastage++;
+    }
+    
+  }
+}
+
+void OS_flashstore_write(unsigned long faddr, unsigned char* value, unsigned char sizeinwords)
+{
+  memcpy(&__store[faddr << 2], value, sizeinwords << 2);
+  FILE* fp = fopen("/tmp/flashstore", "w");
+  fwrite(__store, FLASHSTORE_LEN, sizeof(char), fp);
+  fclose(fp);
+}
+
+void OS_flashstore_erase(unsigned long page)
+{
+  memset(&__store[page << 11], 0xFF, FLASHSTORE_PAGESIZE);
+  FILE* fp = fopen("/tmp/flashstore", "w");
+  fwrite(__store, FLASHSTORE_LEN, sizeof(char), fp);
+  fclose(fp);
 }
