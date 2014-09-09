@@ -67,7 +67,7 @@ extern "C"
 #else
 #define OAD_IMG_B_PAGE        63
 #endif
-#define OAD_IMG_B_AREA       (124 - OAD_IMG_A_AREA)
+#define OAD_IMG_B_AREA       (120 - OAD_IMG_A_AREA)
 #endif
 
 #if defined HAL_IMAGE_B

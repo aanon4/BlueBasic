@@ -79,8 +79,11 @@
 -D_BANK4_BEG=0x48000
 -D_BANK4_END=0x4FFFF
 //
--D_BANK5_BEG=0x58000           // First 6 pages of Bank 5.
--D_BANK5_END=0x5AFFF
+-D_BANK5_BEG=0x58000           // Pages 0-1 of Bank 5.
+-D_BANK5_END=0x58FFF
+
+-D_FLASHSTORE_BEG=0x59000      // Pages 2-5 of Bank 5 for flashstore
+-D_FLASHSTORE_END=0x5AFFF
 
 //
 // Register bank setup

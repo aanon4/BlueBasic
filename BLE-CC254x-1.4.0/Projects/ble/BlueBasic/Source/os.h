@@ -8,7 +8,7 @@
 // os.h
 //
 
-#define kVersion "v0.4"
+#define kVersion "v0.5"
 
 #if __APPLE__
 
@@ -19,7 +19,8 @@
 
 #define __data
 
-#define  SIMULATE_PINS 1
+#define SIMULATE_PINS   1
+#define SIMULATE_FLASH  1
 
 #define OS_init()
 #define OS_memset(A, B, C)    memset(A, B, C)
@@ -43,10 +44,11 @@ extern short OS_file_open(unsigned char chan, unsigned char rw);
 extern unsigned char OS_file_read(unsigned char* buf, short len);
 extern unsigned char OS_file_write(unsigned char* buf, short len);
 extern void OS_file_close(void);
-extern void OS_autorun_set(unsigned char autorun);
-extern char OS_autorun_get(void);
 extern void OS_timer_stop(unsigned char id);
 extern char OS_timer_start(unsigned char id, unsigned long timeout, unsigned char repeat, unsigned short lineno);
+extern void OS_flashstore_init(void);
+extern void OS_flashstore_write(unsigned long faddr, unsigned char* value, unsigned char sizeinwords);
+extern void OS_flashstore_erase(unsigned long page);
 
 #define OS_MAX_TIMER              2
 #define BLUEBASIC_EVENT_TIMER     0x0001
@@ -153,7 +155,6 @@ extern unsigned char GAPObserverRole_CancelDiscovery(void);
 
 #else /* __APPLE__ --------------------------------------------------------------------------- */
 
-
 #include "OSAL.h"
 #include "hal_board.h"
 #include "gatt.h"
@@ -165,6 +166,7 @@ extern unsigned char GAPObserverRole_CancelDiscovery(void);
 #include "peripheral.h"
 #include "linkdb.h"
 #include "hci.h"
+#include "hal_flash.h"
 #include "timestamp.h"
 
 #if TARGET_CC2540 || TARGET_CC2541
@@ -211,6 +213,8 @@ typedef struct
 } os_timer_t;
 extern os_timer_t blueBasic_timers[OS_MAX_TIMER];
 
+#define FLASHSTORE_CPU_BASEADDR ((unsigned char*)0x9000)
+#define FLASHSTORE_DMA_BASEADDR ((unsigned long)0x29000)
 
 #define OS_memset(A, B, C)     osal_memset(A, B, C)
 #define OS_memcpy(A, B, C)     osal_memcpy(A, B, C)
@@ -218,6 +222,9 @@ extern os_timer_t blueBasic_timers[OS_MAX_TIMER];
 #define OS_rand()              osal_rand()
 #define OS_malloc(A)           osal_mem_alloc(A)
 #define OS_free(A)             osal_mem_free(A)
+
+#define OS_flashstore_write(A, V, L)  HalFlashWrite(A, V, L)
+#define OS_flashstore_erase(P)        HalFlashErase(P)
 
 extern void OS_init(void);
 extern void OS_openserial(void);
@@ -234,11 +241,10 @@ extern void OS_timer_stop(unsigned char id);
 extern char OS_timer_start(unsigned char id, unsigned long timeout, unsigned char repeat, unsigned short lineno);
 extern char OS_interrupt_attach(unsigned char pin, unsigned short lineno);
 extern char OS_interrupt_detach(unsigned char pin);
-extern void OS_autorun_set(unsigned char autorun);
-extern char OS_autorun_get(void);
 extern long OS_millis(void);
 extern void OS_delaymicroseconds(short micros);
 extern void OS_reboot(char flash);
+extern void OS_flashstore_init(void);
 
 extern void interpreter_devicefound(unsigned char addtype, unsigned char* address, signed char rssi, unsigned char eventtype, unsigned char len, unsigned char* data);
 
@@ -290,3 +296,30 @@ extern void interpreter_banner(void);
 extern void interpreter_loop(void);
 extern unsigned char interpreter_run(unsigned short gofrom, unsigned char canreturn);
 extern void interpreter_timer_event(unsigned short id);
+
+#define FLASHSTORE_NRPAGES    4
+#define FLASHSTORE_PAGESIZE   2048
+#define FLASHSTORE_LEN        (FLASHSTORE_NRPAGES * FLASHSTORE_PAGESIZE)
+
+enum
+{
+  FLASHID_INVALID = 0x0000,
+  FLASHID_SPECIAL = 0xFFFE,
+  FLASHID_FREE    = 0xFFFF,
+};
+
+enum
+{
+  FLASHSPECIAL_AUTORUN = 0x0001,
+};
+
+extern unsigned char** flashstore_init(unsigned char** startmem);
+extern unsigned char** flashstore_addline(unsigned char* line, unsigned char len);
+extern unsigned char** flashstore_deleteline(unsigned short id);
+extern unsigned char** flashstore_deleteall(void);
+extern unsigned short** flashstore_findclosest(unsigned short id);
+extern unsigned int flashstore_freemem(void);
+extern void flashstore_compact(unsigned char asklen, unsigned char* tempmemstart, unsigned char* tempmemend);
+extern unsigned char flashstore_addspecial(unsigned char* item);
+extern unsigned char flashstore_deletespecial(unsigned short specialid);
+extern unsigned char* flashstore_findspecial(unsigned short specialid);

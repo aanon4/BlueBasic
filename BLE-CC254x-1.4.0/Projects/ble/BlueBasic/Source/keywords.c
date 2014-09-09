@@ -9,10 +9,8 @@ struct keyword
 } keywords[] =
 {
   { "LIST", "KW_LIST" },
-  { "LOAD", "KW_LOAD" },
   { "NEW", "KW_NEW" },
   { "RUN", "KW_RUN" },
-  { "SAVE", "KW_SAVE" },
   { "NEXT", "KW_NEXT" },
   { "IF", "KW_IF" },
   { "ELSE", "KW_ELSE" },
@@ -59,8 +57,6 @@ struct keyword
   { "^", "OP_XOR" },
   { "<<", "OP_LSHIFT" },
   { ">>", "OP_RSHIFT" },
-  { "DSAVE", "KW_DSAVE" },
-  { "DLOAD", "KW_DLOAD" },
   { "PINMODE", "KW_PINMODE" },
   { "ATTACHINTERRUPT", "KW_ATTACHINTERRUPT" },
   { "DETACHINTERRUPT", "KW_DETACHINTERRUPT" },
