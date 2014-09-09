@@ -51,8 +51,6 @@ static const unsigned char keywords_3[] =
   'D','E','T','A','C','H','I','N','T','E','R','R','U','P','T',KW_DETACHINTERRUPT,
   'D','E','V','_','A','D','D','R','E','S','S',KW_CONSTANT,CO_DEV_ADDRESS,
   'D','I','M',KW_DIM,
-  'D','L','O','A','D',KW_DLOAD,
-  'D','S','A','V','E',KW_DSAVE,
   'D','U','P','L','I','C','A','T','E','S',BLE_DUPLICATES,
   '^',OP_XOR,
   0

@@ -22,7 +22,6 @@ static const unsigned char* flashstore = (unsigned char*)FLASHSTORE_CPU_BASEADDR
 
 static unsigned short** lineindexstart;
 static unsigned short** lineindexend;
-static unsigned short lineindexmaxlen;
 static struct
 {
   unsigned short free;
@@ -51,12 +50,6 @@ static flashpage_age lastage = 1;
 //  Id's between 1 and 0xFFFD are valid program lines. Id==0 is an invalidated item, Id=0xFFFE is special (undefined)
 //  and Id=0xFFFF is free space to the end of the page.
 //
-enum
-{
-  FLASHID_INVALID = 0x0000,
-  FLASHID_SPECIAL = 0xFFFE,
-  FLASHID_FREE    = 0xFFFF,
-};
 
 static void flashstore_invalidate(unsigned short* mem);
 
@@ -121,11 +114,10 @@ static void flashpage_heapsort(void)
 //  Rebuild the program store from the flash store.
 //  Called when the interpreter powers up.
 //
-unsigned char** flashstore_init(unsigned char** startmem, unsigned short len)
+unsigned char** flashstore_init(unsigned char** startmem)
 {
   lineindexstart = (unsigned short**)startmem;
   lineindexend = lineindexstart;
-  lineindexmaxlen = len; // len >= FLASHSTORE_PAGESIZE
 
   OS_flashstore_init();
 
@@ -258,6 +250,57 @@ unsigned char** flashstore_addline(unsigned char* line, unsigned char len)
   return NULL;
 }
 
+unsigned char flashstore_addspecial(unsigned char* item)
+{
+  unsigned char pg;
+  unsigned char len = item[sizeof(unsigned short)];
+  for (pg = 0; pg < FLASHSTORE_NRPAGES; pg++)
+  {
+    if (orderedpages[pg].free >= len)
+    {
+      unsigned short* mem = (unsigned short*)(FLASHSTORE_PAGEBASE(pg) + FLASHSTORE_PAGESIZE - orderedpages[pg].free);
+      OS_flashstore_write(FLASHSTORE_FADDR(mem), item, FLASHSTORE_WORDS(len));
+      orderedpages[pg].free -= len;
+      return 1;
+    }
+  }
+  
+  return 0;
+}
+
+unsigned char flashstore_deletespecial(unsigned short specialid)
+{
+  unsigned char* ptr = flashstore_findspecial(specialid);
+  if (ptr)
+  {
+    flashstore_invalidate((unsigned short*)ptr);
+    return 1;
+  }
+  return 0;
+}
+
+unsigned char* flashstore_findspecial(unsigned short specialid)
+{
+  const unsigned char* page;
+  for (page = flashstore; page < &flashstore[FLASHSTORE_LEN]; page += FLASHSTORE_PAGESIZE)
+  {
+    const unsigned char* ptr;
+    for (ptr = page + sizeof(flashpage_age); ptr < page + FLASHSTORE_PAGESIZE; ptr += ptr[sizeof(unsigned short)])
+    {
+      unsigned short id = *(unsigned short*)ptr;
+      if (id == FLASHID_FREE)
+      {
+        break;
+      }
+      else if (id == FLASHID_SPECIAL && *(unsigned short*)(ptr + sizeof(unsigned short) + sizeof(unsigned char)) == specialid)
+      {
+        return (unsigned char*)ptr;
+      }
+    }
+  }
+  return NULL;
+}
+
 //
 // Remove the line from the flash store.
 //
@@ -310,8 +353,14 @@ unsigned int flashstore_freemem(void)
   return free;
 }
 
-void flashstore_compact(unsigned char len)
+void flashstore_compact(unsigned char len, unsigned char* tempmemstart, unsigned char* tempmemend)
 {
+  // Need at least FLASHSTORE_PAGESIZE
+  if (tempmemend - tempmemstart < FLASHSTORE_PAGESIZE)
+  {
+    return;
+  }
+
   // Find the lowest age page which this will fit in.
   unsigned char pg;
   unsigned char selected = 0;
@@ -330,7 +379,7 @@ void flashstore_compact(unsigned char len)
     // Found enough space for the line, compact the page
     
     // Copy the page into RAM
-    unsigned char* ram = (unsigned char*)lineindexstart;
+    unsigned char* ram = tempmemstart;
     unsigned char* flash = (unsigned char*)FLASHSTORE_PAGEBASE(selected);
     OS_memcpy(ram, flash, FLASHSTORE_PAGESIZE);
 
@@ -360,7 +409,7 @@ void flashstore_compact(unsigned char len)
     }
   
     // We corrupted memory, so we need to reinitialize
-    flashstore_init((unsigned char**)lineindexstart, lineindexmaxlen);
+    flashstore_init((unsigned char**)lineindexstart);
   }
 }
 

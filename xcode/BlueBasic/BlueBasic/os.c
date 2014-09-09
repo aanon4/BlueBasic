@@ -132,32 +132,6 @@ unsigned char OS_file_write(unsigned char* buf, short len)
   return fwrite(buf, len, sizeof(unsigned char), filep) == len;
 }
 
-void OS_autorun_set(unsigned char autorun)
-{
-  FILE* fp = fopen("autorun", "w");
-  if (fp)
-  {
-    fwrite(&autorun, 1, sizeof(unsigned char), fp);
-    fclose(fp);
-  }
-}
-
-char OS_autorun_get(void)
-{
-  FILE* fp = fopen("autorun", "r");
-  if (!fp)
-  {
-    return 0;
-  }
-  else
-  {
-    char autorun = 0;
-    fread(&autorun, 1, sizeof(unsigned char), fp);
-    fclose(fp);
-    return autorun;
-  }
-}
-
 static void alarmhandler(int sig)
 {
   alarmfire = 1;

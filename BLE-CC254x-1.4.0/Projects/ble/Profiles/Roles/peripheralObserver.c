@@ -48,7 +48,6 @@
 #include "linkdb.h"
 #include "att.h"
 #include "gatt.h"
-#include "osal_snv.h"
 
 #include "observer.h"
 #include "peripheral.h"
@@ -750,11 +749,6 @@ void GAPRole_Init( uint8 task_id, uint8 role )
   gapRole_AdvDirectType = ADDRTYPE_PUBLIC;
   gapRole_AdvChanMap = GAP_ADVCHAN_ALL;
   gapRole_AdvFilterPolicy = GAP_FILTER_POLICY_ALL;
-
-  // Restore Items from NV
-  VOID osal_snv_read( BLE_NVID_IRK, KEYLEN, gapRole_IRK );
-  VOID osal_snv_read( BLE_NVID_CSRK, KEYLEN, gapRole_SRK );
-  VOID osal_snv_read( BLE_NVID_SIGNCOUNTER, sizeof( uint32 ), &gapRole_signCounter );
 }
 
 /*********************************************************************
@@ -784,9 +778,6 @@ uint16 GAPRole_ProcessEvent( uint8 task_id, uint16 events )
 
   if ( events & GAP_EVENT_SIGN_COUNTER_CHANGED )
   {
-    // Sign counter changed, save it to NV
-    VOID osal_snv_write( BLE_NVID_SIGNCOUNTER, sizeof( uint32 ), &gapRole_signCounter );
-
     return ( events ^ GAP_EVENT_SIGN_COUNTER_CHANGED );
   }
 
@@ -960,10 +951,6 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
 
         if ( stat == SUCCESS )
         {
-          // Save off the generated keys
-          VOID osal_snv_write( BLE_NVID_IRK, KEYLEN, gapRole_IRK );
-          VOID osal_snv_write( BLE_NVID_CSRK, KEYLEN, gapRole_SRK );
-
           // Save off the information
           VOID osal_memcpy( gapRole_bdAddr, pPkt->devAddr, B_ADDR_LEN );
 #ifdef FEATURE_DEVINFO

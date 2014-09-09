@@ -42,12 +42,6 @@ struct program_header
   char autorun;
   unsigned short length[OS_MAX_FILE];
 };
-static struct
-{
-  signed char h;
-  char rw;
-  unsigned short l;
-} file = { -1, 0, 0 };
 
 // Timers
 #define NR_TIMERS ((OS_MAX_TIMER) - 1)
@@ -252,130 +246,21 @@ void OS_init(void)
 
 short OS_file_open(unsigned char chan, unsigned char rw)
 {
-  struct program_header header;
-
-  if (file.h != -1 || chan > FILE_HANDLE_MAX)
-  {
-    return -1;
-  }
-  file.h = chan;
-  file.rw = rw;
-
-  if (rw == 'r')
-  {
-    if (osal_snv_read(FILE_HEADER, sizeof(header), &header) != SUCCESS)
-    {
-      file.l = 0;
-    }
-    else
-    {
-      file.l = header.length[file.h];
-    }
-  }
-  else
-  {
-    file.l = 0;
-  }
-  return file.l;
+  return -1;
 }
 
 unsigned char OS_file_read(unsigned char* buf, short len)
 {
-  if (len <= file.l)
-  {
-    if (file.h == FILE_HANDLE_PROGRAM)
-    {
-      unsigned char idx = FILE_PROGRAM_FIRST;
-      while (len > 0 && idx < FILE_PROGRAM_END)
-      {
-        if (osal_snv_read(idx, (len > FILE_BLOCK_SIZE ? FILE_BLOCK_SIZE : len), buf) != SUCCESS)
-        {
-          return -1;
-        }
-        buf += FILE_BLOCK_SIZE;
-        idx++;
-        len -= FILE_BLOCK_SIZE;
-      }
-      return 1;
-    }
-    else if (osal_snv_read(file.h - FILE_HANDLE_DATA + FILE_DATA_FIRST, len, buf) == SUCCESS)
-    {
-      return 1;
-    }
-  }
   return 0;
 }
 
 unsigned char OS_file_write(unsigned char* buf, short len)
 {
-  if (file.h == FILE_HANDLE_PROGRAM)
-  {
-    unsigned char idx = FILE_PROGRAM_FIRST;
-    file.l = len;
-    while (len > 0 && idx < FILE_PROGRAM_END)
-    {
-      if (osal_snv_write(idx, (len > FILE_BLOCK_SIZE ? FILE_BLOCK_SIZE : len), buf) != SUCCESS)
-      {
-        file.l = 0;
-        return -1;
-      }
-      buf += FILE_BLOCK_SIZE;
-      idx++;
-      len -= FILE_BLOCK_SIZE;
-    }
-    return 1;
-  }
-  else if (len <= FILE_BLOCK_SIZE)
-  {
-    if (osal_snv_write(file.h - FILE_HANDLE_DATA + FILE_DATA_FIRST, len, buf) == SUCCESS)
-    {
-      file.l = len;
-      return 1;
-    }
-  }
   return 0;
 }
 
 void OS_file_close(void)
 {
-  struct program_header header;
-
-  if (file.h != -1 && file.rw == 'w')
-  {
-    if (osal_snv_read(FILE_HEADER, sizeof(header), &header) != SUCCESS)
-    {
-      OS_memset(&header, 0, sizeof(header));
-    }
-    header.length[file.h] = file.l;
-    osal_snv_write(FILE_HEADER, sizeof(header), &header);
-  }
-  file.h = -1;
-}
-
-void OS_autorun_set(unsigned char autorun)
-{
-  struct program_header header;
-
-  if (osal_snv_read(FILE_HEADER, sizeof(header), &header) != SUCCESS)
-  {
-    OS_memset(&header, 0, sizeof(header));
-  }
-  header.autorun = autorun;
-  osal_snv_write(FILE_HEADER, sizeof(header), &header);
-}
-
-char OS_autorun_get(void)
-{
-  struct program_header header;
-
-  if (osal_snv_read(FILE_HEADER, sizeof(header), &header) != SUCCESS)
-  {
-    return 0;
-  }
-  else
-  {
-    return header.autorun;
-  }
 }
 
 void OS_timer_stop(unsigned char id)

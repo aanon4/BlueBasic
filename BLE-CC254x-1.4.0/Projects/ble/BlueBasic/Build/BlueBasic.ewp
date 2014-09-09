@@ -2434,7 +2434,6 @@
           <state>FEATURE_DEVINFO=TRUE</state>
           <state>TARGET_CC2541=TRUE</state>
           <state>xFEATURE_OAD</state>
-          <state>OAD_KEEP_NV_PAGES</state>
           <state>FEATURE_OAD_BIM</state>
           <state>HAL_IMAGE_B</state>
           <state>OAD_IMAGE_VERSION=2</state>
@@ -4344,6 +4343,7 @@
       <name>$PROJ_DIR$\..\Source\cc2540.asm</name>
       <excluded>
         <configuration>CC2541</configuration>
+        <configuration>CC2540</configuration>
         <configuration>CC2541-ImgB</configuration>
       </excluded>
     </file>
@@ -4603,9 +4603,6 @@
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\..\..\COMPONENTS\osal\common\OSAL_PwrMgr.c</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\..\..\Components\osal\mcu\cc2540\osal_snv.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\..\..\Components\osal\common\OSAL_Timers.c</name>

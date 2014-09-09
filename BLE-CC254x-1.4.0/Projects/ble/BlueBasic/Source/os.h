@@ -8,7 +8,7 @@
 // os.h
 //
 
-#define kVersion "v0.4"
+#define kVersion "v0.5"
 
 #if __APPLE__
 
@@ -44,8 +44,6 @@ extern short OS_file_open(unsigned char chan, unsigned char rw);
 extern unsigned char OS_file_read(unsigned char* buf, short len);
 extern unsigned char OS_file_write(unsigned char* buf, short len);
 extern void OS_file_close(void);
-extern void OS_autorun_set(unsigned char autorun);
-extern char OS_autorun_get(void);
 extern void OS_timer_stop(unsigned char id);
 extern char OS_timer_start(unsigned char id, unsigned long timeout, unsigned char repeat, unsigned short lineno);
 extern void OS_flashstore_init(void);
@@ -243,8 +241,6 @@ extern void OS_timer_stop(unsigned char id);
 extern char OS_timer_start(unsigned char id, unsigned long timeout, unsigned char repeat, unsigned short lineno);
 extern char OS_interrupt_attach(unsigned char pin, unsigned short lineno);
 extern char OS_interrupt_detach(unsigned char pin);
-extern void OS_autorun_set(unsigned char autorun);
-extern char OS_autorun_get(void);
 extern long OS_millis(void);
 extern void OS_delaymicroseconds(short micros);
 extern void OS_reboot(char flash);
@@ -305,10 +301,25 @@ extern void interpreter_timer_event(unsigned short id);
 #define FLASHSTORE_PAGESIZE   2048
 #define FLASHSTORE_LEN        (FLASHSTORE_NRPAGES * FLASHSTORE_PAGESIZE)
 
-extern unsigned char** flashstore_init(unsigned char** startmem, unsigned short len);
+enum
+{
+  FLASHID_INVALID = 0x0000,
+  FLASHID_SPECIAL = 0xFFFE,
+  FLASHID_FREE    = 0xFFFF,
+};
+
+enum
+{
+  FLASHSPECIAL_AUTORUN = 0x0001,
+};
+
+extern unsigned char** flashstore_init(unsigned char** startmem);
 extern unsigned char** flashstore_addline(unsigned char* line, unsigned char len);
 extern unsigned char** flashstore_deleteline(unsigned short id);
 extern unsigned char** flashstore_deleteall(void);
 extern unsigned short** flashstore_findclosest(unsigned short id);
 extern unsigned int flashstore_freemem(void);
-extern void flashstore_compact(unsigned char len);
+extern void flashstore_compact(unsigned char asklen, unsigned char* tempmemstart, unsigned char* tempmemend);
+extern unsigned char flashstore_addspecial(unsigned char* item);
+extern unsigned char flashstore_deletespecial(unsigned short specialid);
+extern unsigned char* flashstore_findspecial(unsigned short specialid);

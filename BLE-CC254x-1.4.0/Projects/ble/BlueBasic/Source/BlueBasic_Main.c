@@ -112,9 +112,6 @@ int main(void)
   /* Initialze the HAL driver */
   HalDriverInit();
 
-  /* Initialize NV system */
-  osal_snv_init();
-
   /* Initialize LL */
 
   /* Initialize the operating system */

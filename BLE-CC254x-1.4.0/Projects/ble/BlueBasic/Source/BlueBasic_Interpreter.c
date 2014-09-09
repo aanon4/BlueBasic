@@ -105,8 +105,6 @@ enum
 
   KW_CONSTANT = 0x80,
   KW_LIST,
-  KW_DLOAD,
-  KW_DSAVE,
   KW_MEM,
   KW_NEW,
   KW_RUN,
@@ -1485,7 +1483,7 @@ void interpreter_init()
   OS_memset(program_start, 0, kRamSize);
   variables_begin = (unsigned char*)program_start + kRamSize - 26 * VAR_SIZE - 4; // 4 bytes = 32 bits of flags
   sp = variables_begin;
-  program_end = flashstore_init(program_start, kRamSize);
+  program_end = flashstore_init(program_start);
   interpreter_banner();
 }
 
@@ -1508,7 +1506,7 @@ void interpreter_setup(void)
   interpreter_init();
   OS_prompt_buffer((unsigned char*)program_end + sizeof(LINENUM), sp);
   
-  if (OS_autorun_get())
+  if (flashstore_findspecial(FLASHSPECIAL_AUTORUN))
   {
     if (program_end > program_start)
     {
@@ -1612,7 +1610,7 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
       if (!newend)
       {
         // No space - attempt to compact flash
-        flashstore_compact(linelen);
+        flashstore_compact(linelen, (unsigned char*)program_start, sp);
         // Will corrupt stack space so force clean it
         lineptr = program_end;
         clean_stack();
@@ -1663,10 +1661,6 @@ interperate:
       goto qwhat;
     case KW_LIST:
       goto list;
-    case KW_DLOAD:
-      goto cmd_dload;
-    case KW_DSAVE:
-      goto cmd_dsave;
     case KW_MEM:
       goto mem;
     case KW_NEW:
@@ -2220,91 +2214,6 @@ mem:
   goto run_next_statement;
 
 //
-// DLOAD <1-15> <var>
-// Load the value in the numbered store into <var> (which may be a DIM).
-// The store persists across reboots/power-on/off events.
-//
-cmd_dload:
-  {
-    unsigned char chan;
-    stack_variable_frame* vframe;
-    unsigned char var;
-    unsigned char* ptr;
-    
-    chan = expression(EXPR_NORMAL);
-    if (error_num || chan == 0)
-    {
-      goto qwhat;
-    }
-
-    ignore_blanks();
-    var = *txtpos++;
-    if (var < 'A' || var > 'Z')
-    {
-      txtpos--;
-      goto dsave_error;
-    }
-    if (*txtpos != WS_SPACE && *txtpos != NL)
-    {
-      goto dsave_error;
-    }
-
-    if (OS_file_open(chan, 'r') < 0)
-    {
-      goto qwhat;
-    }
-    ptr = get_variable_frame(var, &vframe);
-    OS_file_read(ptr, vframe->type == VAR_DIM_BYTE ? vframe->header.frame_size - sizeof(stack_variable_frame) : VAR_SIZE);
-    OS_file_close();
-
-    goto run_next_statement;
-  }
-
-//
-// DSAVE <1-15> <var>
-// Save the value of <var> (which may be a DIM) to the numbered store. This
-// store persists across reboots and power-off/on.
-//
-cmd_dsave:
-  {
-    unsigned char chan;
-    stack_variable_frame* vframe;
-    unsigned char var;
-    unsigned char* ptr;
-
-    chan = expression(EXPR_NORMAL);
-    if (error_num || chan == 0)
-    {
-      goto qwhat;
-    }
-
-    ignore_blanks();
-    var = *txtpos++;
-    if (var < 'A' || var > 'Z')
-    {
-      txtpos--;
-      goto dsave_error;
-    }
-    if (*txtpos != WS_SPACE && *txtpos != NL)
-    {
-      goto dsave_error;
-    }
-
-    if (OS_file_open(chan, 'w') < 0)
-    {
-      goto qwhat;
-    }
-    ptr = get_variable_frame(var, &vframe);
-    OS_file_write(ptr, vframe->type == VAR_DIM_BYTE ? vframe->header.frame_size - sizeof(stack_variable_frame) : VAR_SIZE);
-    OS_file_close();
-
-    goto run_next_statement;
-dsave_error:
-    OS_file_close();
-    goto qwhat;
-  }
-  
-//
 // REBOOT [UP]
 //  Reboot the device. If the UP option is present, reboot into upgrade mode.
 //
@@ -2430,7 +2339,18 @@ cmd_autorun:
     {
       goto qwhat;
     }
-    OS_autorun_set(v ? 1 : 0);
+    if (v)
+    {
+      unsigned char autorun[8];
+      *(unsigned short*)autorun = FLASHID_SPECIAL;
+      autorun[2] = 8;
+      *(unsigned short*)&autorun[3] = FLASHSPECIAL_AUTORUN;
+      flashstore_addspecial(autorun);
+    }
+    else
+    {
+      flashstore_deletespecial(FLASHSPECIAL_AUTORUN);
+    }
   }
   goto run_next_statement;
 
