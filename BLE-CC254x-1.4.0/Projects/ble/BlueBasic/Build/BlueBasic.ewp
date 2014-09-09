@@ -4341,6 +4341,13 @@
       <name>$PROJ_DIR$\..\Source\BlueBasic_Main.c</name>
     </file>
     <file>
+      <name>$PROJ_DIR$\..\Source\cc2540.asm</name>
+      <excluded>
+        <configuration>CC2541</configuration>
+        <configuration>CC2541-ImgB</configuration>
+      </excluded>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\Source\os.c</name>
     </file>
     <file>
