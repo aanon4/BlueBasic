@@ -110,6 +110,8 @@ struct keyword
   { "I2C", "KW_I2C" },
   { "OPEN", "KW_OPEN" },
   { "CLOSE", "KW_CLOSE" },
+  { "TRUNCATE", "FS_TRUNCATE" },
+  { "APPEND", "FS_APPEND" },
   { "EOF(", "FUNC_EOF" },
   //
   // Constants

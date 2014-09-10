@@ -231,6 +231,9 @@ enum
   SPI_LSB,
   SPI_MASTER,
   SPI_SLAVE,
+
+  FS_TRUNCATE,
+  FS_APPEND,
 };
 
 enum
@@ -536,9 +539,10 @@ static const gattServiceCBs_t ble_service_callbacks =
 //
 static struct
 {
+  unsigned char filename;
   unsigned char action;
   unsigned char record;
-} files[FS_NR_FILEID];
+} files[FS_NR_FILE_HANDLES];
 
 //
 // Skip whitespace
@@ -1034,17 +1038,13 @@ static void clean_stack(void)
         GATTServApp_DeregisterService(((stack_service_frame*)sp)->attrs[0].handle, &attr);
         break;
       }
-      case STACK_VARIABLE_FLAG:
-      {
-        unsigned char vname;
-        VARIABLE_FLAGS_SET(((stack_variable_frame*)sp)->name, ((stack_variable_frame*)sp)->oflags);
-        break;
-      }
     }
     sp += ((stack_header*)sp)->frame_size;
   }
-  // Reset all variables to 0 and remove all types
+  // Reset variables to 0 and remove all types
   OS_memset(variables_begin, 0, 26 * VAR_SIZE + 4);
+  // Reset file handles
+  OS_memset(files, 0, sizeof(files));
 }
 
 // -------------------------------------------------------------------------------------------
@@ -1380,11 +1380,11 @@ static VAR_TYPE expression(unsigned char mode)
               queueptr[-1] = OS_rand() % top;
               break;
             case FUNC_EOF:
-              if (top < 0 || top > FS_NR_FILEID || !files[top].action)
+              if (top < 0 || top > FS_NR_FILE_HANDLES || !files[top].action)
               {
                 goto expr_error;
               }
-              queueptr[-1] = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(top, files[top].record)) ? 0 : 1;
+              queueptr[-1] = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(files[top].filename, files[top].record)) ? 0 : 1;
               break;
             case KW_PIN_P0:
               queueptr[-1] = pin_read(0, top);
@@ -3012,36 +3012,43 @@ cmd_btset:
   goto run_next_statement;
 
 //
-// OPEN <0-7>, [R|T|A]
+// OPEN <0-7>, READ|TRUNCATE|APPEND "<A-Z>"
 //  Open a numbered file for read, write or append access.
 //
 cmd_open:
   {
     unsigned char id = expression(EXPR_COMMA);
-    if (error_num || id >= FS_NR_FILEID)
+    if (error_num || id >= FS_NR_FILE_HANDLES)
     {
       goto qwhat;
     }
-    ignore_blanks();
-    switch (*txtpos++)
+    if (txtpos[1] == '"' && txtpos[3] == '"' && txtpos[2] >= 'A' && txtpos[2] <= 'Z')
     {
-      case 'R': // Read
+      files[id].filename = txtpos[2];
+    }
+    else
+    {
+      goto qwhat;
+    }
+    switch (*txtpos)
+    {
+      case KW_READ: // Read
         files[id].record = 0;
         files[id].action = 'R';
         break;
-      case 'T': // Truncate
+      case FS_TRUNCATE: // Truncate
       {
         files[id].record = 0;
         files[id].action = 'W';
-        for (unsigned short special = FS_MAKE_FILE_SPECIAL(id, 0); flashstore_deletespecial(special); special++)
+        for (unsigned short special = FS_MAKE_FILE_SPECIAL(files[id].filename, 0); flashstore_deletespecial(special); special++)
           ;
         break;
       }
-      case 'A': // Append
+      case FS_APPEND: // Append
       {
         files[id].record = 0;
         files[id].action = 'W';
-        for (unsigned short special = FS_MAKE_FILE_SPECIAL(id, 0); flashstore_findspecial(special); special++, files[id].record++)
+        for (unsigned short special = FS_MAKE_FILE_SPECIAL(files[id].filename, 0); flashstore_findspecial(special); special++, files[id].record++)
           ;
         break;
       }
@@ -3058,7 +3065,7 @@ cmd_open:
 cmd_close:
   {
     unsigned char id = expression(EXPR_COMMA);
-    if (error_num || id >= FS_NR_FILEID)
+    if (error_num || id >= FS_NR_FILE_HANDLES)
     {
       goto qwhat;
     }
@@ -3073,11 +3080,11 @@ cmd_close:
 cmd_read:
   {
     unsigned char id = expression(EXPR_COMMA);
-    if (error_num || id >= FS_NR_FILEID || files[id].action != 'R')
+    if (error_num || id >= FS_NR_FILE_HANDLES || files[id].action != 'R')
     {
       goto qwhat;
     }
-    unsigned char* special = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(id, files[id].record));
+    unsigned char* special = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(files[id].filename, files[id].record));
     if (!special)
     {
       goto qeof;
@@ -3124,7 +3131,7 @@ cmd_read:
 cmd_write:
   {
     unsigned char id = expression(EXPR_COMMA);
-    if (error_num || id >= FS_NR_FILEID || files[id].action != 'W')
+    if (error_num || id >= FS_NR_FILE_HANDLES || files[id].action != 'W')
     {
       goto qwhat;
     }
@@ -3132,7 +3139,7 @@ cmd_write:
     {
       goto qtoobig;
     }
-    unsigned special = FS_MAKE_FILE_SPECIAL(id, files[id].record);
+    unsigned special = FS_MAKE_FILE_SPECIAL(files[id].filename, files[id].record);
     files[id].record++;
     
     stack_variable_frame* vframe = NULL;

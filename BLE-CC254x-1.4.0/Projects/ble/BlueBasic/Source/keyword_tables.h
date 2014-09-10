@@ -7,6 +7,7 @@ static const unsigned char keywords_0[] =
   'A','D','V','E','R','T',KW_ADVERT,
   'A','N','A','L','O','G','R','E','F','E','R','E','N','C','E',KW_ANALOGREFERENCE,
   'A','N','A','L','O','G','R','E','S','O','L','U','T','I','O','N',KW_ANALOGRESOLUTION,
+  'A','P','P','E','N','D',FS_APPEND,
   'A','T','T','A','C','H','I','N','T','E','R','R','U','P','T',KW_ATTACHINTERRUPT,
   'A','U','T','O','R','U','N',KW_AUTORUN,
   'N','A','M','E',BLE_NAME,
@@ -105,6 +106,7 @@ static const unsigned char keywords_6[] =
   'T','O',ST_TO,
   'T','R','A','N','S','F','E','R',SPI_TRANSFER,
   'T','R','U','E',KW_CONSTANT,CO_TRUE,
+  'T','R','U','N','C','A','T','E',FS_TRUNCATE,
   'T','X','P','O','W','E','R',KW_CONSTANT,CO_TXPOWER,
   0
 };
