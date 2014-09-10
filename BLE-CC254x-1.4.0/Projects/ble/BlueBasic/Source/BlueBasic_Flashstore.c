@@ -38,7 +38,7 @@ static struct
 //  The ages are used to reconstruct the program data by keeping the pages use ordered correctly.
 //
 #ifdef TARGET_CC254X
-typedef long int flashpage_age;
+typedef unsigned long flashpage_age;
 #else
 typedef unsigned int flashpage_age;
 #endif
