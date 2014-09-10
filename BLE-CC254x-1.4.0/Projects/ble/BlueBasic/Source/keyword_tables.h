@@ -27,12 +27,14 @@ static const unsigned char keywords_1[] =
   'O','N','R','E','A','D',BLE_ONREAD,
   'O','N','W','R','I','T','E',BLE_ONWRITE,
   'O','N',KW_CONSTANT,CO_ON,
+  'O','P','E','N',KW_OPEN,
   'O','U','T','P','U','T',PM_OUTPUT,
   0
 };
 static const unsigned char keywords_2[] =
 {
   'C','H','A','R','A','C','T','E','R','I','S','T','I','C',BLE_CHARACTERISTIC,
+  'C','L','O','S','E',KW_CLOSE,
   'C','U','S','T','O','M',BLE_CUSTOM,
   'P','0','(',KW_PIN_P0,
   'P','1','(',KW_PIN_P1,
@@ -61,8 +63,9 @@ static const unsigned char keywords_4[] =
   'E','L','I','F',KW_ELIF,
   'E','L','S','E',KW_ELSE,
   'E','N','D',KW_END,
+  'E','O','F','(',FUNC_EOF,
   'E','X','T','E','R','N','A','L',PM_EXTERNAL,
-  'R','E','A','D',BLE_READ,
+  'R','E','A','D',KW_READ,
   'R','E','B','O','O','T',KW_REBOOT,
   'R','E','M',KW_REM,
   'R','E','P','E','A','T',TI_REPEAT,
@@ -135,7 +138,7 @@ static const unsigned char keywords_9[] =
   'W','A','I','T',PM_WAIT,
   'W','I','R','E',KW_WIRE,
   'W','R','I','T','E','N','O','R','S','P',BLE_WRITENORSP,
-  'W','R','I','T','E',BLE_WRITE,
+  'W','R','I','T','E',KW_WRITE,
   0
 };
 static const unsigned char keywords_10[] =

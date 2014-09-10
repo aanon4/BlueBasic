@@ -81,9 +81,9 @@ struct keyword
   { "GATT", "KW_GATT" },
   { "SERVICE", "BLE_SERVICE" },
   { "CHARACTERISTIC", "BLE_CHARACTERISTIC" },
-  { "READ", "BLE_READ" },
+  { "READ", "KW_READ" },
   { "WRITENORSP", "BLE_WRITENORSP" },
-  { "WRITE", "BLE_WRITE" },
+  { "WRITE", "KW_WRITE" },
   { "NOTIFY", "BLE_NOTIFY" },
   { "INDICATE", "BLE_INDICATE" },
   { "ADVERT", "KW_ADVERT" },
@@ -108,6 +108,9 @@ struct keyword
   { "WAIT", "PM_WAIT" },
   { "PULSE", "PM_PULSE" },
   { "I2C", "KW_I2C" },
+  { "OPEN", "KW_OPEN" },
+  { "CLOSE", "KW_CLOSE" },
+  { "EOF(", "FUNC_EOF" },
   //
   // Constants
   //

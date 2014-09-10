@@ -311,7 +311,15 @@ enum
 enum
 {
   FLASHSPECIAL_AUTORUN = 0x0001,
+  FLASHSPECIAL_FILE0 = 0x1000,
+  FLASHSPECIAL_FILE7 = 0x1700,
 };
+
+#define FS_NR_FILEID    8
+#define FS_MAKE_FILE_SPECIAL(ID,OFF)  (FLASHSPECIAL_FILE0|((ID)<<8)|(OFF))
+#define FS_NR_RECORDS   255
+#define FS_DATA_LEN     2
+#define FS_DATA_OFFSET  5
 
 extern unsigned char** flashstore_init(unsigned char** startmem);
 extern unsigned char** flashstore_addline(unsigned char* line, unsigned char len);

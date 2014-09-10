@@ -10,6 +10,9 @@
 //	      Scott Lawrence <yorgle@gmail.com>
 //
 
+// v0.5: 2014-09-09
+//      Flash storage system for programs.
+//
 // v.04: 2014-09-05
 //      New version time again. Mostly this is support for over-the-air updates.
 //
@@ -61,6 +64,8 @@ enum
   ERROR_TOOBIG,
   ERROR_BADPIN,
   ERROR_DIRECT,
+  ERROR_EOF,
+  ERROR_MISMATCH,
 };
 
 static const char* const error_msgs[] =
@@ -73,6 +78,8 @@ static const char* const error_msgs[] =
   "Too big",
   "Bad pin",
   "Not in direct",
+  "End of file",
+  "Mismatch",
 };
 
 #ifdef BUILD_TIMESTAMP
@@ -140,6 +147,10 @@ enum
   KW_ANALOGRESOLUTION,
   KW_WIRE,
   KW_I2C,
+  KW_OPEN,
+  KW_CLOSE,
+  KW_READ,
+  KW_WRITE,
 
   // -----------------------
   // Operators
@@ -175,6 +186,7 @@ enum
   FUNC_MILLIS,
   FUNC_BATTERY,
   FUNC_HEX,
+  FUNC_EOF,
   
   // -----------------------
 
@@ -202,9 +214,7 @@ enum
   BLE_ONDISCOVER,
   BLE_SERVICE,
   BLE_CHARACTERISTIC,
-  BLE_READ,
   BLE_WRITENORSP,
-  BLE_WRITE,
   BLE_NOTIFY,
   BLE_INDICATE,
   BLE_GENERAL,
@@ -520,6 +530,15 @@ static const gattServiceCBs_t ble_service_callbacks =
   ble_write_callback,
   NULL
 };
+
+//
+// File system handles.
+//
+static struct
+{
+  unsigned char action;
+  unsigned char record;
+} files[FS_NR_FILEID];
 
 //
 // Skip whitespace
@@ -1283,6 +1302,7 @@ static VAR_TYPE expression(unsigned char mode)
 
       case FUNC_ABS:
       case FUNC_RND:
+      case FUNC_EOF:
       case KW_PIN_P0:
       case KW_PIN_P1:
       case KW_PIN_P2:
@@ -1358,6 +1378,13 @@ static VAR_TYPE expression(unsigned char mode)
               break;
             case FUNC_RND:
               queueptr[-1] = OS_rand() % top;
+              break;
+            case FUNC_EOF:
+              if (top < 0 || top > FS_NR_FILEID || !files[top].action)
+              {
+                goto expr_error;
+              }
+              queueptr[-1] = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(top, files[top].record)) ? 0 : 1;
               break;
             case KW_PIN_P0:
               queueptr[-1] = pin_read(0, top);
@@ -1753,6 +1780,14 @@ interperate:
       goto cmd_wire;
     case KW_I2C:
       goto cmd_i2c;
+    case KW_OPEN:
+      goto cmd_open;
+    case KW_CLOSE:
+      goto cmd_close;
+    case KW_READ:
+      goto cmd_read;
+    case KW_WRITE:
+      goto cmd_write;
   }
   goto qwhat;
 
@@ -1772,6 +1807,14 @@ qbadpin:
 
 qdirect:
   error_num = ERROR_DIRECT;
+  goto print_error_or_ok;
+
+qeof:
+  error_num = ERROR_EOF;
+  goto print_error_or_ok;
+
+qmismatch:
+  error_num = ERROR_MISMATCH;
   goto print_error_or_ok;
 
 qwhat:
@@ -2571,8 +2614,8 @@ ble_gatt:
       servicestart = *(LINENUM*)(txtpos - 5); // <lineno:2> <len:1> GATT:1 SERVICE:1
       servicecount = 1;
       break;
-    case BLE_READ:
-    case BLE_WRITE:
+    case KW_READ:
+    case KW_WRITE:
     case BLE_WRITENORSP:
     case BLE_NOTIFY:
     case BLE_INDICATE:
@@ -2586,8 +2629,8 @@ ble_gatt:
             case BLE_INDICATE:
               servicecount++;
               break;
-            case BLE_READ:
-            case BLE_WRITE:
+            case KW_READ:
+            case KW_WRITE:
             case BLE_WRITENORSP:
               break;
             default:
@@ -2969,6 +3012,177 @@ cmd_btset:
   goto run_next_statement;
 
 //
+// OPEN <0-7>, [R|T|A]
+//  Open a numbered file for read, write or append access.
+//
+cmd_open:
+  {
+    unsigned char id = expression(EXPR_COMMA);
+    if (error_num || id >= FS_NR_FILEID)
+    {
+      goto qwhat;
+    }
+    ignore_blanks();
+    switch (*txtpos++)
+    {
+      case 'R': // Read
+        files[id].record = 0;
+        files[id].action = 'R';
+        break;
+      case 'T': // Truncate
+      {
+        files[id].record = 0;
+        files[id].action = 'W';
+        for (unsigned short special = FS_MAKE_FILE_SPECIAL(id, 0); flashstore_deletespecial(special); special++)
+          ;
+        break;
+      }
+      case 'A': // Append
+      {
+        files[id].record = 0;
+        files[id].action = 'W';
+        for (unsigned short special = FS_MAKE_FILE_SPECIAL(id, 0); flashstore_findspecial(special); special++, files[id].record++)
+          ;
+        break;
+      }
+      default:
+        goto qwhat;
+    }
+  }
+  goto run_next_statement;
+
+//
+// CLOSE <0-7>
+//  Close the numbered file.
+//
+cmd_close:
+  {
+    unsigned char id = expression(EXPR_COMMA);
+    if (error_num || id >= FS_NR_FILEID)
+    {
+      goto qwhat;
+    }
+    files[id].action = 0;
+  }
+  goto run_next_statement;
+
+//
+// READ <0-7>, <variable>
+//  Read from the currrent place in the numbered file into the variable
+//
+cmd_read:
+  {
+    unsigned char id = expression(EXPR_COMMA);
+    if (error_num || id >= FS_NR_FILEID || files[id].action != 'R')
+    {
+      goto qwhat;
+    }
+    unsigned char* special = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(id, files[id].record));
+    if (!special)
+    {
+      goto qeof;
+    }
+    files[id].record++;
+
+    stack_variable_frame* vframe = NULL;
+    unsigned char* ptr = parse_variable_address(&vframe);
+    if (ptr)
+    {
+      if (vframe->type == VAR_DIM_BYTE && special[FS_DATA_LEN] >= sizeof(unsigned char))
+      {
+        *ptr = special[FS_DATA_OFFSET];
+      }
+      else if (vframe->type == VAR_INT && special[FS_DATA_LEN] >= VAR_SIZE)
+      {
+        *(VAR_TYPE*)ptr = *(VAR_TYPE*)&special[FS_DATA_OFFSET];
+      }
+      else
+      {
+        goto qmismatch;
+      }
+    }
+    else if (vframe)
+    {
+      // No address, but we have a vframe - this is a full array
+      unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
+      if (special[FS_DATA_LEN] >= alen)
+      {
+        OS_memcpy(((unsigned char*)vframe) + sizeof(stack_variable_frame), special + FS_DATA_OFFSET, alen);
+      }
+      else
+      {
+        goto qmismatch;
+      }
+    }
+  }
+  goto run_next_statement;
+
+//
+// WRITE <0-7>, <variable>
+//  Write from the variable into the currrent place in the numbered file
+//
+cmd_write:
+  {
+    unsigned char id = expression(EXPR_COMMA);
+    if (error_num || id >= FS_NR_FILEID || files[id].action != 'W')
+    {
+      goto qwhat;
+    }
+    if (files[id].record == FS_NR_RECORDS)
+    {
+      goto qtoobig;
+    }
+    unsigned special = FS_MAKE_FILE_SPECIAL(id, files[id].record);
+    files[id].record++;
+    
+    stack_variable_frame* vframe = NULL;
+    unsigned char* ptr = parse_variable_address(&vframe);
+    if (ptr)
+    {
+      CHECK_SP_OOM(12 + 5); // 5-bytes of item header
+      *(unsigned short*)sp = FLASHID_SPECIAL;
+      sp[FS_DATA_LEN] = 8;
+      *(unsigned short*)&sp[3] = special;
+      
+      if (vframe->type == VAR_DIM_BYTE)
+      {
+        sp[FS_DATA_OFFSET] = *ptr;
+        sp[FS_DATA_LEN] = 8;
+      }
+      else
+      {
+        *(VAR_TYPE*)&sp[FS_DATA_OFFSET] = *(VAR_TYPE*)ptr;
+        sp[FS_DATA_LEN] = 12;
+      }
+      if (!flashstore_addspecial(sp))
+      {
+        goto qoom;
+      }
+      sp += 12 + 5;
+    }
+    else if (vframe)
+    {
+      // No address, but we have a vframe - this is a full array
+      unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
+      CHECK_SP_OOM(alen + 5); // 5-bytes of item header
+      *(unsigned short*)sp = FLASHID_SPECIAL;
+      sp[FS_DATA_LEN] = 8;
+      *(unsigned short*)&sp[3] = special;
+      OS_memcpy(&sp[FS_DATA_OFFSET], ((unsigned char*)vframe) + sizeof(stack_variable_frame), alen);
+      if (!flashstore_addspecial(sp))
+      {
+        goto qoom;
+      }
+      sp += alen + 5;
+    }
+    else
+    {
+      goto qwhat;
+    }
+  }
+  goto run_next_statement;
+
+//
 // SPI MASTER <port 0|1|2|3> <mode 0|1|2|3> LSB|MSB <speed>
 //  or
 // SPI TRANSFER Px(y) <array>
@@ -3161,15 +3375,15 @@ cmd_i2c:
 #define WIRE_SCL_WAIT()   *ptr++ = WIRE_WAIT_HIGH;
 #define WIRE_SDA_READ()   *ptr++ = WIRE_PIN_READ | i2cSda;
 
-    case BLE_WRITE:
-    case BLE_READ:
+    case KW_WRITE:
+    case KW_READ:
     {
       unsigned char* rdata = NULL;
       unsigned char* data;
       unsigned char len = 0;
       unsigned char i = 0;
       unsigned char* ptr = (unsigned char*)program_end;
-      unsigned char rnw = (txtpos[-1] == BLE_READ ? 1 : 0);
+      unsigned char rnw = (txtpos[-1] == KW_READ ? 1 : 0);
 
       *ptr++ = WIRE_INPUT_SET;
       *(unsigned char**)ptr = NULL;
@@ -3189,7 +3403,7 @@ cmd_i2c:
         {
           goto i2c_end;
         }
-        else if (*txtpos == BLE_READ)
+        else if (*txtpos == KW_READ)
         {
           txtpos++;
           if (rnw || !len)
@@ -3568,7 +3782,7 @@ static void pin_wire_parse(void)
         }
         break;
       }
-      case BLE_READ:
+      case KW_READ:
       {
         unsigned char adc = 0;
         unsigned char size = 0;
@@ -4146,7 +4360,7 @@ static char ble_build_service(void)
         goto error;
       }
     }
-    else if (cmd >= BLE_READ && cmd <= BLE_INDICATE)
+    else if (cmd == KW_READ || cmd == KW_WRITE || cmd == BLE_NOTIFY || cmd == BLE_INDICATE || cmd == BLE_WRITENORSP)
     {
       txtpos--;
       ch = 0;
@@ -4154,10 +4368,10 @@ static char ble_build_service(void)
       {
         switch (*txtpos++)
         {
-          case BLE_READ:
+          case KW_READ:
             ch |= GATT_PROP_READ;
             break;
-          case BLE_WRITE:
+          case KW_WRITE:
             ch |= GATT_PROP_WRITE;
             break;
           case BLE_NOTIFY:
