@@ -1633,7 +1633,7 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
     }
     else
     {
-      unsigned char** newend = flashstore_addline(txtpos, linelen);
+      unsigned char** newend = flashstore_addline(txtpos);
       if (!newend)
       {
         // No space - attempt to compact flash
@@ -1641,7 +1641,7 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
         // Will corrupt stack space so force clean it
         lineptr = program_end;
         clean_stack();
-        newend = flashstore_addline(txtpos, linelen);
+        newend = flashstore_addline(txtpos);
         if (!newend)
         {
           // Still no space
@@ -3163,7 +3163,12 @@ cmd_write:
       }
       if (!flashstore_addspecial(sp))
       {
-        goto qoom;
+        // Attempt to compact
+        flashstore_compact(sp[FS_DATA_LEN], (unsigned char*)program_start, sp);
+        if (!flashstore_addspecial(sp))
+        {
+          goto qoom;
+        }
       }
       sp += 12 + 5;
     }

@@ -190,9 +190,29 @@ unsigned short** flashstore_findclosest(unsigned short id)
 }
 
 //
+// Find space for the new line in the youngest page
+//
+static signed char flashstore_findspace(unsigned char len)
+{
+  unsigned char pg;
+  unsigned char spg = 0;
+  flashpage_age age = 0xFFFFFFFF;
+  for (pg = 0; pg < FLASHSTORE_NRPAGES; pg++)
+  {
+    flashpage_age cage = *(flashpage_age*)FLASHSTORE_PAGEBASE(pg);
+    if (cage < age && orderedpages[pg].free >= len)
+    {
+      spg = pg;
+      age = cage;
+    }
+  }
+  return age == 0xFFFFFFFF ? -1 : spg;
+}
+
+//
 // Add a new line to the flash store, returning the total number of lines.
 //
-unsigned char** flashstore_addline(unsigned char* line, unsigned char len)
+unsigned char** flashstore_addline(unsigned char* line)
 {
   unsigned short id = *(unsigned short*)line;
   unsigned short** oldlineptr = flashstore_findclosest(id);
@@ -202,70 +222,70 @@ unsigned char** flashstore_addline(unsigned char* line, unsigned char len)
     found = 1;
   }
 
-  // Find space for the new line
-  unsigned char pg;
-  for (pg = 0; pg < FLASHSTORE_NRPAGES; pg++)
+  // Find space for the new line in the youngest page
+  unsigned char len = line[sizeof(unsigned short)];
+  signed char pg = flashstore_findspace(len);
+  if (pg != -1)
   {
-    if (orderedpages[pg].free >= len)
+    unsigned short* mem = (unsigned short*)(FLASHSTORE_PAGEBASE(pg) + FLASHSTORE_PAGESIZE - orderedpages[pg].free);
+    OS_flashstore_write(FLASHSTORE_FADDR(mem), line, FLASHSTORE_WORDS(len));
+    orderedpages[pg].free -= len;
+    // If there was an old version, invalidate it
+    if (found)
     {
-      unsigned short* mem = (unsigned short*)(FLASHSTORE_PAGEBASE(pg) + FLASHSTORE_PAGESIZE - orderedpages[pg].free);
-      OS_flashstore_write(FLASHSTORE_FADDR(mem), line, FLASHSTORE_WORDS(len));
-      orderedpages[pg].free -= len;
       // If there was an old version, invalidate it
-      if (found)
-      {
-        // If there was an old version, invalidate it
-        flashstore_invalidate(*oldlineptr);
+      flashstore_invalidate(*oldlineptr);
 
-        // Insert new line into index
-        *oldlineptr = mem;
+      // Insert new line into index
+      *oldlineptr = mem;
+    }
+    else
+    {
+      // Insert new line
+      unsigned short len = sizeof(unsigned short*) * (lineindexend - oldlineptr);
+      if (len == 0)
+      {
+        oldlineptr[0] = mem;
       }
       else
       {
-        // Insert new line
-        unsigned short len = sizeof(unsigned short*) * (lineindexend - oldlineptr);
-        if (len == 0)
+        OS_rmemcpy(oldlineptr + 1, oldlineptr, len);
+        if (**oldlineptr > id)
         {
           oldlineptr[0] = mem;
         }
         else
         {
-          OS_rmemcpy(oldlineptr + 1, oldlineptr, len);
-          if (**oldlineptr > id)
-          {
-            oldlineptr[0] = mem;
-          }
-          else
-          {
-            oldlineptr[1] = mem;
-          }
+          oldlineptr[1] = mem;
         }
-        lineindexend++;
       }
-      return (unsigned char**)lineindexend;
+      lineindexend++;
     }
+    return (unsigned char**)lineindexend;
   }
-
-  // No space
-  return NULL;
+  else
+  {
+    // No space
+    return NULL;
+  }
 }
 
 unsigned char flashstore_addspecial(unsigned char* item)
 {
-  unsigned char pg;
   unsigned char len = item[sizeof(unsigned short)];
-  for (pg = 0; pg < FLASHSTORE_NRPAGES; pg++)
+  // Find space for the new line in the youngest page
+  signed char pg = flashstore_findspace(len);
+  if (pg != -1)
   {
-    if (orderedpages[pg].free >= len)
-    {
-      unsigned short* mem = (unsigned short*)(FLASHSTORE_PAGEBASE(pg) + FLASHSTORE_PAGESIZE - orderedpages[pg].free);
-      OS_flashstore_write(FLASHSTORE_FADDR(mem), item, FLASHSTORE_WORDS(len));
-      orderedpages[pg].free -= len;
-      return 1;
-    }
+    unsigned short* mem = (unsigned short*)(FLASHSTORE_PAGEBASE(pg) + FLASHSTORE_PAGESIZE - orderedpages[pg].free);
+    OS_flashstore_write(FLASHSTORE_FADDR(mem), item, FLASHSTORE_WORDS(len));
+    orderedpages[pg].free -= len;
+    return 1;
   }
-  
-  return 0;
+  else
+  {
+    return 0;
+  }
 }
 
 unsigned char flashstore_deletespecial(unsigned short specialid)

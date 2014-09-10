@@ -322,7 +322,7 @@ enum
 #define FS_DATA_OFFSET    5
 
 extern unsigned char** flashstore_init(unsigned char** startmem);
-extern unsigned char** flashstore_addline(unsigned char* line, unsigned char len);
+extern unsigned char** flashstore_addline(unsigned char* line);
 extern unsigned char** flashstore_deleteline(unsigned short id);
 extern unsigned char** flashstore_deleteall(void);
 extern unsigned short** flashstore_findclosest(unsigned short id);
