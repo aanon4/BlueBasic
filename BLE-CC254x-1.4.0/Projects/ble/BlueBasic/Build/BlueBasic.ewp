@@ -4670,6 +4670,9 @@
       </excluded>
     </file>
     <file>
+      <name>$PROJ_DIR$\..\..\Profiles\Roles\observer.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\..\Profiles\Roles\peripheral.c</name>
       <excluded>
         <configuration>CC2541</configuration>

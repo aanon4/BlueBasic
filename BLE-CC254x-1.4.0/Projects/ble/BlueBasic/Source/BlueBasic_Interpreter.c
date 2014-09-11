@@ -258,6 +258,8 @@ enum
   CO_LIM_DISC_INT_MAX,
   CO_GEN_DISC_INT_MIN,
   CO_GEN_DISC_INT_MAX,
+  CO_GEN_DISC_ADV_MIN,
+  CO_LIM_ADV_TIMEOUT,
 };
 
 // Constant map (so far all constants are <= 16 bits)
@@ -283,6 +285,8 @@ static const VAR_TYPE constantmap[] =
   TGAP_LIM_DISC_ADV_INT_MAX,
   TGAP_GEN_DISC_ADV_INT_MIN,
   TGAP_GEN_DISC_ADV_INT_MAX,
+  TGAP_GEN_DISC_ADV_MIN,
+  TGAP_LIM_ADV_TIMEOUT,
 };
 
 //
@@ -1537,7 +1541,7 @@ void interpreter_setup(void)
   {
     if (program_end > program_start)
     {
-      OS_timer_start(DELAY_TIMER, OS_AUTORUN_TIMEOUT, 0, *(LINENUM*)program_start);
+      OS_timer_start(DELAY_TIMER, OS_AUTORUN_TIMEOUT, 0, *(LINENUM*)*program_start);
     }
     OS_prompt_buffer((unsigned char*)program_end + sizeof(LINENUM), sp);
   }
@@ -2366,9 +2370,7 @@ cmd_delay:
   {
     goto qwhat;
   }
-  while (*txtpos++ != NL)
-    ;
-  OS_timer_start(DELAY_TIMER, val, 0, *(LINENUM*)txtpos);
+  OS_timer_start(DELAY_TIMER, val, 0, *(LINENUM*)lineptr[1]);
   return IX_PROMPT;
 
 //
@@ -2969,14 +2971,14 @@ ble_advert:
   }
 
 //
-// BTSET <paramater> <value>|<array>
+// BTSET <paramater>, <value>|<array>
 //
 cmd_btset:
   {
     unsigned short param;
     unsigned char* ptr;
 
-    param = (unsigned short)expression(EXPR_NORMAL);
+    param = (unsigned short)expression(EXPR_COMMA);
     if (error_num)
     {
       goto qwhat;

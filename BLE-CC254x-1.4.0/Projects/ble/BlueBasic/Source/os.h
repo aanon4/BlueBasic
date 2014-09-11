@@ -90,6 +90,8 @@ extern void OS_flashstore_erase(unsigned long page);
 #define GAP_ADTYPE_FLAGS_GENERAL              0x02
 #define GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED  0x04
 
+#define TGAP_GEN_DISC_ADV_MIN                 0
+#define TGAP_LIM_ADV_TIMEOUT                  1
 #define TGAP_GEN_DISC_SCAN                    2
 #define TGAP_LIM_DISC_SCAN                    3
 #define TGAP_LIM_DISC_ADV_INT_MIN             6
