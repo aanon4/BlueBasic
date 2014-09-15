@@ -33,6 +33,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		22A8215419C6D70400A94A99 /* Blue Basic.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "Blue Basic.entitlements"; sourceTree = "<group>"; };
 		22C5B90B19862FEB0069D0C7 /* Blue Basic.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Blue Basic.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		22C5B90E19862FEB0069D0C7 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		22C5B91119862FEB0069D0C7 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -83,6 +84,7 @@
 		22C5B90219862FEA0069D0C7 = {
 			isa = PBXGroup;
 			children = (
+				22A8215419C6D70400A94A99 /* Blue Basic.entitlements */,
 				22C5B91419862FEB0069D0C7 /* BlueBasicConsole */,
 				22C5B93219862FEB0069D0C7 /* BlueBasicConsoleTests */,
 				22C5B90D19862FEB0069D0C7 /* Frameworks */,
@@ -212,6 +214,17 @@
 				LastUpgradeCheck = 0510;
 				ORGANIZATIONNAME = tim;
 				TargetAttributes = {
+					22C5B90A19862FEA0069D0C7 = {
+						DevelopmentTeam = JAQ8839UNZ;
+						SystemCapabilities = {
+							com.apple.InAppPurchase = {
+								enabled = 0;
+							};
+							com.apple.iCloud = {
+								enabled = 0;
+							};
+						};
+					};
 					22C5B92B19862FEB0069D0C7 = {
 						TestTargetID = 22C5B90A19862FEA0069D0C7;
 					};
@@ -397,6 +410,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -406,7 +421,9 @@
 				GCC_PREFIX_HEADER = "BlueBasicConsole/BlueBasicConsole-Prefix.pch";
 				INFOPLIST_FILE = "BlueBasicConsole/BlueBasicConsole-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = "";
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -415,6 +432,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -424,7 +443,9 @@
 				GCC_PREFIX_HEADER = "BlueBasicConsole/BlueBasicConsole-Prefix.pch";
 				INFOPLIST_FILE = "BlueBasicConsole/BlueBasicConsole-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = "";
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
