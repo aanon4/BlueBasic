@@ -140,8 +140,8 @@ enum
   KW_SCAN,
   KW_BTSET,
   KW_PINMODE,
-  KW_ATTACHINTERRUPT,
-  KW_DETACHINTERRUPT,
+  KW_INTERRUPT,
+  KW_SPACER8,
   KW_SPI,
   KW_ANALOG,
   KW_CONFIG,
@@ -260,6 +260,11 @@ enum
 
   FS_TRUNCATE,
   FS_APPEND,
+
+  IN_ATTACH,
+  IN_DETACH,
+
+  LAST_KEYWORD
 };
 
 enum
@@ -1561,6 +1566,9 @@ expr_oom:
 
 void interpreter_init()
 {
+#ifndef TARGET_CC254X
+  assert(LAST_KEYWORD < 256);
+#endif
   program_start = OS_malloc(kRamSize);
   OS_memset(program_start, 0, kRamSize);
   variables_begin = (unsigned char*)program_start + kRamSize - 26 * VAR_SIZE - 4; // 4 bytes = 32 bits of flags
@@ -1821,10 +1829,8 @@ interperate:
       goto cmd_btset;
     case KW_PINMODE:
       goto cmd_pinmode;
-    case KW_ATTACHINTERRUPT:
-      goto cmd_attachint;
-    case KW_DETACHINTERRUPT:
-      goto cmd_detachint;
+    case KW_INTERRUPT:
+      goto cmd_interrupt;
     case KW_SPI:
       goto cmd_spi;
     case KW_ANALOG:
@@ -2359,7 +2365,7 @@ cmd_dim:
   goto run_next_statement;
 
 //
-// TIMER <timer number> <timeout ms> [REPEAT] GOSUB <linenum>
+// TIMER <timer number>, <timeout ms> [REPEAT] GOSUB <linenum>
 // Creates an optionally repeating timer which will call a specific subroutine everytime it fires.
 //
 cmd_timer:
@@ -2513,134 +2519,137 @@ cmd_pinmode:
   goto run_next_statement;
 
 //
-// ATTACHINTERRUPT <pin> RISING|FALLING GOSUB <linenr>
+// INTERRUPT ATTACH <pin> RISING|FALLING GOSUB <linenr>
 // Attach an interrupt handler to the given pin. When the pin either falls or rises, the specified
 // subroutine will be called.
 //
-cmd_attachint:
+// INTERRUPT DETACH <pin>
+//
+cmd_interrupt:
   {
     unsigned short pin;
-    LINENUM line;
-    unsigned char falling = 0;
     unsigned char i;
-    
-    pin = pin_parse();
-    if (error_num)
+
+    if (*txtpos == IN_ATTACH)
     {
-      goto qwhat;
-    }
-    if (PIN_MAJOR(pin) == 2 && PIN_MINOR(pin) >= 4)
-    {
-      goto qbadpin;
-    }
-    ignore_blanks();
-    switch (*txtpos++)
-    {
-      case PM_RISING:
-        falling = 0;
-        break;
-      case PM_FALLING:
-        falling = 1;
-        break;
-      default:
+      LINENUM line;
+      unsigned char falling = 0;
+
+      txtpos++;
+      pin = pin_parse();
+      if (error_num)
+      {
+        goto qwhat;
+      }
+      if (PIN_MAJOR(pin) == 2 && PIN_MINOR(pin) >= 4)
+      {
+        goto qbadpin;
+      }
+      ignore_blanks();
+      switch (*txtpos++)
+      {
+        case PM_RISING:
+          falling = 0;
+          break;
+        case PM_FALLING:
+          falling = 1;
+          break;
+        default:
+          txtpos--;
+          goto qwhat;
+      }
+      if (*txtpos++ != KW_GOSUB)
+      {
         txtpos--;
         goto qwhat;
-    }
-    if (*txtpos++ != KW_GOSUB)
-    {
-      txtpos--;
-      goto qwhat;
-    }
-    line = expression(EXPR_NORMAL);
-    if (error_num)
-    {
-      goto qwhat;
-    }
-    
-    if (!OS_interrupt_attach(pin, line))
-    {
-      goto qbadpin;
-    }
-
-    i = 1 << PIN_MINOR(pin);
-    if (PIN_MAJOR(pin) == 0)
-    {
-      PICTL = (PICTL & 0x01) | falling;
-      P0IEN |= i;
-      IEN1 |= 1 << 5;
-    }
-    else if (PIN_MAJOR(pin) == 1)
-    {
-      if (PIN_MINOR(pin) < 4)
+      }
+      line = expression(EXPR_NORMAL);
+      if (error_num)
       {
-        PICTL = (PICTL & 0x02) | (falling << 1);
-        P1IEN |= i;
-        IEN2 |= 1 << 4;
+        goto qwhat;
+      }
+      
+      if (!OS_interrupt_attach(pin, line))
+      {
+        goto qbadpin;
+      }
+
+      i = 1 << PIN_MINOR(pin);
+      if (PIN_MAJOR(pin) == 0)
+      {
+        PICTL = (PICTL & 0x01) | falling;
+        P0IEN |= i;
+        IEN1 |= 1 << 5;
+      }
+      else if (PIN_MAJOR(pin) == 1)
+      {
+        if (PIN_MINOR(pin) < 4)
+        {
+          PICTL = (PICTL & 0x02) | (falling << 1);
+          P1IEN |= i;
+          IEN2 |= 1 << 4;
+        }
+        else
+        {
+          PICTL = (PICTL & 0x04) | (falling << 2);
+          P1IEN |= i;
+          IEN2 |= 1 << 4;
+        }
       }
       else
       {
-        PICTL = (PICTL & 0x04) | (falling << 2);
-        P1IEN |= i;
-        IEN2 |= 1 << 4;
+        PICTL = (PICTL & 0x08) | (falling << 3);
+        P2IEN |= i;
+        IEN2 |= 1 << 1;
+      }
+    }
+    else if (*txtpos == IN_DETACH)
+    {
+      txtpos++;
+      pin = pin_parse();
+      if (error_num)
+      {
+        goto qwhat;
+      }
+      
+      i = ~(1 << PIN_MINOR(pin));
+      if (PIN_MAJOR(pin) == 0)
+      {
+        P0IEN &= i;
+        if (P0IEN == 0)
+        {
+          IEN1 &= ~(1 << 5);
+        }
+      }
+      else if (PIN_MAJOR(pin) == 1)
+      {
+        P1IEN &= i;
+        if (P1IEN == 0)
+        {
+          IEN2 &= ~(1 << 4);
+        }
+      }
+      else
+      {
+        P2IEN &= i;
+        if (P2IEN == 0)
+        {
+          IEN2 &= ~(1 << 1);
+        }
+      }
+      
+      if (!OS_interrupt_detach(pin))
+      {
+        goto qbadpin;
       }
     }
     else
-    {
-      PICTL = (PICTL & 0x08) | (falling << 3);
-      P2IEN |= i;
-      IEN2 |= 1 << 1;
-    }
-  }
-  goto run_next_statement;
-
-//
-// DETACHINTERRUPT <pin>
-// Detach the interrupt handler from the pin.
-//
-cmd_detachint:
-  {
-    unsigned short pin;
-    unsigned char i;
-    
-    pin = pin_parse();
-    if (error_num)
     {
       goto qwhat;
     }
-    
-    i = ~(1 << PIN_MINOR(pin));
-    if (PIN_MAJOR(pin) == 0)
-    {
-      P0IEN &= i;
-      if (P0IEN == 0)
-      {
-        IEN1 &= ~(1 << 5);
-      }
-    }
-    else if (PIN_MAJOR(pin) == 1)
-    {
-      P1IEN &= i;
-      if (P1IEN == 0)
-      {
-        IEN2 &= ~(1 << 4);
-      }
-    }
-    else
-    {
-      P2IEN &= i;
-      if (P2IEN == 0)
-      {
-        IEN2 &= ~(1 << 1);
-      }
-    }
-
-    if (!OS_interrupt_detach(pin))
-    {
-      goto qbadpin;
-    }
     goto run_next_statement;
   }
-  
+
 //
 // WIRE ...
 //

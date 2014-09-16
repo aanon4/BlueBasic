@@ -7,7 +7,7 @@ static const unsigned char keywords_0[] =
   'A','D','V','E','R','T',KW_ADVERT,
   'A','N','A','L','O','G',KW_ANALOG,
   'A','P','P','E','N','D',FS_APPEND,
-  'A','T','T','A','C','H','I','N','T','E','R','R','U','P','T',KW_ATTACHINTERRUPT,
+  'A','T','T','A','C','H',IN_ATTACH,
   'A','U','T','O','R','U','N',KW_AUTORUN,
   'N','A','M','E',BLE_NAME,
   'N','E','W',KW_NEW,
@@ -52,7 +52,7 @@ static const unsigned char keywords_3[] =
 {
   '*',OP_MUL,
   'D','E','L','A','Y',KW_DELAY,
-  'D','E','T','A','C','H','I','N','T','E','R','R','U','P','T',KW_DETACHINTERRUPT,
+  'D','E','T','A','C','H',IN_DETACH,
   'D','E','V','_','A','D','D','R','E','S','S',KW_CONSTANT,CO_DEV_ADDRESS,
   'D','I','M',KW_DIM,
   'D','U','P','L','I','C','A','T','E','S',BLE_DUPLICATES,
@@ -134,6 +134,7 @@ static const unsigned char keywords_8[] =
   'I','N','D','I','C','A','T','E',BLE_INDICATE,
   'I','N','P','U','T',PM_INPUT,
   'I','N','T','E','R','N','A','L',KW_CONSTANT,CO_INTERNAL,
+  'I','N','T','E','R','R','U','P','T',KW_INTERRUPT,
   0
 };
 static const unsigned char keywords_9[] =

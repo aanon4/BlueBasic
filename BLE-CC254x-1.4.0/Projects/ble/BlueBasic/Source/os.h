@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <time.h>
+#include <assert.h>
 
 #define __data
 
