@@ -122,6 +122,18 @@ int main(void)
 
   // Final board initialization
   InitBoard( OB_READY );
+  
+#if defined ( FEATURE_BOOST_CONVERTER )
+  // Turn boost converter on by default
+  extern unsigned char BlueBasic_powerMode;
+  BlueBasic_powerMode = 1;
+#if FEATURE_BOOST_CONVERTER == P2_0
+  P2DIR |= 1;
+#else
+#error "Unknown boost converter location"
+#endif
+  FEATURE_BOOST_CONVERTER = 1;
+#endif
 
 #if defined ( POWER_SAVING )
   osal_pwrmgr_device( PWRMGR_BATTERY );

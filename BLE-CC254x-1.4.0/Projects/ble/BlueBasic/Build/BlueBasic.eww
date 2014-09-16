@@ -9,14 +9,6 @@
       <name>All</name>
       <member>
         <project>BlueBasic</project>
-        <configuration>CC2541</configuration>
-      </member>
-      <member>
-        <project>BlueBasic</project>
-        <configuration>CC2540</configuration>
-      </member>
-      <member>
-        <project>BlueBasic</project>
         <configuration>CC2540-ImgB</configuration>
       </member>
       <member>

@@ -398,6 +398,16 @@ void halSleep( uint32 osal_timeout )
       // TEMP
       P1_0 = 0;
 #endif // DEBUG_GPIO
+#ifdef FEATURE_BOOST_CONVERTER
+      {
+        extern unsigned char BlueBasic_powerMode;
+        // Mode 2 == switch to lower power mode on sleep
+        if (BlueBasic_powerMode == 2)
+        {
+          FEATURE_BOOST_CONVERTER = 0;
+        }
+      }
+#endif
 
       // set CC254x power mode; interrupts are disabled after this function
       // Note: Any ISR that could wake the device from sleep needs to use
@@ -406,6 +416,23 @@ void halSleep( uint32 osal_timeout )
       //       missing this interrupt.
       HAL_SLEEP_SET_POWER_MODE();
 
+#ifdef FEATURE_BOOST_CONVERTER
+      {
+        // Measure the battery voltage on wakeup.
+        extern unsigned short BlueBasic_rawBattery;
+        ADCCON3 = 0x0F | 0x10 | 0x00; // VDD/3, 10-bit, internal voltage reference
+        while ((ADCCON1 & 0x80) == 0)
+          ;
+        BlueBasic_rawBattery = ADCL;
+        BlueBasic_rawBattery |= ADCH << 8;
+        extern unsigned char BlueBasic_powerMode;
+        // Mode 2 == switch to high power mode on wake
+        if (BlueBasic_powerMode == 2)
+        {
+          FEATURE_BOOST_CONVERTER = 1;
+        }
+      }
+#endif
 #ifdef DEBUG_GPIO
       // TEMP
       P1_0 = 1;

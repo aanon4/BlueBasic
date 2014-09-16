@@ -280,6 +280,7 @@
           <state>HAL_AES=FALSE</state>
           <state>FEATURE_DEVINFO=TRUE</state>
           <state>TARGET_CC2541=TRUE</state>
+          <state>FEATURE_BOOST_CONVERTER=P2_0</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -1356,6 +1357,7 @@
           <state>HAL_ADC=FALSE</state>
           <state>HAL_AES=FALSE</state>
           <state>TARGET_CC2540=TRUE</state>
+          <state>FEATURE_BOOST_CONVERTER=P2_0</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -2438,6 +2440,7 @@
           <state>HAL_IMAGE_B</state>
           <state>OAD_IMAGE_VERSION=2</state>
           <state>FEATURE_OAD_HEADER=TRUE</state>
+          <state>FEATURE_BOOST_CONVERTER=P2_0</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -3522,6 +3525,7 @@
           <state>HAL_IMAGE_B</state>
           <state>OAD_IMAGE_VERSION=2</state>
           <state>FEATURE_OAD_HEADER=TRUE</state>
+          <state>FEATURE_BOOST_CONVERTER=P2_0</state>
         </option>
         <option>
           <name>CCPreprocFile</name>

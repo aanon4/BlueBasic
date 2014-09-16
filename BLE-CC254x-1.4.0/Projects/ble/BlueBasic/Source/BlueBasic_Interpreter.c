@@ -143,8 +143,8 @@ enum
   KW_ATTACHINTERRUPT,
   KW_DETACHINTERRUPT,
   KW_SPI,
-  KW_ANALOGREFERENCE,
-  KW_ANALOGRESOLUTION,
+  KW_ANALOG,
+  KW_CONFIG,
   KW_WIRE,
   KW_I2C,
   KW_OPEN,
@@ -228,8 +228,8 @@ enum
   PM_OUTPUT,
   PM_RISING,
   PM_FALLING,
-  PM_INTERNAL,
-  PM_EXTERNAL,
+  PM_SPACE0,
+  PM_SPACE1,
   PM_TIMEOUT,
   PM_WAIT,
   PM_PULSE,
@@ -286,6 +286,11 @@ enum
   CO_GEN_DISC_INT_MAX,
   CO_GEN_DISC_ADV_MIN,
   CO_LIM_ADV_TIMEOUT,
+  CO_RESOLUTION,
+  CO_REFERENCE,
+  CO_POWER,
+  CO_INTERNAL,
+  CO_EXTERNAL,
 };
 
 // Constant map (so far all constants are <= 16 bits)
@@ -313,6 +318,11 @@ static const VAR_TYPE constantmap[] =
   TGAP_GEN_DISC_ADV_INT_MAX,
   TGAP_GEN_DISC_ADV_MIN,
   TGAP_LIM_ADV_TIMEOUT,
+  CO_RESOLUTION,
+  CO_REFERENCE,
+  CO_POWER,
+  CO_INTERNAL,
+  CO_EXTERNAL,
 };
 
 //
@@ -573,6 +583,15 @@ static struct
   unsigned char action;
   unsigned char record;
 } files[FS_NR_FILE_HANDLES];
+
+#ifdef FEATURE_BOOST_CONVERTER
+//
+// Battery management.
+//
+unsigned short BlueBasic_rawBattery;
+unsigned char BlueBasic_powerMode;
+#endif
+
 
 //
 // Skip whitespace
@@ -1283,6 +1302,9 @@ static VAR_TYPE expression(unsigned char mode)
         {
           goto expr_oom;
         }
+#ifdef FEATURE_BOOST_CONVERTER
+        top = BlueBasic_rawBattery;
+#else
         ADCCON3 = 0x0F | 0x10 | 0x00; // VDD/3, 10-bit, internal voltage reference
 #ifdef SIMULATE_PINS
         ADCCON1 = 0x80;
@@ -1291,6 +1313,7 @@ static VAR_TYPE expression(unsigned char mode)
           ;
         top = ADCL;
         top |= ADCH << 8;
+#endif // FEATURE_BOOST_CONVERTER
         top = top >> 6;
         // VDD can be in the range 2v to 3.6v. Internal reference voltage is 1.24v (per datasheet)
         // So we're measuring VDD/3 against 1.24v giving us (VDD x 511) / 3.72
@@ -1804,10 +1827,10 @@ interperate:
       goto cmd_detachint;
     case KW_SPI:
       goto cmd_spi;
-    case KW_ANALOGREFERENCE:
-      goto cmd_analogref;
-    case KW_ANALOGRESOLUTION:
-      goto cmd_analogresolution;
+    case KW_ANALOG:
+      goto cmd_analog;
+    case KW_CONFIG:
+      goto cmd_config;
     case KW_WIRE:
       goto cmd_wire;
     case KW_I2C:
@@ -3601,47 +3624,86 @@ i2c_end:
   goto run_next_statement;
 
 //
-// ANALOGREFERENCE INTERNAL|EXTERNAL
+// ANALOG RESOLUTION, 8|10|12|14
+//  Set the number of bits returned from an ADC operation.
+// ANALOG REFERENCE, INTERNAL|EXTERNAL
 //
-cmd_analogref:
-  switch (*txtpos)
+cmd_analog:
+
+  switch (expression(EXPR_COMMA))
   {
-    case PM_INTERNAL:
-      analogReference = 0x00;
+    case CO_REFERENCE:
+      switch (expression(EXPR_NORMAL))
+      {
+        case CO_INTERNAL:
+          analogReference = 0x00;
+          break;
+        case CO_EXTERNAL:
+          analogReference = 0x40;
+          break;
+        default:
+          goto qwhat;
+      }
       break;
-    case PM_EXTERNAL:
-      analogReference = 0x40;
+    case CO_RESOLUTION:
+      switch (expression(EXPR_NORMAL))
+      {
+        case 8:
+          analogResolution = 0x00;
+          break;
+        case 10:
+          analogResolution = 0x10;
+          break;
+        case 12:
+          analogResolution = 0x20;
+          break;
+        case 14:
+          analogResolution = 0x30;
+          break;
+        default:
+          goto qwhat;
+      }
       break;
     default:
       goto qwhat;
   }
-  txtpos++;
   goto run_next_statement;
 
-//
-// ANALOGRESOLUTION 8|10|12|14
-//  Set the number of bits returned from an ADC operation.
-//
-cmd_analogresolution:
-  val = expression(EXPR_NORMAL);
-  switch (val)
+cmd_config:
+  switch (expression(EXPR_COMMA))
   {
-    case 8:
-      analogResolution = 0x00;
+    case CO_POWER:
+    {
+      switch (expression(EXPR_NORMAL))
+      {
+#ifdef FEATURE_BOOST_CONVERTER
+        case 0:
+          // Mode 0: Boost converter is always off
+          BlueBasic_powerMode = 0;
+          FEATURE_BOOST_CONVERTER = 0;
+          break;
+        case 1:
+          // Mode 1: Boost converter if always on
+          BlueBasic_powerMode = 1;
+          FEATURE_BOOST_CONVERTER = 1;
+          break;
+        case 2:
+          // Mode 2: Boost convert is on when awake, off when asleep
+          BlueBasic_powerMode = 2;
+          FEATURE_BOOST_CONVERTER = 1;
+          break;
+#else
+        case 0:
+          break;
+#endif // FEATURE_BOOST_CONVERTER
+        default:
+          goto qwhat;
+      }
       break;
-    case 10:
-      analogResolution = 0x10;
-      break;
-    case 12:
-      analogResolution = 0x20;
-      break;
-    case 14:
-      analogResolution = 0x30;
-      break;
+    }
     default:
       goto qwhat;
   }
-  analogResolution = val;
   goto run_next_statement;
 }
 
