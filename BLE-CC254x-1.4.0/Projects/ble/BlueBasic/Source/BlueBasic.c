@@ -491,6 +491,20 @@ HAL_ISR_FUNCTION(port0Isr, P0INT_VECTOR)
   {
     P0IFG = ~status;
     P0IF = 0;
+    
+#if HAL_UART_DMA == 1
+    extern uint8 Hal_TaskID;
+    extern volatile uint8 dmaRdyIsr;
+    dmaRdyIsr = 1;
+    CLEAR_SLEEP_MODE();
+    osal_pwrmgr_task_state(Hal_TaskID, PWRMGR_HOLD);
+#if HAL_UART_TX_BY_ISR
+    if (dmaCfg.txHead == dmaCfg.txTail)
+    {
+      HAL_UART_DMA_CLR_RDY_OUT();
+    }
+#endif
+#endif // HAL_UART_DMA
 
     for (i = 0; i < OS_MAX_INTERRUPT; i++)
     {
@@ -503,8 +517,6 @@ HAL_ISR_FUNCTION(port0Isr, P0INT_VECTOR)
 
   HAL_EXIT_ISR();
 }
-
-#ifdef ENABLE_BLE_CONSOLE // Not using P1 interrupts for UART
 
 HAL_ISR_FUNCTION(port1Isr, P1INT_VECTOR)
 {
@@ -531,8 +543,6 @@ HAL_ISR_FUNCTION(port1Isr, P1INT_VECTOR)
 
   HAL_EXIT_ISR();
 }
-
-#endif // ENABLE_BLE_CONSOLE
 
 HAL_ISR_FUNCTION(port2Isr, P2INT_VECTOR)
 {

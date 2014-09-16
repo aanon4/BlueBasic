@@ -352,6 +352,17 @@ uint16 Hal_UART_RxBufLen( uint8 port )
 #endif
 }
 
+uint16 Hal_UART_TxBufLen( uint8 port )
+{
+#if (HAL_UART_DMA == 1)
+  if (port == HAL_UART_PORT_0)  return HalUARTTxAvailDMA();
+#endif
+#if (HAL_UART_DMA == 2)
+  if (port == HAL_UART_PORT_1)  return HalUARTTxAvailDMA();
+#endif
+  return 0;
+}
+
 void HalUARTIsrDMA(void)
 {
 #if (HAL_UART_DMA && HAL_UART_SPI)  // When both are defined, port is run-time choice.

@@ -86,6 +86,7 @@ static const unsigned char keywords_5[] =
   'F','A','L','S','E',KW_CONSTANT,CO_FALSE,
   'F','O','R',KW_FOR,
   'S','C','A','N',KW_SCAN,
+  'S','E','R','I','A','L',KW_SERIAL,
   'S','E','R','V','I','C','E',BLE_SERVICE,
   'S','L','A','V','E','_','L','A','T','E','N','C','Y',KW_CONSTANT,CO_SLAVE_LATENCY,
   'S','L','A','V','E',SPI_SLAVE,

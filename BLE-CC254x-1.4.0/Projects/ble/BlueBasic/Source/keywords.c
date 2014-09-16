@@ -58,6 +58,7 @@ struct keyword
   { "<<", "OP_LSHIFT" },
   { ">>", "OP_RSHIFT" },
   { "PINMODE", "KW_PINMODE" },
+  { "SERIAL", "KW_SERIAL" },
   { "INTERRUPT", "KW_INTERRUPT" },
   { "ATTACH", "IN_ATTACH" },
   { "DETACH", "IN_DETACH" },

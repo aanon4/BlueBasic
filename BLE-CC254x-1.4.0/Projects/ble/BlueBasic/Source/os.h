@@ -51,6 +51,7 @@ extern void OS_flashstore_init(void);
 extern void OS_flashstore_write(unsigned long faddr, unsigned char* value, unsigned char sizeinwords);
 extern void OS_flashstore_erase(unsigned long page);
 
+
 #define OS_MAX_TIMER              2
 #define BLUEBASIC_EVENT_TIMER     0x0001
 #define DELAY_TIMER               1
@@ -143,6 +144,13 @@ typedef struct gattCharCfg
   unsigned char value;
 } gattCharCfg_t;
 
+
+extern unsigned char OS_serial_open(unsigned short baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite);
+extern unsigned char OS_serial_read(void);
+extern unsigned char OS_serial_write(unsigned char ch);
+extern unsigned char OS_serial_available(unsigned char ch);
+
+
 extern unsigned char GATTServApp_RegisterService(gattAttribute_t* attributes, unsigned short count, const void* callbacks);
 extern unsigned char GATTServApp_DeregisterService(unsigned short handle, void* attr);
 extern unsigned char GATTServApp_InitCharCfg(unsigned short handle, gattCharCfg_t* charcfgtbl);
@@ -182,11 +190,6 @@ extern unsigned char GAPObserverRole_CancelDiscovery(void);
 
 extern unsigned char blueBasic_TaskID;
 
-#ifndef ENABLE_BLE_CONSOLE
-#define OS_UART_PORT           HAL_UART_PORT_1
-#define OS_UART_BAUDRATE       HAL_UART_BR_115200
-#endif
-
 // Task Events
 #define BLUEBASIC_START_DEVICE_EVT 0x0001
 #define BLUEBASIC_CONNECTION_EVENT 0x0002
@@ -202,6 +205,8 @@ extern unsigned char blueBasic_TaskID;
 #define OS_AUTORUN_TIMEOUT        5000
 
 #define OS_MAX_FILE               16
+
+#define OS_MAX_SERIAL             1
 
 typedef struct
 {
@@ -248,6 +253,10 @@ extern long OS_millis(void);
 extern void OS_delaymicroseconds(short micros);
 extern void OS_reboot(char flash);
 extern void OS_flashstore_init(void);
+extern unsigned char OS_serial_open(unsigned long baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite);
+extern unsigned char OS_serial_read(void);
+extern unsigned char OS_serial_write(unsigned char ch);
+extern unsigned char OS_serial_available(unsigned char ch);
 
 extern void interpreter_devicefound(unsigned char addtype, unsigned char* address, signed char rssi, unsigned char eventtype, unsigned char len, unsigned char* data);
 

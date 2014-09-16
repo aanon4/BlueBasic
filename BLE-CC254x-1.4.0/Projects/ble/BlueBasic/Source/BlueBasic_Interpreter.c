@@ -141,7 +141,7 @@ enum
   KW_BTSET,
   KW_PINMODE,
   KW_INTERRUPT,
-  KW_SPACER8,
+  KW_SERIAL,
   KW_SPI,
   KW_ANALOG,
   KW_CONFIG,
@@ -1331,7 +1331,23 @@ static VAR_TYPE expression(unsigned char mode)
       case FUNC_LEN:
       {
         unsigned char ch = *txtpos;
-        if (ch < 'A' || ch > 'Z' || txtpos[1] != ')')
+        if (ch == KW_SERIAL)
+        {
+          ch = txtpos[1];
+          if (!(ch == KW_READ || ch == KW_WRITE) || txtpos[2] != ')')
+          {
+            goto expr_error;
+          }
+          txtpos += 3;
+          if (queueptr == queueend)
+          {
+            goto expr_oom;
+          }
+          *queueptr++ = OS_serial_available(ch == KW_READ ? 'R' : 'W');
+          lastop = 0;
+          break;
+        }
+        else if (ch < 'A' || ch > 'Z' || txtpos[1] != ')')
         {
           goto expr_error;
         }
@@ -1831,6 +1847,8 @@ interperate:
       goto cmd_pinmode;
     case KW_INTERRUPT:
       goto cmd_interrupt;
+    case KW_SERIAL:
+      goto cmd_serial;
     case KW_SPI:
       goto cmd_spi;
     case KW_ANALOG:
@@ -2649,6 +2667,125 @@ cmd_interrupt:
     }
     goto run_next_statement;
   }
+  
+//
+// SERIAL CONFIG <baud>,<parity:N|P>,<bits>,<stop>,<flow> [ONREAD GOSUB <linenum>] [ONWRITE GOSUB <linenum>]
+// SERIAL READ <var>
+// SERIAL WRITE <var>
+//
+cmd_serial:
+  {
+    switch (*txtpos++)
+    {
+      case KW_READ:
+      {
+        stack_variable_frame* vframe = NULL;
+        unsigned char* ptr = parse_variable_address(&vframe);
+        if (ptr)
+        {
+          if (vframe->type == VAR_INT)
+          {
+            *(VAR_TYPE*)ptr = OS_serial_read();
+          }
+          else
+          {
+            *ptr = OS_serial_read();
+          }
+        }
+        else if (vframe)
+        {
+          // No address, but we have a vframe - this is a full array
+          unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
+          for (ptr = (unsigned char*)vframe + sizeof(stack_variable_frame); alen; alen--)
+          {
+            *ptr++ = OS_serial_read();
+          }
+        }
+        else
+        {
+          goto qwhat;
+        }
+        break;
+      }
+      case KW_WRITE:
+      {
+        stack_variable_frame* vframe = NULL;
+        unsigned char* ptr = parse_variable_address(&vframe);
+        if (ptr)
+        {
+          if (vframe->type == VAR_DIM_BYTE)
+          {
+            OS_serial_write(*ptr);
+          }
+          else
+          {
+            OS_serial_write(*(VAR_TYPE*)ptr);
+          }
+        }
+        else if (vframe)
+        {
+          // No address, but we have a vframe - this is a full array
+          unsigned char alen;
+          ptr = (unsigned char*)vframe + sizeof(stack_variable_frame);
+          for (alen = vframe->header.frame_size - sizeof(stack_variable_frame); alen; alen--)
+          {
+            OS_serial_write(*ptr++);
+          }
+        }
+        else
+        {
+          goto qwhat;
+        }
+        break;
+      }
+      case KW_CONFIG:
+      {
+        unsigned long baud = expression(EXPR_COMMA);
+        ignore_blanks();
+        unsigned char parity = *txtpos++;
+        ignore_blanks();
+        if (*txtpos++ != ',')
+        {
+          goto qwhat;
+        }
+        unsigned char bits = expression(EXPR_COMMA);
+        unsigned char stop = expression(EXPR_COMMA);
+        unsigned char flow = *txtpos++;
+        if (error_num)
+        {
+          goto qwhat;
+        }
+        LINENUM onread = 0;
+        if (*txtpos == BLE_ONREAD)
+        {
+          txtpos++;
+          if (*txtpos++ != KW_GOSUB)
+          {
+            goto qwhat;
+          }
+          onread = expression(EXPR_NORMAL);
+        }
+        LINENUM onwrite = 0;
+        if (*txtpos == BLE_ONWRITE)
+        {
+          txtpos++;
+          if (*txtpos++ != KW_GOSUB)
+          {
+            goto qwhat;
+          }
+          onwrite = expression(EXPR_NORMAL);
+        }
+        if (OS_serial_open(baud, parity, bits, stop, flow, onread, onwrite))
+        {
+          goto qwhat;
+        }
+        break;
+      }
+      default:
+        goto qwhat;
+    }
+  }
+  goto run_next_statement;
 
 //
 // WIRE ...

@@ -328,7 +328,7 @@ typedef struct
  */
 
 // The following two variables are only used when POWER_SAVING is defined.
-static volatile uint8 dmaRdyIsr;
+volatile uint8 dmaRdyIsr;
 static uint8 dmaRdyDly;  // Minimum delay before allowing sleep after detecting RdyIn de-asserted.
 
 static uartDMACfg_t dmaCfg;
@@ -795,6 +795,33 @@ static void HalUARTPollDMA(void)
 }
 
 /**************************************************************************************************
+ * @fn      HalUARTTxAvailDMA()
+ *
+ * @brief   Calculate Tx Buffer length - the number of bytes in the buffer.
+ *
+ * @param   none
+ *
+ * @return  remaining space in Tx Buffer
+ **************************************************************************************************/
+static uint16 HalUARTTxAvailDMA(void)
+{
+#if HAL_UART_TX_BY_ISR
+  return HAL_UART_DMA_TX_AVAIL();
+#else
+  txIdx_t txIdx;
+  uint8 txSel;
+  halIntState_t his;
+
+  HAL_ENTER_CRITICAL_SECTION(his);
+  txSel = dmaCfg.txSel;
+  txIdx = dmaCfg.txIdx[txSel];
+  HAL_EXIT_CRITICAL_SECTION(his);
+
+  return HAL_UART_DMA_TX_MAX - txIdx;
+#endif
+}
+
+/**************************************************************************************************
  * @fn      HalUARTRxAvailDMA()
  *
  * @brief   Calculate Rx Buffer length - the number of bytes in the buffer.
@@ -1000,6 +1027,7 @@ void HalUART_DMAIsrDMA(void)
  *
  * @return  None.
  *************************************************************************************************/
+#if 0 // BLUE BASIC
 #if (HAL_UART_DMA == 1)
 HAL_ISR_FUNCTION(port0Isr, P0INT_VECTOR)
 #else
@@ -1026,6 +1054,7 @@ HAL_ISR_FUNCTION(port1Isr, P1INT_VECTOR)
 #endif
   HAL_EXIT_ISR();
 }
+#endif
 #endif
 
 #if HAL_UART_TX_BY_ISR

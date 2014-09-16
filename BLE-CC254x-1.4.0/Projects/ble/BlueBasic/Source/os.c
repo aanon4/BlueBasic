@@ -18,6 +18,7 @@
 #include "oad_target.h"
 #include "hal_flash.h"
 #endif
+#include "hal_uart.h"
 
 #define FILE_HANDLE_PROGRAM     0
 #define FILE_HANDLE_DATA        1
@@ -50,6 +51,13 @@ struct
   unsigned short lineno;
 } timers[OS_MAX_TIMER];
 
+// Serial
+struct
+{
+  unsigned short onread;
+  unsigned short onwrite;
+} serial[OS_MAX_SERIAL];
+
 enum {
   MODE_STARTUP = 0,
   MODE_NEED_INPUT,
@@ -63,9 +71,6 @@ static struct {
   char* ptr;
   char mode;
   char quote;
-#ifndef ENABLE_BLE_CONSOLE
-  char wakeup;
-#endif
 } input;
 
 #ifdef ENABLE_BLE_CONSOLE
@@ -83,55 +88,6 @@ extern unsigned char ble_console_enabled;
 #define CTRLC	0x03
 #define CTRLH	0x08
 
-#ifndef ENABLE_BLE_CONSOLE
-
-static void _uartCallback(uint8 port, uint8 event)
-{
-  if (port != OS_UART_PORT)
-  {
-    return;
-  }
-#ifdef HAL_UART_RX_WAKEUP
-  // UART woken up. This happens in the interrupt handler so we really
-  // don't want to do anything else.
-  if (event == HAL_UART_RX_WAKEUP)
-  {
-    return;
-  }
-#endif
-
-  // Waiting at the command prompt. We accept characters and insert them into the input buffer
-  char c;
-  while (input.mode == MODE_NEED_INPUT && HalUARTRead(OS_UART_PORT, (uint8*)&c, 1) > 0)
-  {
-    if (!input.wakeup)
-    {
-      input.wakeup = 1;
-      OS_timer_stop(DELAY_TIMER);
-      osal_pwrmgr_task_state(blueBasic_TaskID, PWRMGR_HOLD);
-      interpreter_banner();
-    }
-    OS_type(c);
-  }
-}
-
-void OS_openserial(void)
-{
-  halUARTCfg_t config;
-  config.configured = 1;
-  config.baudRate = OS_UART_BAUDRATE;
-  config.flowControl = 1;
-  config.flowControlThreshold = 64;
-  config.idleTimeout = 0;
-  config.rx.maxBufSize = 128;
-  config.tx.maxBufSize = 128;
-  config.intEnable = 1;
-  config.callBackFunc = _uartCallback;
-
-  HalUARTOpen(OS_UART_PORT, &config);
-}
-
-#endif // ENABLE_BLE_CONSOLE
 
 void OS_type(char c)
 {
@@ -213,14 +169,7 @@ char OS_prompt_available(void)
 
 void OS_putchar(char ch)
 {
-#ifndef ENABLE_BLE_CONSOLE
-  if (input.wakeup)
-  {
-    HalUARTWrite(OS_UART_PORT, (uint8*)&ch, 1);
-  }
-#else
   ble_console_write(ch);
-#endif
 }
 
 void* OS_rmemcpy(void *dst, const void GENERIC *src, unsigned int len)
@@ -355,4 +304,101 @@ void OS_flashstore_init(void)
   {
     flashstore_deleteall();
   }
+}
+
+static void _uartCallback(uint8 port, uint8 event)
+{
+#ifdef HAL_UART_RX_WAKEUP
+  // UART woken up. This happens in the interrupt handler so we really
+  // don't want to do anything else.
+  if (event == HAL_UART_RX_WAKEUP)
+  {
+    return;
+  }
+#endif
+  if (port == HAL_UART_PORT_0)
+  {
+    while (serial[0].onread && Hal_UART_RxBufLen(HAL_UART_PORT_0) > 0)
+    {
+      interpreter_run(serial[0].onread, 1);
+    }
+    if (serial[0].onwrite && Hal_UART_TxBufLen(HAL_UART_PORT_0) > 0)
+    {
+      interpreter_run(serial[0].onwrite, 1);
+    }
+  }
+}
+
+
+unsigned char OS_serial_open(unsigned long baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite)
+{
+  halUARTCfg_t config;
+  
+  switch (baud)
+  {
+    case 9600:
+      baud = HAL_UART_BR_9600;
+      break;
+    case 19200:
+      baud = HAL_UART_BR_19200;
+      break;
+    case 38400:
+      baud = HAL_UART_BR_38400;
+      break;
+    case 57600:
+      baud = HAL_UART_BR_57600;
+      break;
+    case 115200:
+      baud = HAL_UART_BR_115200;
+      break;
+    default:
+      return 2;
+  }
+ 
+  // Only support port 0, no-parity, 8-bits, 1 stop bit
+  if (parity != 'N' || bits != 8 || stop != 1 || !(flow == 'H' || flow == 'N'))
+  {
+    return 3;
+  }
+
+  config.configured = 1;
+  config.baudRate = baud;
+  config.flowControl = (flow == 'H' ? 1 : 0);
+  config.flowControlThreshold = 64;
+  config.idleTimeout = 0;
+  config.rx.maxBufSize = 128;
+  config.tx.maxBufSize = 128;
+  config.intEnable = 1;
+  config.callBackFunc = _uartCallback;
+  if (HalUARTOpen(HAL_UART_PORT_0, &config) == HAL_UART_SUCCESS)
+  {
+    serial[0].onread = onread;
+    serial[0].onwrite = onwrite;
+    return 0;
+  }
+ 
+  return 1;
+}
+
+unsigned char OS_serial_read(void)
+{
+  unsigned char ch;
+  if (HalUARTRead(HAL_UART_PORT_0, &ch, 1) == 1)
+  {
+    return ch;
+  }
+  else
+  {
+    return 255;
+  }
+}
+
+unsigned char OS_serial_write(unsigned char ch)
+{
+  return HalUARTWrite(HAL_UART_PORT_0, &ch, 1) == 1 ? 1 : 0;
+}
+
+unsigned char OS_serial_available(unsigned char ch)
+{
+  return ch == 'R' ? Hal_UART_RxBufLen(HAL_UART_PORT_0) : Hal_UART_TxBufLen(HAL_UART_PORT_0);
 }

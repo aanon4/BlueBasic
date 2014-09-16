@@ -269,3 +269,23 @@ void OS_flashstore_erase(unsigned long page)
   fwrite(__store, FLASHSTORE_LEN, sizeof(char), fp);
   fclose(fp);
 }
+
+unsigned char OS_serial_open(unsigned short baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite)
+{
+  return 0;
+}
+
+unsigned char OS_serial_read(void)
+{
+  return 255;
+}
+
+unsigned char OS_serial_write(unsigned char ch)
+{
+  return 0;
+}
+
+unsigned char OS_serial_available(unsigned char ch)
+{
+  return 0;
+}
