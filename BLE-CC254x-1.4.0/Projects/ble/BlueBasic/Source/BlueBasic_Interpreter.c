@@ -151,6 +151,19 @@ enum
   KW_CLOSE,
   KW_READ,
   KW_WRITE,
+  
+  // -----------------------
+  // Keyword spacers - to add main keywords later without messing up the numbering below
+  //
+
+  KW_SPACE0,
+  KW_SPACE1,
+  KW_SPACE2,
+  KW_SPACE3,
+  KW_SPACE4,
+  KW_SPACE5,
+  KW_SPACE6,
+  KW_SPACE7,
 
   // -----------------------
   // Operators
@@ -176,6 +189,11 @@ enum
   OP_RSHIFT,
   OP_UMINUS,
   
+  OP_SPACE0,
+  OP_SPACE1,
+  OP_SPACE2,
+  OP_SPACE3,
+  
   // -----------------------
   // Functions
   //
@@ -187,6 +205,14 @@ enum
   FUNC_BATTERY,
   FUNC_HEX,
   FUNC_EOF,
+  
+  // -----------------------
+  // Funciton & operator spacers - to add main keywords later without messing up the numbering below
+  //
+  FUNC_SPACE0,
+  FUNC_SPACE1,
+  FUNC_SPACE2,
+  FUNC_SPACE3,
   
   // -----------------------
 
@@ -1140,7 +1166,9 @@ expr_div0:
 static VAR_TYPE expression(unsigned char mode)
 {
   VAR_TYPE queue[EXPRESSION_QUEUE_SIZE];
+  VAR_TYPE* queueend = &queue[EXPRESSION_QUEUE_SIZE];
   unsigned char stack[EXPRESSION_STACK_SIZE];
+  unsigned char* stackend = &stack[EXPRESSION_STACK_SIZE];
   unsigned char lastop = 1;
 
   // Done parse if we have a pending error
@@ -1169,7 +1197,7 @@ static VAR_TYPE expression(unsigned char mode)
         // Parse number
         if (op >= '0' && op <= '9')
         {
-          if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+          if (queueptr == queueend)
           {
             goto expr_oom;
           }
@@ -1185,7 +1213,7 @@ static VAR_TYPE expression(unsigned char mode)
           
           if (frame->type == VAR_DIM_BYTE)
           {
-            if (stackptr >= &stack[EXPRESSION_STACK_SIZE - 1])
+            if (stackptr + 1 >= stackend)
             {
               goto expr_oom;
             }
@@ -1194,7 +1222,7 @@ static VAR_TYPE expression(unsigned char mode)
           }
           else
           {
-            if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+            if (queueptr == queueend)
             {
               goto expr_oom;
             }
@@ -1210,7 +1238,7 @@ static VAR_TYPE expression(unsigned char mode)
         break;
         
       case KW_CONSTANT:
-        if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+        if (queueptr == queueend)
         {
           goto expr_oom;
         }
@@ -1219,7 +1247,7 @@ static VAR_TYPE expression(unsigned char mode)
         break;
 
       case FUNC_HEX:
-        if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+        if (queueptr == queueend)
         {
           goto expr_oom;
         }
@@ -1234,7 +1262,7 @@ static VAR_TYPE expression(unsigned char mode)
         {
           goto expr_error;
         }
-        if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+        if (queueptr == queueend)
         {
           goto expr_oom;
         }
@@ -1251,7 +1279,7 @@ static VAR_TYPE expression(unsigned char mode)
         {
           goto expr_error;
         }
-        if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+        if (queueptr == queueend)
         {
           goto expr_oom;
         }
@@ -1279,7 +1307,7 @@ static VAR_TYPE expression(unsigned char mode)
         {
           goto expr_error;
         }
-        if (queueptr == &queue[EXPRESSION_QUEUE_SIZE])
+        if (queueptr == queueend)
         {
           goto expr_oom;
         }
@@ -1296,7 +1324,7 @@ static VAR_TYPE expression(unsigned char mode)
       }
 
       case '(':
-        if (stackptr == &stack[EXPRESSION_STACK_SIZE])
+        if (stackptr == stackend)
         {
           goto expr_oom;
         }
@@ -1311,7 +1339,7 @@ static VAR_TYPE expression(unsigned char mode)
       case KW_PIN_P1:
       case KW_PIN_P2:
       case BLE_FUNC_BTGET:
-        if (stackptr >= &stack[EXPRESSION_STACK_SIZE - 1])
+        if (stackptr + 1 >= stackend)
         {
           goto expr_oom;
         }
@@ -1468,7 +1496,7 @@ static VAR_TYPE expression(unsigned char mode)
             goto expr_error;
           }
         }
-        if (stackptr == &stack[EXPRESSION_STACK_SIZE])
+        if (stackptr == stackend)
         {
           goto expr_oom;
         }
