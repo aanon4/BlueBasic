@@ -65,6 +65,7 @@ enum
   ERROR_BADPIN,
   ERROR_DIRECT,
   ERROR_EOF,
+  ERROR_EOR,
 };
 
 static const char* const error_msgs[] =
@@ -78,6 +79,7 @@ static const char* const error_msgs[] =
   "Bad pin",
   "Not in direct",
   "End of file",
+  "End of record",
 };
 
 #ifdef BUILD_TIMESTAMP
@@ -1702,8 +1704,6 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
 
     // Calculate the length of what is left, including the (yet-to-be-populated) line header
     linelen = sp - txtpos;
-    // Round up
-    linelen = (linelen + 3) & -4;
 
     // Now we have the number, add the line header.
     *((LINENUM*)txtpos) = linenum;
@@ -1893,6 +1893,10 @@ qdirect:
 
 qeof:
   error_num = ERROR_EOF;
+  goto print_error_or_ok;
+
+qeor:
+  error_num = ERROR_EOR;
   goto print_error_or_ok;
 
 qwhat:
@@ -3266,7 +3270,7 @@ cmd_read:
       }
       files[id].record++;
 
-      unsigned char len = special[FS_DATA_LEN];
+      unsigned char len = special[FS_DATA_LEN] - FS_DATA_OFFSET;
       unsigned char* sptr = &special[FS_DATA_OFFSET];
       txtpos--;
       for (;;)
@@ -3286,7 +3290,7 @@ cmd_read:
         {
           if (len == 0)
           {
-            goto qeof;
+            goto qeor;
           }
           if (vframe->type == VAR_DIM_BYTE)
           {
@@ -3310,7 +3314,7 @@ cmd_read:
           }
           else
           {
-            goto qeof;
+            goto qeor;
           }
         }
       }
@@ -3456,14 +3460,14 @@ cmd_write:
             txtpos--;
           }
         }
-        if (((iptr - item + 3) & -4) > 255)
+        if (iptr - item > 0xFC)
         {
           program_end = (unsigned char**)item;
           goto qtoobig;
         }
         iptr = (unsigned char*)program_end;
       }
-      item[FS_DATA_LEN] = (iptr - item + 3) & -4;
+      item[FS_DATA_LEN] = iptr - item;
       if (!addspecial_with_compact(item))
       {
         goto qhoom;

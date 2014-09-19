@@ -29,6 +29,7 @@ static struct
 } orderedpages[FLASHSTORE_NRPAGES];
 
 #define FLASHSTORE_PAGEBASE(IDX)  &flashstore[FLASHSTORE_PAGESIZE * (IDX)]
+#define FLASHSTORE_PADDEDSIZE(SZ) (((SZ) + 3) & -4)
 
 
 //
@@ -142,14 +143,14 @@ unsigned char** flashstore_init(unsigned char** startmem)
       }
       else if (id == FLASHID_INVALID)
       {
-        orderedpages[ordered].waste += ptr[sizeof(unsigned short)];
+        orderedpages[ordered].waste += FLASHSTORE_PADDEDSIZE(ptr[sizeof(unsigned short)]);
       }
       else if (id != FLASHID_SPECIAL)
       {
         // Valid program line - record entry (sort later)
         *lineindexend++ = (unsigned short*)ptr;
       }
-      ptr += ptr[sizeof(unsigned short)];
+      ptr += FLASHSTORE_PADDEDSIZE(ptr[sizeof(unsigned short)]);
     }
   
     orderedpages[ordered].free = FLASHSTORE_PAGESIZE - (ptr - page);
@@ -223,7 +224,7 @@ unsigned char** flashstore_addline(unsigned char* line)
   }
 
   // Find space for the new line in the youngest page
-  unsigned char len = line[sizeof(unsigned short)];
+  unsigned char len = FLASHSTORE_PADDEDSIZE(line[sizeof(unsigned short)]);
   signed char pg = flashstore_findspace(len);
   if (pg != -1)
   {
@@ -272,7 +273,7 @@ unsigned char** flashstore_addline(unsigned char* line)
 
 unsigned char flashstore_addspecial(unsigned char* item)
 {
-  unsigned char len = item[sizeof(unsigned short)];
+  unsigned char len = FLASHSTORE_PADDEDSIZE(item[sizeof(unsigned short)]);
   // Find space for the new line in the youngest page
   signed char pg = flashstore_findspace(len);
   if (pg != -1)
@@ -305,7 +306,7 @@ unsigned char* flashstore_findspecial(unsigned short specialid)
   for (page = flashstore; page < &flashstore[FLASHSTORE_LEN]; page += FLASHSTORE_PAGESIZE)
   {
     const unsigned char* ptr;
-    for (ptr = page + sizeof(flashpage_age); ptr < page + FLASHSTORE_PAGESIZE; ptr += ptr[sizeof(unsigned short)])
+    for (ptr = page + sizeof(flashpage_age); ptr < page + FLASHSTORE_PAGESIZE; ptr += FLASHSTORE_PADDEDSIZE(ptr[sizeof(unsigned short)]))
     {
       unsigned short id = *(unsigned short*)ptr;
       if (id == FLASHID_FREE)
@@ -415,7 +416,7 @@ void flashstore_compact(unsigned char len, unsigned char* tempmemstart, unsigned
     for (ptr = ram + sizeof(flashpage_age); ptr < ram + FLASHSTORE_PAGESIZE; )
     {
       unsigned short id = *(unsigned short*)ptr;
-      unsigned char len = ptr[sizeof(unsigned short)];
+      unsigned char len = FLASHSTORE_PADDEDSIZE(ptr[sizeof(unsigned short)]);
       if (id == FLASHID_FREE)
       {
         break;
