@@ -91,6 +91,7 @@ static const char initmsg[]           = "BlueBasic " BUILD_TIMESTAMP " " kVersio
 #else
 static const char initmsg[]           = "BlueBasic " kVersion;
 #endif
+static const char urlmsg[]            = "http://blog.xojs.org/bluebasic";
 static const char memorymsg[]         = " bytes free.";
 
 #ifdef TARGET_CC254X
@@ -1601,6 +1602,7 @@ void interpreter_init()
 void interpreter_banner(void)
 {
   printmsg(initmsg);
+  printmsg(urlmsg);
   printnum(0, flashstore_freemem());
   printmsg(memorymsg);
   printmsg(error_msgs[ERROR_OK]);
