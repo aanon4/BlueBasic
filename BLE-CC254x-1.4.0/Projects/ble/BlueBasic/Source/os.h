@@ -145,10 +145,10 @@ typedef struct gattCharCfg
 } gattCharCfg_t;
 
 
-extern unsigned char OS_serial_open(unsigned short baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite);
-extern unsigned char OS_serial_read(void);
-extern unsigned char OS_serial_write(unsigned char ch);
-extern unsigned char OS_serial_available(unsigned char ch);
+extern unsigned char OS_serial_open(unsigned char port, unsigned short baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite);
+extern unsigned char OS_serial_read(unsigned char port);
+extern unsigned char OS_serial_write(unsigned char port, unsigned char ch);
+extern unsigned char OS_serial_available(unsigned char port, unsigned char ch);
 
 
 extern unsigned char GATTServApp_RegisterService(gattAttribute_t* attributes, unsigned short count, const void* callbacks);
@@ -253,10 +253,10 @@ extern long OS_millis(void);
 extern void OS_delaymicroseconds(short micros);
 extern void OS_reboot(char flash);
 extern void OS_flashstore_init(void);
-extern unsigned char OS_serial_open(unsigned long baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite);
-extern unsigned char OS_serial_read(void);
-extern unsigned char OS_serial_write(unsigned char ch);
-extern unsigned char OS_serial_available(unsigned char ch);
+extern unsigned char OS_serial_open(unsigned char port, unsigned long baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite);
+extern unsigned char OS_serial_read(unsigned char port);
+extern unsigned char OS_serial_write(unsigned char port, unsigned char ch);
+extern unsigned char OS_serial_available(unsigned char port, unsigned char ch);
 
 extern void interpreter_devicefound(unsigned char addtype, unsigned char* address, signed char rssi, unsigned char eventtype, unsigned char len, unsigned char* data);
 

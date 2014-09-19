@@ -270,22 +270,22 @@ void OS_flashstore_erase(unsigned long page)
   fclose(fp);
 }
 
-unsigned char OS_serial_open(unsigned short baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite)
+unsigned char OS_serial_open(unsigned char port, unsigned short baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite)
 {
   return 0;
 }
 
-unsigned char OS_serial_read(void)
+unsigned char OS_serial_read(unsigned char port)
 {
   return 255;
 }
 
-unsigned char OS_serial_write(unsigned char ch)
+unsigned char OS_serial_write(unsigned char port, unsigned char ch)
 {
   return 0;
 }
 
-unsigned char OS_serial_available(unsigned char ch)
+unsigned char OS_serial_available(unsigned char port, unsigned char ch)
 {
   return 0;
 }

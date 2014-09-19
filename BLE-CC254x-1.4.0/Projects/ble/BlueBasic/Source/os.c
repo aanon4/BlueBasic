@@ -330,7 +330,7 @@ static void _uartCallback(uint8 port, uint8 event)
 }
 
 
-unsigned char OS_serial_open(unsigned long baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite)
+unsigned char OS_serial_open(unsigned char port, unsigned long baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite)
 {
   halUARTCfg_t config;
   
@@ -356,7 +356,7 @@ unsigned char OS_serial_open(unsigned long baud, unsigned char parity, unsigned 
   }
  
   // Only support port 0, no-parity, 8-bits, 1 stop bit
-  if (parity != 'N' || bits != 8 || stop != 1 || !(flow == 'H' || flow == 'N'))
+  if (port != 0 || parity != 'N' || bits != 8 || stop != 1 || !(flow == 'H' || flow == 'N'))
   {
     return 3;
   }
@@ -380,7 +380,7 @@ unsigned char OS_serial_open(unsigned long baud, unsigned char parity, unsigned 
   return 1;
 }
 
-unsigned char OS_serial_read(void)
+unsigned char OS_serial_read(unsigned char port)
 {
   unsigned char ch;
   if (HalUARTRead(HAL_UART_PORT_0, &ch, 1) == 1)
@@ -393,12 +393,12 @@ unsigned char OS_serial_read(void)
   }
 }
 
-unsigned char OS_serial_write(unsigned char ch)
+unsigned char OS_serial_write(unsigned char port, unsigned char ch)
 {
   return HalUARTWrite(HAL_UART_PORT_0, &ch, 1) == 1 ? 1 : 0;
 }
 
-unsigned char OS_serial_available(unsigned char ch)
+unsigned char OS_serial_available(unsigned char port, unsigned char ch)
 {
   return ch == 'R' ? Hal_UART_RxBufLen(HAL_UART_PORT_0) : Hal_UART_TxBufLen(HAL_UART_PORT_0);
 }

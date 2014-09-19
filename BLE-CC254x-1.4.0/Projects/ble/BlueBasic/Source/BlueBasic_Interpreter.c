@@ -1348,7 +1348,7 @@ static VAR_TYPE expression(unsigned char mode)
           {
             goto expr_oom;
           }
-          *queueptr++ = OS_serial_available(ch == KW_READ ? 'R' : 'W');
+          *queueptr++ = OS_serial_available(0, ch == KW_READ ? 'R' : 'W');
           lastop = 0;
           break;
         }
@@ -2711,7 +2711,7 @@ cmd_serial:
       }
       onwrite = expression(EXPR_NORMAL);
     }
-    if (OS_serial_open(baud, parity, bits, stop, flow, onread, onwrite))
+    if (OS_serial_open(0, baud, parity, bits, stop, flow, onread, onwrite))
     {
       goto qwhat;
     }
@@ -3234,11 +3234,11 @@ cmd_read:
         {
           if (vframe->type == VAR_INT)
           {
-            *(VAR_TYPE*)ptr = OS_serial_read();
+            *(VAR_TYPE*)ptr = OS_serial_read(0);
           }
           else
           {
-            *ptr = OS_serial_read();
+            *ptr = OS_serial_read(0);
           }
         }
         else if (vframe)
@@ -3247,7 +3247,7 @@ cmd_read:
           unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
           for (ptr = (unsigned char*)vframe + sizeof(stack_variable_frame); alen; alen--)
           {
-            *ptr++ = OS_serial_read();
+            *ptr++ = OS_serial_read(0);
           }
         }
         else
@@ -3354,11 +3354,11 @@ cmd_write:
         {
           if (vframe->type == VAR_DIM_BYTE)
           {
-            OS_serial_write(*ptr);
+            OS_serial_write(0, *ptr);
           }
           else
           {
-            OS_serial_write(*(VAR_TYPE*)ptr);
+            OS_serial_write(0, *(VAR_TYPE*)ptr);
           }
         }
         else if (vframe)
@@ -3368,7 +3368,7 @@ cmd_write:
           ptr = (unsigned char*)vframe + sizeof(stack_variable_frame);
           for (alen = vframe->header.frame_size - sizeof(stack_variable_frame); alen; alen--)
           {
-            OS_serial_write(*ptr++);
+            OS_serial_write(0, *ptr++);
           }
         }
         else if (*txtpos == NL)
@@ -3382,7 +3382,7 @@ cmd_write:
           {
             goto qwhat;
           }
-          OS_serial_write(val);
+          OS_serial_write(0, val);
         }
       }
     }
