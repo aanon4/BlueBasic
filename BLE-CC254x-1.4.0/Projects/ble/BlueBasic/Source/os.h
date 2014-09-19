@@ -330,7 +330,9 @@ enum
 #define FS_NR_FILE_HANDLES 4
 #define FS_MAKE_FILE_SPECIAL(NAME,OFF)  (FLASHSPECIAL_FILE0|(((NAME)-'A')<<8)|(OFF))
 #define FS_NR_RECORDS     255
+#define FS_FILE_SPECIAL   0
 #define FS_DATA_LEN       2
+#define FS_FILE_ITEM_ID   3
 #define FS_DATA_OFFSET    5
 
 extern unsigned char** flashstore_init(unsigned char** startmem);

@@ -65,7 +65,6 @@ enum
   ERROR_BADPIN,
   ERROR_DIRECT,
   ERROR_EOF,
-  ERROR_MISMATCH,
 };
 
 static const char* const error_msgs[] =
@@ -79,7 +78,6 @@ static const char* const error_msgs[] =
   "Bad pin",
   "Not in direct",
   "End of file",
-  "Mismatch",
 };
 
 #ifdef BUILD_TIMESTAMP
@@ -483,7 +481,8 @@ static stack_variable_frame normal_variable = { { STACK_VARIABLE_FLAG, 0 }, VAR_
 #define VARIABLE_FLAGS_GET(F)   (vname = (F) - 'A', (((*(variables_begin + 26 * VAR_SIZE + vname / 8)) >> (vname % 8)) & 0x01))
 #define VARIABLE_FLAGS_SET(F,V) do { vname = (F) - 'A'; unsigned char* v = variables_begin + 26 * VAR_SIZE + vname / 8; *v = (*v & (255 - (1 << (vname % 8)))) | ((V) << (vname % 8)); } while(0)
 
-#define CHECK_SP_OOM(S)  if (sp - (S) < (unsigned char*)program_end) goto qoom; else sp -= (S)
+#define CHECK_SP_OOM(S)   if (sp - (S) < (unsigned char*)program_end) goto qoom; else sp -= (S)
+#define CHECK_HEAP_OOM(S) if ((unsigned char*)program_end + (S) > sp) goto qhoom; else program_end = (unsigned char**)((unsigned char*)program_end + (S))
 
 #ifdef SIMULATE_PINS
 static unsigned char P0DIR, P1DIR, P2DIR;
@@ -588,6 +587,9 @@ static struct
   unsigned char action;
   unsigned char record;
 } files[FS_NR_FILE_HANDLES];
+
+static unsigned char addspecial_with_compact(unsigned char* item);
+
 
 #ifdef FEATURE_BOOST_CONVERTER
 //
@@ -1009,7 +1011,8 @@ static unsigned char* get_variable_frame(char name, stack_variable_frame** frame
 //
 static unsigned char* parse_variable_address(stack_variable_frame** vframe)
 {
-  unsigned char* ptr;
+  ignore_blanks();
+
   const unsigned char name = *txtpos;
 
   if (name < 'A' || name > 'Z')
@@ -1017,7 +1020,7 @@ static unsigned char* parse_variable_address(stack_variable_frame** vframe)
     return NULL;
   }
   txtpos++;
-  ptr = get_variable_frame(name, vframe);
+  unsigned char* ptr = get_variable_frame(name, vframe);
   if ((*vframe)->type == VAR_DIM_BYTE)
   {
     if (*txtpos != '(')
@@ -1892,10 +1895,6 @@ qeof:
   error_num = ERROR_EOF;
   goto print_error_or_ok;
 
-qmismatch:
-  error_num = ERROR_MISMATCH;
-  goto print_error_or_ok;
-
 qwhat:
   if (!error_num)
   {
@@ -2465,7 +2464,7 @@ cmd_autorun:
       *(unsigned short*)autorun = FLASHID_SPECIAL;
       autorun[2] = 8;
       *(unsigned short*)&autorun[3] = FLASHSPECIAL_AUTORUN;
-      flashstore_addspecial(autorun);
+      addspecial_with_compact(autorun);
     }
     else
     {
@@ -2669,120 +2668,48 @@ cmd_interrupt:
   }
   
 //
-// SERIAL CONFIG <baud>,<parity:N|P>,<bits>,<stop>,<flow> [ONREAD GOSUB <linenum>] [ONWRITE GOSUB <linenum>]
-// SERIAL READ <var>
-// SERIAL WRITE <var>
+// SERIAL <baud>,<parity:N|P>,<bits>,<stop>,<flow> [ONREAD GOSUB <linenum>] [ONWRITE GOSUB <linenum>]
 //
 cmd_serial:
   {
-    switch (*txtpos++)
+    unsigned long baud = expression(EXPR_COMMA);
+    ignore_blanks();
+    unsigned char parity = *txtpos++;
+    ignore_blanks();
+    if (*txtpos++ != ',')
     {
-      case KW_READ:
+      goto qwhat;
+    }
+    unsigned char bits = expression(EXPR_COMMA);
+    unsigned char stop = expression(EXPR_COMMA);
+    unsigned char flow = *txtpos++;
+    if (error_num)
+    {
+      goto qwhat;
+    }
+    LINENUM onread = 0;
+    if (*txtpos == BLE_ONREAD)
+    {
+      txtpos++;
+      if (*txtpos++ != KW_GOSUB)
       {
-        stack_variable_frame* vframe = NULL;
-        unsigned char* ptr = parse_variable_address(&vframe);
-        if (ptr)
-        {
-          if (vframe->type == VAR_INT)
-          {
-            *(VAR_TYPE*)ptr = OS_serial_read();
-          }
-          else
-          {
-            *ptr = OS_serial_read();
-          }
-        }
-        else if (vframe)
-        {
-          // No address, but we have a vframe - this is a full array
-          unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
-          for (ptr = (unsigned char*)vframe + sizeof(stack_variable_frame); alen; alen--)
-          {
-            *ptr++ = OS_serial_read();
-          }
-        }
-        else
-        {
-          goto qwhat;
-        }
-        break;
-      }
-      case KW_WRITE:
-      {
-        stack_variable_frame* vframe = NULL;
-        unsigned char* ptr = parse_variable_address(&vframe);
-        if (ptr)
-        {
-          if (vframe->type == VAR_DIM_BYTE)
-          {
-            OS_serial_write(*ptr);
-          }
-          else
-          {
-            OS_serial_write(*(VAR_TYPE*)ptr);
-          }
-        }
-        else if (vframe)
-        {
-          // No address, but we have a vframe - this is a full array
-          unsigned char alen;
-          ptr = (unsigned char*)vframe + sizeof(stack_variable_frame);
-          for (alen = vframe->header.frame_size - sizeof(stack_variable_frame); alen; alen--)
-          {
-            OS_serial_write(*ptr++);
-          }
-        }
-        else
-        {
-          goto qwhat;
-        }
-        break;
-      }
-      case KW_CONFIG:
-      {
-        unsigned long baud = expression(EXPR_COMMA);
-        ignore_blanks();
-        unsigned char parity = *txtpos++;
-        ignore_blanks();
-        if (*txtpos++ != ',')
-        {
-          goto qwhat;
-        }
-        unsigned char bits = expression(EXPR_COMMA);
-        unsigned char stop = expression(EXPR_COMMA);
-        unsigned char flow = *txtpos++;
-        if (error_num)
-        {
-          goto qwhat;
-        }
-        LINENUM onread = 0;
-        if (*txtpos == BLE_ONREAD)
-        {
-          txtpos++;
-          if (*txtpos++ != KW_GOSUB)
-          {
-            goto qwhat;
-          }
-          onread = expression(EXPR_NORMAL);
-        }
-        LINENUM onwrite = 0;
-        if (*txtpos == BLE_ONWRITE)
-        {
-          txtpos++;
-          if (*txtpos++ != KW_GOSUB)
-          {
-            goto qwhat;
-          }
-          onwrite = expression(EXPR_NORMAL);
-        }
-        if (OS_serial_open(baud, parity, bits, stop, flow, onread, onwrite))
-        {
-          goto qwhat;
-        }
-        break;
-      }
-      default:
         goto qwhat;
+      }
+      onread = expression(EXPR_NORMAL);
+    }
+    LINENUM onwrite = 0;
+    if (*txtpos == BLE_ONWRITE)
+    {
+      txtpos++;
+      if (*txtpos++ != KW_GOSUB)
+      {
+        goto qwhat;
+      }
+      onwrite = expression(EXPR_NORMAL);
+    }
+    if (OS_serial_open(baud, parity, bits, stop, flow, onread, onwrite))
+    {
+      goto qwhat;
     }
   }
   goto run_next_statement;
@@ -3273,125 +3200,281 @@ cmd_close:
   goto run_next_statement;
 
 //
-// READ <0-7>, <variable>
+// READ #<0-7>, <variable>[, ...]
 //  Read from the currrent place in the numbered file into the variable
+// READ #SERIAL, <variable>[, ...]
 //
 cmd_read:
   {
-    unsigned char id = expression(EXPR_COMMA);
-    if (error_num || id >= FS_NR_FILE_HANDLES || files[id].action != 'R')
+    if (*txtpos++ != '#')
     {
       goto qwhat;
     }
-    unsigned char* special = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(files[id].filename, files[id].record));
-    if (!special)
+    else if (*txtpos == KW_SERIAL)
     {
-      goto qeof;
-    }
-    files[id].record++;
-
-    stack_variable_frame* vframe = NULL;
-    unsigned char* ptr = parse_variable_address(&vframe);
-    if (ptr)
-    {
-      if (vframe->type == VAR_DIM_BYTE && special[FS_DATA_LEN] >= sizeof(unsigned char))
+      txtpos++;
+      for (;;)
       {
-        *ptr = special[FS_DATA_OFFSET];
-      }
-      else if (vframe->type == VAR_INT && special[FS_DATA_LEN] >= VAR_SIZE)
-      {
-        *(VAR_TYPE*)ptr = *(VAR_TYPE*)&special[FS_DATA_OFFSET];
-      }
-      else
-      {
-        goto qmismatch;
-      }
-    }
-    else if (vframe)
-    {
-      // No address, but we have a vframe - this is a full array
-      unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
-      if (special[FS_DATA_LEN] >= alen)
-      {
-        OS_memcpy(((unsigned char*)vframe) + sizeof(stack_variable_frame), special + FS_DATA_OFFSET, alen);
-      }
-      else
-      {
-        goto qmismatch;
-      }
-    }
-  }
-  goto run_next_statement;
-
-//
-// WRITE <0-7>, <variable>
-//  Write from the variable into the currrent place in the numbered file
-//
-cmd_write:
-  {
-    unsigned char id = expression(EXPR_COMMA);
-    if (error_num || id >= FS_NR_FILE_HANDLES || files[id].action != 'W')
-    {
-      goto qwhat;
-    }
-    if (files[id].record == FS_NR_RECORDS)
-    {
-      goto qtoobig;
-    }
-    unsigned special = FS_MAKE_FILE_SPECIAL(files[id].filename, files[id].record);
-    files[id].record++;
-    
-    stack_variable_frame* vframe = NULL;
-    unsigned char* ptr = parse_variable_address(&vframe);
-    if (ptr)
-    {
-      CHECK_SP_OOM(12 + 5); // 5-bytes of item header
-      *(unsigned short*)sp = FLASHID_SPECIAL;
-      sp[FS_DATA_LEN] = 8;
-      *(unsigned short*)&sp[3] = special;
-      
-      if (vframe->type == VAR_DIM_BYTE)
-      {
-        sp[FS_DATA_OFFSET] = *ptr;
-        sp[FS_DATA_LEN] = 8;
-      }
-      else
-      {
-        *(VAR_TYPE*)&sp[FS_DATA_OFFSET] = *(VAR_TYPE*)ptr;
-        sp[FS_DATA_LEN] = 12;
-      }
-      if (!flashstore_addspecial(sp))
-      {
-        // Attempt to compact
-        flashstore_compact(sp[FS_DATA_LEN], (unsigned char*)program_start, sp);
-        if (!flashstore_addspecial(sp))
+        ignore_blanks();
+        if (*txtpos == NL)
         {
-          goto qoom;
+          break;
+        }
+        else if (*txtpos++ != ',')
+        {
+          goto qwhat;
+        }
+        stack_variable_frame* vframe = NULL;
+        unsigned char* ptr = parse_variable_address(&vframe);
+        if (ptr)
+        {
+          if (vframe->type == VAR_INT)
+          {
+            *(VAR_TYPE*)ptr = OS_serial_read();
+          }
+          else
+          {
+            *ptr = OS_serial_read();
+          }
+        }
+        else if (vframe)
+        {
+          // No address, but we have a vframe - this is a full array
+          unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
+          for (ptr = (unsigned char*)vframe + sizeof(stack_variable_frame); alen; alen--)
+          {
+            *ptr++ = OS_serial_read();
+          }
+        }
+        else
+        {
+          goto qwhat;
         }
       }
-      sp += 12 + 5;
-    }
-    else if (vframe)
-    {
-      // No address, but we have a vframe - this is a full array
-      unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
-      CHECK_SP_OOM(alen + 5); // 5-bytes of item header
-      *(unsigned short*)sp = FLASHID_SPECIAL;
-      sp[FS_DATA_LEN] = 8;
-      *(unsigned short*)&sp[3] = special;
-      OS_memcpy(&sp[FS_DATA_OFFSET], ((unsigned char*)vframe) + sizeof(stack_variable_frame), alen);
-      if (!flashstore_addspecial(sp))
-      {
-        goto qoom;
-      }
-      sp += alen + 5;
     }
     else
     {
-      goto qwhat;
+      unsigned char id = expression(EXPR_COMMA);
+      if (error_num || id >= FS_NR_FILE_HANDLES || files[id].action != 'R')
+      {
+        goto qwhat;
+      }
+      unsigned char* special = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(files[id].filename, files[id].record));
+      if (!special)
+      {
+        goto qeof;
+      }
+      files[id].record++;
+
+      unsigned char len = special[FS_DATA_LEN];
+      unsigned char* sptr = &special[FS_DATA_OFFSET];
+      txtpos--;
+      for (;;)
+      {
+        ignore_blanks();
+        if (*txtpos == NL)
+        {
+          break;
+        }
+        else if (*txtpos++ != ',')
+        {
+          goto qwhat;
+        }
+        stack_variable_frame* vframe = NULL;
+        unsigned char* ptr = parse_variable_address(&vframe);
+        if (ptr)
+        {
+          if (len == 0)
+          {
+            goto qeof;
+          }
+          if (vframe->type == VAR_DIM_BYTE)
+          {
+            *ptr = *sptr++;
+          }
+          else if (vframe->type == VAR_INT)
+          {
+            *(VAR_TYPE*)ptr = *sptr++;
+          }
+          len--;
+        }
+        else if (vframe)
+        {
+          // No address, but we have a vframe - this is a full array
+          unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
+          if (alen <= len)
+          {
+            OS_memcpy(((unsigned char*)vframe) + sizeof(stack_variable_frame), sptr, alen);
+            sptr += alen;
+            len -= alen;
+          }
+          else
+          {
+            goto qeof;
+          }
+        }
+      }
     }
   }
   goto run_next_statement;
+
+//
+// WRITE #<0-7>, <variable>|<byte>[, ...]
+//  Write from the variable into the currrent place in the numbered file
+// WRITE #SERIAL, <variable>|<byte>[, ...]
+//  Write from the variable to the serial port
+//
+cmd_write:
+  {
+    if (*txtpos++ != '#')
+    {
+      goto qwhat;
+    }
+    else if (*txtpos == KW_SERIAL)
+    {
+      txtpos++;
+      for (;;)
+      {
+        ignore_blanks();
+        if (*txtpos == NL)
+        {
+          break;
+        }
+        else if (*txtpos++ != ',')
+        {
+          goto qwhat;
+        }
+        stack_variable_frame* vframe = NULL;
+        unsigned char* ptr = parse_variable_address(&vframe);
+        if (ptr)
+        {
+          if (vframe->type == VAR_DIM_BYTE)
+          {
+            OS_serial_write(*ptr);
+          }
+          else
+          {
+            OS_serial_write(*(VAR_TYPE*)ptr);
+          }
+        }
+        else if (vframe)
+        {
+          // No address, but we have a vframe - this is a full array
+          unsigned char alen;
+          ptr = (unsigned char*)vframe + sizeof(stack_variable_frame);
+          for (alen = vframe->header.frame_size - sizeof(stack_variable_frame); alen; alen--)
+          {
+            OS_serial_write(*ptr++);
+          }
+        }
+        else if (*txtpos == NL)
+        {
+          break;
+        }
+        else
+        {
+          VAR_TYPE val = expression(EXPR_COMMA);
+          if (error_num)
+          {
+            goto qwhat;
+          }
+          OS_serial_write(val);
+        }
+      }
+    }
+    else
+    {
+      if (lineptr >= program_end)
+      {
+        goto qdirect;
+      }
+      unsigned char id = expression(EXPR_COMMA);
+      if (error_num || id >= FS_NR_FILE_HANDLES || files[id].action != 'W')
+      {
+        goto qwhat;
+      }
+      if (files[id].record == FS_NR_RECORDS)
+      {
+        goto qtoobig;
+      }
+      unsigned special = FS_MAKE_FILE_SPECIAL(files[id].filename, files[id].record);
+      files[id].record++;
+      
+      unsigned char* item = (unsigned char*)program_end;
+      unsigned char* iptr = item + FS_DATA_OFFSET;
+      unsigned char ilen = FS_DATA_OFFSET;
+      CHECK_HEAP_OOM(ilen);
+      *(unsigned short*)item = FLASHID_SPECIAL;
+      *(unsigned short*)&item[FS_FILE_ITEM_ID] = special;
+
+      txtpos--;
+      for (;;)
+      {
+        ignore_blanks();
+        if (*txtpos == NL)
+        {
+          break;
+        }
+        else if (*txtpos++ != ',')
+        {
+          program_end = (unsigned char**)item;
+          goto qwhat;
+        }
+        stack_variable_frame* vframe = NULL;
+        unsigned char* ptr = parse_variable_address(&vframe);
+        if (ptr)
+        {
+          CHECK_HEAP_OOM(1);
+          if (vframe->type == VAR_DIM_BYTE)
+          {
+            *iptr = *ptr;
+          }
+          else
+          {
+            *iptr = *(VAR_TYPE*)ptr;
+          }
+        }
+        else if (vframe)
+        {
+          // No address, but we have a vframe - this is a full array
+          unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
+          CHECK_HEAP_OOM(alen);
+          OS_memcpy(iptr, ((unsigned char*)vframe) + sizeof(stack_variable_frame), alen);
+        }
+        else
+        {
+          VAR_TYPE val = expression(EXPR_COMMA);
+          if (error_num)
+          {
+            program_end = (unsigned char**)item;
+            goto qwhat;
+          }
+          CHECK_HEAP_OOM(1);
+          *iptr = val;
+          if (*txtpos != NL)
+          {
+            txtpos--;
+          }
+        }
+        if (((iptr - item + 3) & -4) > 255)
+        {
+          program_end = (unsigned char**)item;
+          goto qtoobig;
+        }
+        iptr = (unsigned char*)program_end;
+      }
+      item[FS_DATA_LEN] = (iptr - item + 3) & -4;
+      if (!addspecial_with_compact(item))
+      {
+        goto qhoom;
+      }
+      program_end = (unsigned char**)item;
+      goto run_next_statement;
+qhoom:
+      program_end = (unsigned char**)item;
+      goto qoom;
+    }
+  }
 
 //
 // SPI MASTER <port 0|1|2|3> <mode 0|1|2|3> LSB|MSB <speed>
@@ -4497,6 +4580,16 @@ wire_error:
     error_num = ERROR_GENERAL;
   }
   return;
+}
+
+unsigned char addspecial_with_compact(unsigned char* item)
+{
+  if (!flashstore_addspecial(item))
+  {
+    flashstore_compact(item[sizeof(unsigned short)], (unsigned char*)program_end, sp);
+    return flashstore_addspecial(item);
+  }
+  return 1;
 }
 
 //
