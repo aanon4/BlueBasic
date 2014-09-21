@@ -65,7 +65,6 @@ enum
   ERROR_BADPIN,
   ERROR_DIRECT,
   ERROR_EOF,
-  ERROR_EOR,
 };
 
 static const char* const error_msgs[] =
@@ -79,7 +78,6 @@ static const char* const error_msgs[] =
   "Bad pin",
   "Not in direct",
   "End of file",
-  "End of record",
 };
 
 #ifdef BUILD_TIMESTAMP
@@ -584,12 +582,14 @@ static const gattServiceCBs_t ble_service_callbacks =
 //
 // File system handles.
 //
-static struct
+typedef struct
 {
   unsigned char filename;
   unsigned char action;
   unsigned char record;
-} files[FS_NR_FILE_HANDLES];
+  unsigned char poffset;
+} os_file_t;
+static os_file_t files[FS_NR_FILE_HANDLES];
 
 static unsigned char addspecial_with_compact(unsigned char* item);
 
@@ -1897,10 +1897,6 @@ qeof:
   error_num = ERROR_EOF;
   goto print_error_or_ok;
 
-qeor:
-  error_num = ERROR_EOR;
-  goto print_error_or_ok;
-
 qwhat:
   if (!error_num)
   {
@@ -3154,9 +3150,12 @@ cmd_open:
     {
       goto qwhat;
     }
+    os_file_t* file = &files[id];
     if (txtpos[1] == '"' && txtpos[3] == '"' && txtpos[2] >= 'A' && txtpos[2] <= 'Z')
     {
-      files[id].filename = txtpos[2];
+      file->filename = txtpos[2];
+      file->record = 0;
+      file->poffset = FS_DATA_OFFSET;
     }
     else
     {
@@ -3165,22 +3164,19 @@ cmd_open:
     switch (*txtpos)
     {
       case KW_READ: // Read
-        files[id].record = 0;
-        files[id].action = 'R';
+        file->action = 'R';
         break;
       case FS_TRUNCATE: // Truncate
       {
-        files[id].record = 0;
-        files[id].action = 'W';
-        for (unsigned short special = FS_MAKE_FILE_SPECIAL(files[id].filename, 0); flashstore_deletespecial(special); special++)
+        file->action = 'W';
+        for (unsigned short special = FS_MAKE_FILE_SPECIAL(file->filename, 0); flashstore_deletespecial(special); special++)
           ;
         break;
       }
       case FS_APPEND: // Append
       {
-        files[id].record = 0;
-        files[id].action = 'W';
-        for (unsigned short special = FS_MAKE_FILE_SPECIAL(files[id].filename, 0); flashstore_findspecial(special); special++, files[id].record++)
+        file->action = 'W';
+        for (unsigned short special = FS_MAKE_FILE_SPECIAL(file->filename, 0); flashstore_findspecial(special); special++, file->record++)
           ;
         break;
       }
@@ -3275,15 +3271,15 @@ cmd_read:
       {
         goto qwhat;
       }
-      unsigned char* special = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(files[id].filename, files[id].record));
+      os_file_t* file = &files[id];
+
+      unsigned char* special = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(file->filename, file->record));
       if (!special)
       {
         goto qeof;
       }
-      files[id].record++;
+      unsigned char len = special[FS_DATA_LEN];
 
-      unsigned char len = special[FS_DATA_LEN] - FS_DATA_OFFSET;
-      unsigned char* sptr = &special[FS_DATA_OFFSET];
       txtpos--;
       for (;;)
       {
@@ -3300,34 +3296,53 @@ cmd_read:
         unsigned char* ptr = parse_variable_address(&vframe);
         if (ptr)
         {
-          if (len == 0)
+          if (file->poffset == len)
           {
-            goto qeor;
+            special = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(file->filename, ++file->record));
+            if (!special)
+            {
+              goto qeof;
+            }
+            file->poffset = FS_DATA_OFFSET;
+            len = special[FS_DATA_LEN];
           }
+          unsigned char v = special[file->poffset++];
           if (vframe->type == VAR_DIM_BYTE)
           {
-            *ptr = *sptr++;
+            *ptr = v;
           }
           else if (vframe->type == VAR_INT)
           {
-            *(VAR_TYPE*)ptr = *sptr++;
+            *(VAR_TYPE*)ptr = v;
           }
-          len--;
         }
         else if (vframe)
         {
           // No address, but we have a vframe - this is a full array
           unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
-          if (alen <= len)
+          ptr = (unsigned char*)vframe + sizeof(stack_variable_frame);
+          while (alen)
           {
-            OS_memcpy(((unsigned char*)vframe) + sizeof(stack_variable_frame), sptr, alen);
-            sptr += alen;
-            len -= alen;
+            if (file->poffset == len)
+            {
+              unsigned char* special = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(file->filename, ++file->record));
+              if (!special)
+              {
+                goto qeof;
+              }
+              file->poffset = FS_DATA_OFFSET;
+              len = special[FS_DATA_LEN];
+            }
+            unsigned char blen = (alen < len - file->poffset ? alen : len - file->poffset);
+            OS_memcpy(ptr, special + file->poffset, blen);
+            ptr += blen;
+            alen -= blen;
+            file->poffset += blen;
           }
-          else
-          {
-            goto qeor;
-          }
+        }
+        else
+        {
+          goto qwhat;
         }
       }
     }

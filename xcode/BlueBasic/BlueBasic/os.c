@@ -280,7 +280,7 @@ unsigned char OS_serial_close(unsigned char port)
   return 0;
 }
 
-unsigned char OS_serial_read(unsigned char port)
+short OS_serial_read(unsigned char port)
 {
   return 255;
 }

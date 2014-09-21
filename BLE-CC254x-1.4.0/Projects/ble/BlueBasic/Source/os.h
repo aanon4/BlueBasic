@@ -347,6 +347,6 @@ extern unsigned char* flashstore_findspecial(unsigned short specialid);
 
 extern unsigned char OS_serial_open(unsigned char port, unsigned long baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite);
 extern unsigned char OS_serial_close(unsigned char port);
-extern unsigned char OS_serial_read(unsigned char port);
+extern short OS_serial_read(unsigned char port);
 extern unsigned char OS_serial_write(unsigned char port, unsigned char ch);
 extern unsigned char OS_serial_available(unsigned char port, unsigned char ch);

@@ -376,7 +376,7 @@ unsigned char OS_serial_close(unsigned char port)
   return 1;
 }
 
-unsigned char OS_serial_read(unsigned char port)
+short OS_serial_read(unsigned char port)
 {
   unsigned char ch;
   if (HalUARTRead(HAL_UART_PORT_0, &ch, 1) == 1)
@@ -385,7 +385,7 @@ unsigned char OS_serial_read(unsigned char port)
   }
   else
   {
-    return 255;
+    return -1;
   }
 }
 
