@@ -3193,15 +3193,25 @@ cmd_open:
 //
 // CLOSE <0-7>
 //  Close the numbered file.
+// CLOSE SERIAL
+//  Close the serial port
 //
 cmd_close:
   {
-    unsigned char id = expression(EXPR_COMMA);
-    if (error_num || id >= FS_NR_FILE_HANDLES)
+    if (*txtpos == KW_SERIAL)
     {
-      goto qwhat;
+      txtpos++;
+      OS_serial_close(0);
     }
-    files[id].action = 0;
+    else
+    {
+      unsigned char id = expression(EXPR_COMMA);
+      if (error_num || id >= FS_NR_FILE_HANDLES)
+      {
+        goto qwhat;
+      }
+      files[id].action = 0;
+    }
   }
   goto run_next_statement;
 

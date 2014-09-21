@@ -10,7 +10,6 @@
 
 #include "os.h"
 #include "OSAL.h"
-#include "osal_snv.h"
 #include "hal_uart.h"
 #include "OSAL_PwrMgr.h"
 #ifdef FEATURE_OAD_HEADER
@@ -52,11 +51,7 @@ struct
 } timers[OS_MAX_TIMER];
 
 // Serial
-struct
-{
-  unsigned short onread;
-  unsigned short onwrite;
-} serial[OS_MAX_SERIAL];
+os_serial_t serial[OS_MAX_SERIAL];
 
 enum {
   MODE_STARTUP = 0,
@@ -316,16 +311,9 @@ static void _uartCallback(uint8 port, uint8 event)
     return;
   }
 #endif
-  if (port == HAL_UART_PORT_0)
+  if (port == HAL_UART_PORT_0 && (serial[0].onread || serial[0].onwrite))
   {
-    while (serial[0].onread && Hal_UART_RxBufLen(HAL_UART_PORT_0) > 0)
-    {
-      interpreter_run(serial[0].onread, 1);
-    }
-    if (serial[0].onwrite && Hal_UART_TxBufLen(HAL_UART_PORT_0) > 0)
-    {
-      interpreter_run(serial[0].onwrite, 1);
-    }
+    osal_set_event(blueBasic_TaskID, BLUEBASIC_EVENT_SERIAL);
   }
 }
 
@@ -377,6 +365,14 @@ unsigned char OS_serial_open(unsigned char port, unsigned long baud, unsigned ch
     return 0;
   }
  
+  return 1;
+}
+
+unsigned char OS_serial_close(unsigned char port)
+{
+  serial[0].onread = 0;
+  serial[0].onwrite = 0;
+  // HalUARTClose(0); - In the hal_uart.h include file, but not actually in the code
   return 1;
 }
 

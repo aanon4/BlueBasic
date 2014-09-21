@@ -47,6 +47,7 @@
 #include "bcomdef.h"
 #include "OSAL.h"
 #include "OSAL_PwrMgr.h"
+#include "hal_uart.h"
 
 #include "OnBoard.h"
 
@@ -362,6 +363,27 @@ uint16 BlueBasic_ProcessEvent( uint8 task_id, uint16 events )
       }
     }
     return (events ^ (events & BLUEBASIC_EVENT_TIMERS));
+  }
+  
+  if ( events & BLUEBASIC_EVENT_SERIAL )
+  {
+    if (serial[0].onread && Hal_UART_RxBufLen(HAL_UART_PORT_0) > 0)
+    {
+      interpreter_run(serial[0].onread, 1);
+    }
+    if (serial[0].onwrite && Hal_UART_TxBufLen(HAL_UART_PORT_0) > 0)
+    {
+      interpreter_run(serial[0].onwrite, 1);
+    }
+
+    if (Hal_UART_RxBufLen(HAL_UART_PORT_0) == 0 && Hal_UART_TxBufLen(HAL_UART_PORT_0) == 0)
+    {
+      return (events ^ BLUEBASIC_EVENT_SERIAL);
+    }
+    else
+    {
+      return events;
+    }
   }
 
   // Discard unknown events

@@ -145,12 +145,6 @@ typedef struct gattCharCfg
 } gattCharCfg_t;
 
 
-extern unsigned char OS_serial_open(unsigned char port, unsigned short baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite);
-extern unsigned char OS_serial_read(unsigned char port);
-extern unsigned char OS_serial_write(unsigned char port, unsigned char ch);
-extern unsigned char OS_serial_available(unsigned char port, unsigned char ch);
-
-
 extern unsigned char GATTServApp_RegisterService(gattAttribute_t* attributes, unsigned short count, const void* callbacks);
 extern unsigned char GATTServApp_DeregisterService(unsigned short handle, void* attr);
 extern unsigned char GATTServApp_InitCharCfg(unsigned short handle, gattCharCfg_t* charcfgtbl);
@@ -194,6 +188,7 @@ extern unsigned char blueBasic_TaskID;
 #define BLUEBASIC_START_DEVICE_EVT 0x0001
 #define BLUEBASIC_CONNECTION_EVENT 0x0002
 #define BLUEBASIC_INPUT_AVAILABLE 0x0004
+#define BLUEBASIC_EVENT_SERIAL    0x0008
 #define OS_MAX_TIMER              4
 #define DELAY_TIMER               3
 #define BLUEBASIC_EVENT_TIMER     0x0010
@@ -207,6 +202,14 @@ extern unsigned char blueBasic_TaskID;
 #define OS_MAX_FILE               16
 
 #define OS_MAX_SERIAL             1
+
+// Serial
+typedef struct
+{
+  unsigned short onread;
+  unsigned short onwrite;
+} os_serial_t;
+extern os_serial_t serial[OS_MAX_SERIAL];
 
 typedef struct
 {
@@ -253,10 +256,6 @@ extern long OS_millis(void);
 extern void OS_delaymicroseconds(short micros);
 extern void OS_reboot(char flash);
 extern void OS_flashstore_init(void);
-extern unsigned char OS_serial_open(unsigned char port, unsigned long baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite);
-extern unsigned char OS_serial_read(unsigned char port);
-extern unsigned char OS_serial_write(unsigned char port, unsigned char ch);
-extern unsigned char OS_serial_available(unsigned char port, unsigned char ch);
 
 extern void interpreter_devicefound(unsigned char addtype, unsigned char* address, signed char rssi, unsigned char eventtype, unsigned char len, unsigned char* data);
 
@@ -345,3 +344,9 @@ extern void flashstore_compact(unsigned char asklen, unsigned char* tempmemstart
 extern unsigned char flashstore_addspecial(unsigned char* item);
 extern unsigned char flashstore_deletespecial(unsigned short specialid);
 extern unsigned char* flashstore_findspecial(unsigned short specialid);
+
+extern unsigned char OS_serial_open(unsigned char port, unsigned long baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite);
+extern unsigned char OS_serial_close(unsigned char port);
+extern unsigned char OS_serial_read(unsigned char port);
+extern unsigned char OS_serial_write(unsigned char port, unsigned char ch);
+extern unsigned char OS_serial_available(unsigned char port, unsigned char ch);
