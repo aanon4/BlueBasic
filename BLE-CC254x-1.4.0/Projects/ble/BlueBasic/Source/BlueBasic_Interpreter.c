@@ -2462,10 +2462,10 @@ cmd_autorun:
     }
     if (v)
     {
-      unsigned char autorun[8];
+      unsigned char autorun[7];
       *(unsigned short*)autorun = FLASHID_SPECIAL;
-      autorun[2] = 8;
-      *(unsigned short*)&autorun[3] = FLASHSPECIAL_AUTORUN;
+      autorun[2] = 7;
+      *(unsigned long*)&autorun[3] = FLASHSPECIAL_AUTORUN;
       addspecial_with_compact(autorun);
     }
     else
