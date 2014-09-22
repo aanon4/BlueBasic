@@ -3169,14 +3169,14 @@ cmd_open:
       case FS_TRUNCATE: // Truncate
       {
         file->action = 'W';
-        for (unsigned short special = FS_MAKE_FILE_SPECIAL(file->filename, 0); flashstore_deletespecial(special); special++)
+        for (unsigned long special = FS_MAKE_FILE_SPECIAL(file->filename, 0); flashstore_deletespecial(special); special++)
           ;
         break;
       }
       case FS_APPEND: // Append
       {
         file->action = 'W';
-        for (unsigned short special = FS_MAKE_FILE_SPECIAL(file->filename, 0); flashstore_findspecial(special); special++, file->record++)
+        for (unsigned long special = FS_MAKE_FILE_SPECIAL(file->filename, 0); flashstore_findspecial(special); special++, file->record++)
           ;
         break;
       }

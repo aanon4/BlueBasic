@@ -27,8 +27,8 @@
 
 /* Begin PBXFileReference section */
 		220CDF5019D09DB900432A1C /* fs01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = fs01.test; sourceTree = "<group>"; };
-		220CDF5119D09DB900432A1C /* TemplateIcon2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = TemplateIcon2x.png; sourceTree = "<group>"; };
 		220CDF5219D09E8700432A1C /* fs02.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = fs02.test; sourceTree = "<group>"; };
+		220CDF5319D0C84D00432A1C /* fs03.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = fs03.test; sourceTree = "<group>"; };
 		222635EF19BE5AD60031438D /* BlueBasic_Flashstore.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = BlueBasic_Flashstore.c; path = "../../../BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Source/BlueBasic_Flashstore.c"; sourceTree = "<group>"; };
 		2233458D19920FC200B2141A /* keyword_tables.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = keyword_tables.h; path = "../../../BLE-CC254x-1.4.0/Projects/ble/BlueBasic/Source/keyword_tables.h"; sourceTree = "<group>"; };
 		2233458E199440C800B2141A /* blescan10.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = blescan10.test; sourceTree = "<group>"; };
@@ -142,8 +142,8 @@
 				22869BB719BAC9560052B9AA /* example01.test */,
 				22869BB819BAC9560052B9AA /* example02.test */,
 				220CDF5019D09DB900432A1C /* fs01.test */,
-				220CDF5119D09DB900432A1C /* TemplateIcon2x.png */,
 				220CDF5219D09E8700432A1C /* fs02.test */,
+				220CDF5319D0C84D00432A1C /* fs03.test */,
 			);
 			path = Tests;
 			sourceTree = "<group>";

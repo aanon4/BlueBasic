@@ -33,5 +33,6 @@ spi01
 i2c01
 fs01
 fs02
+fs03
 example01
 example02
