@@ -321,18 +321,17 @@ enum
 
 enum
 {
-  FLASHSPECIAL_AUTORUN = 0x0001,
-  FLASHSPECIAL_FILE0   = 0x1000,
-  FLASHSPECIAL_FILE25  = 0x2900,
+  FLASHSPECIAL_AUTORUN = 0x00000001,
+  FLASHSPECIAL_FILE0   = 0x00100000,
+  FLASHSPECIAL_FILE25  = 0x00290000,
 };
 
 #define FS_NR_FILE_HANDLES 4
-#define FS_MAKE_FILE_SPECIAL(NAME,OFF)  (FLASHSPECIAL_FILE0|(((NAME)-'A')<<8)|(OFF))
-#define FS_NR_RECORDS     255
-#define FS_FILE_SPECIAL   0
-#define FS_DATA_LEN       2
-#define FS_FILE_ITEM_ID   3
-#define FS_DATA_OFFSET    5
+#define FS_MAKE_FILE_SPECIAL(NAME,OFF)  (FLASHSPECIAL_FILE0+(((unsigned long)((NAME)-'A'))<<16)|(OFF))
+#define FLASHSPECIAL_NR_FILE_RECORDS 0xFFFF
+#define FLASHSPECIAL_DATA_LEN       2
+#define FLASHSPECIAL_ITEM_ID        3
+#define FLASHSPECIAL_DATA_OFFSET    (FLASHSPECIAL_ITEM_ID + sizeof(unsigned long))
 
 extern unsigned char** flashstore_init(unsigned char** startmem);
 extern unsigned char** flashstore_addline(unsigned char* line);
@@ -342,8 +341,8 @@ extern unsigned short** flashstore_findclosest(unsigned short id);
 extern unsigned int flashstore_freemem(void);
 extern void flashstore_compact(unsigned char asklen, unsigned char* tempmemstart, unsigned char* tempmemend);
 extern unsigned char flashstore_addspecial(unsigned char* item);
-extern unsigned char flashstore_deletespecial(unsigned short specialid);
-extern unsigned char* flashstore_findspecial(unsigned short specialid);
+extern unsigned char flashstore_deletespecial(unsigned long specialid);
+extern unsigned char* flashstore_findspecial(unsigned long specialid);
 
 extern unsigned char OS_serial_open(unsigned char port, unsigned long baud, unsigned char parity, unsigned char bits, unsigned char stop, unsigned char flow, unsigned short onread, unsigned short onwrite);
 extern unsigned char OS_serial_close(unsigned char port);

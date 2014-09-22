@@ -586,7 +586,7 @@ typedef struct
 {
   unsigned char filename;
   unsigned char action;
-  unsigned char record;
+  unsigned short record;
   unsigned char poffset;
 } os_file_t;
 static os_file_t files[FS_NR_FILE_HANDLES];
@@ -3140,7 +3140,7 @@ cmd_btset:
   goto run_next_statement;
 
 //
-// OPEN <0-7>, READ|TRUNCATE|APPEND "<A-Z>"
+// OPEN <0-3>, READ|TRUNCATE|APPEND "<A-Z>"
 //  Open a numbered file for read, write or append access.
 //
 cmd_open:
@@ -3155,7 +3155,7 @@ cmd_open:
     {
       file->filename = txtpos[2];
       file->record = 0;
-      file->poffset = FS_DATA_OFFSET;
+      file->poffset = FLASHSPECIAL_DATA_OFFSET;
     }
     else
     {
@@ -3187,7 +3187,7 @@ cmd_open:
   goto run_next_statement;
 
 //
-// CLOSE <0-7>
+// CLOSE <0-3>
 //  Close the numbered file.
 // CLOSE SERIAL
 //  Close the serial port
@@ -3212,7 +3212,7 @@ cmd_close:
   goto run_next_statement;
 
 //
-// READ #<0-7>, <variable>[, ...]
+// READ #<0-3>, <variable>[, ...]
 //  Read from the currrent place in the numbered file into the variable
 // READ #SERIAL, <variable>[, ...]
 //
@@ -3278,7 +3278,7 @@ cmd_read:
       {
         goto qeof;
       }
-      unsigned char len = special[FS_DATA_LEN];
+      unsigned char len = special[FLASHSPECIAL_DATA_LEN];
 
       txtpos--;
       for (;;)
@@ -3303,8 +3303,8 @@ cmd_read:
             {
               goto qeof;
             }
-            file->poffset = FS_DATA_OFFSET;
-            len = special[FS_DATA_LEN];
+            file->poffset = FLASHSPECIAL_DATA_OFFSET;
+            len = special[FLASHSPECIAL_DATA_LEN];
           }
           unsigned char v = special[file->poffset++];
           if (vframe->type == VAR_DIM_BYTE)
@@ -3330,8 +3330,8 @@ cmd_read:
               {
                 goto qeof;
               }
-              file->poffset = FS_DATA_OFFSET;
-              len = special[FS_DATA_LEN];
+              file->poffset = FLASHSPECIAL_DATA_OFFSET;
+              len = special[FLASHSPECIAL_DATA_LEN];
             }
             unsigned char blen = (alen < len - file->poffset ? alen : len - file->poffset);
             OS_memcpy(ptr, special + file->poffset, blen);
@@ -3350,7 +3350,7 @@ cmd_read:
   goto run_next_statement;
 
 //
-// WRITE #<0-7>, <variable>|<byte>[, ...]
+// WRITE #<0-3>, <variable>|<byte>[, ...]
 //  Write from the variable into the currrent place in the numbered file
 // WRITE #SERIAL, <variable>|<byte>[, ...]
 //  Write from the variable to the serial port
@@ -3424,19 +3424,19 @@ cmd_write:
       {
         goto qwhat;
       }
-      if (files[id].record == FS_NR_RECORDS)
+      if (files[id].record == FLASHSPECIAL_NR_FILE_RECORDS)
       {
         goto qtoobig;
       }
-      unsigned special = FS_MAKE_FILE_SPECIAL(files[id].filename, files[id].record);
+      unsigned long special = FS_MAKE_FILE_SPECIAL(files[id].filename, files[id].record);
       files[id].record++;
       
       unsigned char* item = (unsigned char*)program_end;
-      unsigned char* iptr = item + FS_DATA_OFFSET;
-      unsigned char ilen = FS_DATA_OFFSET;
+      unsigned char* iptr = item + FLASHSPECIAL_DATA_OFFSET;
+      unsigned char ilen = FLASHSPECIAL_DATA_OFFSET;
       CHECK_HEAP_OOM(ilen);
       *(unsigned short*)item = FLASHID_SPECIAL;
-      *(unsigned short*)&item[FS_FILE_ITEM_ID] = special;
+      *(unsigned long*)&item[FLASHSPECIAL_ITEM_ID] = special;
 
       txtpos--;
       for (;;)
@@ -3494,7 +3494,7 @@ cmd_write:
         }
         iptr = (unsigned char*)program_end;
       }
-      item[FS_DATA_LEN] = iptr - item;
+      item[FLASHSPECIAL_DATA_LEN] = iptr - item;
       if (!addspecial_with_compact(item))
       {
         goto qhoom;

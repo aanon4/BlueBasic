@@ -289,7 +289,7 @@ unsigned char flashstore_addspecial(unsigned char* item)
   }
 }
 
-unsigned char flashstore_deletespecial(unsigned short specialid)
+unsigned char flashstore_deletespecial(unsigned long specialid)
 {
   unsigned char* ptr = flashstore_findspecial(specialid);
   if (ptr)
@@ -300,7 +300,7 @@ unsigned char flashstore_deletespecial(unsigned short specialid)
   return 0;
 }
 
-unsigned char* flashstore_findspecial(unsigned short specialid)
+unsigned char* flashstore_findspecial(unsigned long specialid)
 {
   const unsigned char* page;
   for (page = flashstore; page < &flashstore[FLASHSTORE_LEN]; page += FLASHSTORE_PAGESIZE)
@@ -313,7 +313,7 @@ unsigned char* flashstore_findspecial(unsigned short specialid)
       {
         break;
       }
-      else if (id == FLASHID_SPECIAL && *(unsigned short*)(ptr + sizeof(unsigned short) + sizeof(unsigned char)) == specialid)
+      else if (id == FLASHID_SPECIAL && *(unsigned long*)(ptr + FLASHSPECIAL_ITEM_ID) == specialid)
       {
         return (unsigned char*)ptr;
       }
