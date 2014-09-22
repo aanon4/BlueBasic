@@ -26,7 +26,7 @@ $line"
   done
   expected=${expected:1} # remove first newline
   rm -f /tmp/flashstore
-  result=$(echo "${input:1}" | $BLUEBASIC | sed '1,3d') # remove startup header
+  result=$(echo "${input:1}" | $BLUEBASIC | sed '1,4d') # remove startup header
   if [ "$result" = "$expected" ]
   then
     echo "** $test: SUCCESS"
