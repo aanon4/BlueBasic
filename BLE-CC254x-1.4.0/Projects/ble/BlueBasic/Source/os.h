@@ -181,6 +181,7 @@ extern unsigned char GAPObserverRole_CancelDiscovery(void);
 #endif
 #define ENABLE_DEBUG_INTERFACE  1
 #define ENABLE_BLE_CONSOLE  1
+#define ENABLE_FAKE_OAD_PROFILE 1
 
 extern unsigned char blueBasic_TaskID;
 

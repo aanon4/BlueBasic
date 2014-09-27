@@ -117,7 +117,7 @@ extern void ble_connection_status(uint16 connHandle, uint8 changeType, int8 rssi
 
 #define CONSOLE_PROFILE_SERV_UUID 0x3A, 0xA7, 0xBD, 0x64, 0x0a, 0xF7, 0xA3, 0xB5, 0x8D, 0x44, 0x16, 0x16, 0x91, 0x9E, 0xFB, 0x25
 static CONST uint8 consoleProfileServUUID[] = { CONSOLE_PROFILE_SERV_UUID };
-static CONST gattAttrType_t consoleProfileService = { 16, consoleProfileServUUID };
+static CONST gattAttrType_t consoleProfileService = { ATT_UUID_SIZE, consoleProfileServUUID };
 static CONST uint8 inputUUID[] = { 0xB2, 0x07, 0xCF, 0x1D, 0x47, 0x2F, 0x49, 0x37, 0xB5, 0x9F, 0x6B, 0x67, 0xE2, 0xC9, 0xFB, 0xC3 };
 static CONST uint8 inputProps = GATT_PROP_READ|GATT_PROP_NOTIFY;
 static CONST uint8 outputUUID[] = { 0x6D, 0x7E, 0xE5, 0x7D, 0xFB, 0x7A, 0x4B, 0xF7, 0xB2, 0x1C, 0x92, 0xFE, 0x3C, 0x9B, 0xAF, 0xD6 };
@@ -135,12 +135,12 @@ static struct
 
 static gattAttribute_t consoleProfile[] =
 {
-  { { ATT_BT_UUID_SIZE, primaryServiceUUID }, GATT_PERMIT_READ, 0, (uint8*)&consoleProfileService },
-  { { ATT_BT_UUID_SIZE, characterUUID }, GATT_PERMIT_READ, 0, (uint8*)&inputProps },
-  { { 16, inputUUID }, GATT_PERMIT_READ|GATT_PERMIT_WRITE, 0, io.write },
-  { { ATT_BT_UUID_SIZE, clientCharCfgUUID }, GATT_PERMIT_READ|GATT_PERMIT_WRITE, 0, (uint8*)consoleProfileCharCfg },
-  { { ATT_BT_UUID_SIZE, characterUUID }, GATT_PERMIT_READ, 0, (uint8*)&outputProps },
-  { { 16, outputUUID }, GATT_PERMIT_READ|GATT_PERMIT_WRITE, 0, NULL },
+  { { ATT_BT_UUID_SIZE, primaryServiceUUID },   GATT_PERMIT_READ,                       0, (uint8*)&consoleProfileService },
+  { { ATT_BT_UUID_SIZE, characterUUID },        GATT_PERMIT_READ,                       0, (uint8*)&inputProps },
+  { { ATT_UUID_SIZE, inputUUID },               GATT_PERMIT_READ|GATT_PERMIT_WRITE,     0, io.write },
+  { { ATT_BT_UUID_SIZE, clientCharCfgUUID },    GATT_PERMIT_READ|GATT_PERMIT_WRITE,     0, (uint8*)consoleProfileCharCfg },
+  { { ATT_BT_UUID_SIZE, characterUUID },        GATT_PERMIT_READ,                       0, (uint8*)&outputProps },
+  { { ATT_UUID_SIZE, outputUUID },              GATT_PERMIT_READ|GATT_PERMIT_WRITE,     0, NULL },
 };
 
 static bStatus_t consoleProfile_ReadAttrCB(uint16 connHandle, gattAttribute_t *pAttr, uint8 *pValue, uint8 *pLen, uint16 offset, uint8 maxLen);
@@ -158,6 +158,31 @@ static CONST uint8 consoleAdvert[] =
   0x02, GAP_ADTYPE_FLAGS, GAP_ADTYPE_FLAGS_LIMITED|GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED,
   0x11, GAP_ADTYPE_128BIT_MORE, CONSOLE_PROFILE_SERV_UUID,
   0x09, GAP_ADTYPE_LOCAL_NAME_COMPLETE, 'B', 'A', 'S', 'I', 'C', '#', '?', '?'
+};
+
+#endif
+
+#ifdef ENABLE_FAKE_OAD_PROFILE
+
+static CONST uint8 oadProfileServiceUUID[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xB0, 0x00, 0x40, 0x51, 0x04, 0xC0, 0xFF, 0x00, 0xF0 };
+static CONST uint8 oadIdentUUID[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xB0, 0x00, 0x40, 0x51, 0x04, 0xC1, 0xFF, 0x00, 0xF0 };
+static CONST uint8 oadBlockUUID[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xB0, 0x00, 0x40, 0x51, 0x04, 0xC2, 0xFF, 0x00, 0xF0 };
+static CONST gattAttrType_t oadProfileService = { ATT_UUID_SIZE, oadProfileServiceUUID };
+static CONST uint8 oadCharProps = GATT_PROP_WRITE_NO_RSP | GATT_PROP_WRITE | GATT_PROP_NOTIFY;
+static CONST gattCharCfg_t oadConfig[GATT_MAX_NUM_CONN];
+static CONST unsigned char oadDesc[] = "";
+
+static gattAttribute_t oadProfile[] =
+{
+  { { ATT_BT_UUID_SIZE, primaryServiceUUID },   GATT_PERMIT_READ,                       0, (uint8*)&oadProfileService },
+  { { ATT_BT_UUID_SIZE, characterUUID },        GATT_PERMIT_READ,                       0, (uint8*)&oadCharProps },
+  { { ATT_UUID_SIZE, oadIdentUUID },            GATT_PERMIT_WRITE,                      0, NULL },
+  { { ATT_BT_UUID_SIZE, clientCharCfgUUID },    GATT_PERMIT_READ|GATT_PERMIT_WRITE,     0, (uint8*)oadConfig },
+  { { ATT_BT_UUID_SIZE, charUserDescUUID },     GATT_PERMIT_READ,                       0, NULL },
+  { { ATT_BT_UUID_SIZE, characterUUID },        GATT_PERMIT_READ,                       0, (uint8*)&oadCharProps },
+  { { ATT_UUID_SIZE, oadBlockUUID },            GATT_PERMIT_WRITE,                      0, (uint8*)oadDesc },
+  { { ATT_BT_UUID_SIZE, clientCharCfgUUID },    GATT_PERMIT_READ|GATT_PERMIT_WRITE,     0, (uint8*)oadConfig },
+  { { ATT_BT_UUID_SIZE, charUserDescUUID },     GATT_PERMIT_READ,                       0, (uint8*)oadDesc }
 };
 
 #endif
@@ -243,6 +268,9 @@ void BlueBasic_Init( uint8 task_id )
   // Initialize GATT attributes
   GGS_AddService( GATT_ALL_SERVICES );            // GAP
   GATTServApp_AddService( GATT_ALL_SERVICES );    // GATT attributes
+#ifdef ENABLE_FAKE_OAD_PROFILE
+  GATTServApp_RegisterService(oadProfile, GATT_NUM_ATTRS(oadProfile), NULL);
+#endif
   DevInfo_AddService();                           // Device Information Service
 #if defined FEATURE_OAD
   VOID OADTarget_AddService();                    // OAD Profile
