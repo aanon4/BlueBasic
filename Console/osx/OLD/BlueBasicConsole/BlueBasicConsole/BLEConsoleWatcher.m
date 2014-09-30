@@ -137,7 +137,6 @@
         {
           [peripheral discoverCharacteristics:[NSArray array] forService:svc];
           found = true;
-          break;
         }
       }
       if (!found)
@@ -188,7 +187,7 @@
     {
       [self updateStatus:@"Connected"];
     }
-    else if (fcount == 2)
+    else if (fcount == 2 && inputCharacteristic == nil)
     {
       [self updateStatus:@"Upgradable"];
     }

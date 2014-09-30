@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="5056" systemVersion="13E28" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="6245" systemVersion="13F34" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="5056"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="6245"/>
     </dependencies>
     <objects>
         <customObject id="-2" userLabel="File's Owner" customClass="NSApplication">
@@ -10,7 +10,7 @@
             </connections>
         </customObject>
         <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
-        <customObject id="-3" userLabel="Application"/>
+        <customObject id="-3" userLabel="Application" customClass="NSObject"/>
         <customObject id="Voe-Tx-rLC" customClass="AppDelegate">
             <connections>
                 <outlet property="console" destination="yzU-Td-T4z" id="DIH-i3-yv2"/>
@@ -69,13 +69,13 @@
                                     <action selector="toDevice:" target="Voe-Tx-rLC" id="qck-fj-aKp"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="Save from device" hidden="YES" id="F21-7U-qtb">
+                            <menuItem title="Save from device" hidden="YES" enabled="NO" id="F21-7U-qtb">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
                                     <action selector="fromDevice:" target="Voe-Tx-rLC" id="wh1-fj-RAQ"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="Upgrade firmware" id="k3k-an-iIG" userLabel="Menu Item - Upgrade firmware">
+                            <menuItem title="Upgrade firmware" hidden="YES" enabled="NO" id="k3k-an-iIG" userLabel="Menu Item - Upgrade firmware">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
                                     <action selector="updateFirmware:" target="Voe-Tx-rLC" id="PuC-Da-tXk"/>
@@ -151,7 +151,6 @@
                 <subviews>
                     <scrollView borderType="line" horizontalLineScroll="10" horizontalPageScroll="10" verticalLineScroll="10" verticalPageScroll="10" hasHorizontalScroller="NO" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="13w-pp-UfM">
                         <rect key="frame" x="98" y="25" width="435" height="387"/>
-                        <autoresizingMask key="autoresizingMask"/>
                         <clipView key="contentView" id="H2k-wj-aqw">
                             <rect key="frame" x="1" y="1" width="433" height="385"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -186,7 +185,6 @@
                     </scrollView>
                     <textField toolTip="Connection status" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="oc2-sp-PrI">
                         <rect key="frame" x="405" y="5" width="124" height="17"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <constraints>
                             <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="120" id="7on-0b-VIO"/>
                             <constraint firstAttribute="height" constant="17" id="R8v-BJ-4KK"/>
@@ -200,13 +198,12 @@
                     </textField>
                     <scrollView ambiguous="YES" misplaced="YES" borderType="line" autohidesScrollers="YES" horizontalLineScroll="19" horizontalPageScroll="10" verticalLineScroll="19" verticalPageScroll="10" hasHorizontalScroller="NO" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="EeN-K9-2qJ">
                         <rect key="frame" x="-1" y="25" width="100" height="387"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <clipView key="contentView" ambiguous="YES" misplaced="YES" copiesOnScroll="NO" id="FSY-pc-ADc">
                             <rect key="frame" x="1" y="1" width="98" height="385"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
                                 <tableView focusRingType="none" verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" alternatingRowBackgroundColors="YES" columnReordering="NO" columnResizing="NO" multipleSelection="NO" emptySelection="NO" autosaveColumns="NO" typeSelect="NO" id="2qw-iX-yKG">
-                                    <rect key="frame" x="0.0" y="0.0" width="98" height="385"/>
+                                    <rect key="frame" x="0.0" y="0.0" width="98" height="19"/>
                                     <autoresizingMask key="autoresizingMask"/>
                                     <size key="intercellSpacing" width="3" height="2"/>
                                     <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
@@ -235,7 +232,6 @@
                             <autoresizingMask key="autoresizingMask"/>
                         </scroller>
                         <scroller key="verticalScroller" hidden="YES" verticalHuggingPriority="750" horizontal="NO" id="9hY-jg-uAh">
-                            <rect key="frame" x="83" y="1" width="16" height="0.0"/>
                             <autoresizingMask key="autoresizingMask"/>
                         </scroller>
                     </scrollView>
