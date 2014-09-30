@@ -15,8 +15,8 @@ class Firmware: ConsoleDelegate {
   var complete: CompletionHandler? = nil
   let device: Device
   var firmware : NSData?
-  var wrote = 0.0
-  var written = 0.0
+  var wrote = 0
+  var written = 0
   var blockCharacteristic: CBCharacteristic?
   
   init(_ console: Console) {
@@ -49,22 +49,28 @@ class Firmware: ConsoleDelegate {
   }
   
   func onWriteComplete(uuid: CBUUID) {
+    
+    let blocksize = 16
+    let countsize = 16
 
     switch uuid {
     case UUIDS.imgIdentityUUID:
-      let blocksize = 16
       var nrblocks = (firmware!.length + blocksize - 1) / blocksize
-      wrote = Double(nrblocks - 1) // Last block won't get a response because device is rebooting
       for i in 0...nrblocks-1 {
         var block = NSMutableData(capacity: blocksize + 2)
         var blockheader = [ Byte(i & 255), Byte(i >> 8) ]
         block.appendBytes(blockheader, length: 2)
         block.appendData(self.firmware!.subdataWithRange(NSMakeRange(i * blocksize, blocksize)))
-        device.write(block, characteristic: blockCharacteristic!, type: .WithResponse)
+        if i < nrblocks - 1 && i % countsize != 0 {
+          device.write(block, characteristic: blockCharacteristic!, type: .WithoutResponse)
+        } else {
+          device.write(block, characteristic: blockCharacteristic!, type: .WithResponse)
+          wrote++
+        }
       }
     case UUIDS.imgBlockUUID:
       written++
-      if written == wrote {
+      if written == wrote - 1 { // Last ack is always lost as device reboots
         console.status = "Waiting..."
         // Wait for 5 seconds to give last writes change to finish
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5_000_000_000), dispatch_get_main_queue()) {
@@ -74,7 +80,7 @@ class Firmware: ConsoleDelegate {
           }
         }
       } else {
-        console.status = String(format: "Upgrading...%.1f%%", 100.0 * written / wrote)
+        console.status = String(format: "Upgrading...%d%%", 100 * written / wrote)
       }
       break
     default:
