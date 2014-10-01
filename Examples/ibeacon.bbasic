@@ -1,11 +1,11 @@
 10 // "A Simple iBeacon service"
 20 DIM M(5)
 30 // "Major (0-65535)"
-40 M(0) = 2
-41 M(1) = 0
+40 M(0) = 0
+41 M(1) = 2
 50 // "Minor (0-65535)"
-60 M(2) = 4
-61 M(3) = 0
+60 M(2) = 0
+61 M(3) = 4
 70 // "Power"
 80 M(4) = 0xC8
 90 ADVERT GENERAL
