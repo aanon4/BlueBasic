@@ -1,13 +1,15 @@
 10 // "A Simple iBeacon service"
-20 DIM M(3)
-30 // "Major (0-255)"
-40 M(0) = 0
-50 // "Minor (0-255)"
-60 M(1) = 1
+20 DIM M(5)
+30 // "Major (0-65535)"
+40 M(0) = 2
+41 M(1) = 0
+50 // "Minor (0-65535)"
+60 M(2) = 4
+61 M(3) = 0
 70 // "Power"
 80 M(2) = 0xC8
 90 ADVERT GENERAL
-100 ADVERT CUSTOM "FF 4C 00 02 15" "74 27 8B DA B6 44 45 20 8F 0C 72 0E AF 05 99 35" "00 00" M "00"
+100 ADVERT CUSTOM "FF 4C 00 02 15" "74 27 8B DA B6 44 45 20 8F 0C 72 0E AF 05 99 35" M "00"
 110 ADVERT END
 120 // SET A NAME IN THE SCAN RESPONSE
 130 SCAN NAME "iBeacon"

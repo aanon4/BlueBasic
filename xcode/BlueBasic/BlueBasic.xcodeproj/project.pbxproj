@@ -69,6 +69,7 @@
 		22BC370C197CEE7E00828C73 /* bleadvert05.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleadvert05.test; sourceTree = "<group>"; };
 		22C5B9011985AAA40069D0C7 /* bleservice02.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bleservice02.test; sourceTree = "<group>"; };
 		22C640B519DB7C010059FDE6 /* lowpower.bbasic */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = lowpower.bbasic; sourceTree = "<group>"; };
+		22C640B619DC977A0059FDE6 /* ibeacon.bbasic */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = ibeacon.bbasic; path = ../../Examples/ibeacon.bbasic; sourceTree = "<group>"; };
 		22E3960C19B1A542003A7892 /* i2c01.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = i2c01.test; sourceTree = "<group>"; };
 		22FA2DB3197331050049CDB8 /* BlueBasic */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = BlueBasic; sourceTree = BUILT_PRODUCTS_DIR; };
 		22FA2DB6197331050049CDB8 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
@@ -94,6 +95,7 @@
 		22869BB219BAC6AC0052B9AA /* Examples */ = {
 			isa = PBXGroup;
 			children = (
+				22C640B619DC977A0059FDE6 /* ibeacon.bbasic */,
 				22869BB319BAC72E0052B9AA /* ble_onoff.bbasic */,
 				22869BB419BAC7360052B9AA /* wire_dht22.bbasic */,
 				22869BB519BAC7C20052B9AA /* spi_mb85rs64v.bbasic */,
