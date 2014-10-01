@@ -1,0 +1,11 @@
+4 //
+5 // "Basic low power configuration"
+6 //
+7 // "Power regulator off when sleeping"
+10 CONFIG POWER, 2
+13 // "3200 = Advertise every 2 seconds"
+15 T = 3200
+20 BTSET LIM_DISC_ADV_INT_MIN, T
+30 BTSET LIM_DISC_ADV_INT_MAX, T
+40 BTSET GEN_DISC_ADV_INT_MIN, T
+50 BTSET GEN_DISC_ADV_INT_MAX, T
