@@ -176,7 +176,7 @@ static const unsigned char keywords_12[] =
   'M','A','S','T','E','R',SPI_MASTER,
   'M','A','X','_','C','O','N','N','_','I','N','T','E','R','V','A','L',KW_CONSTANT,CO_MAX_CONN_INTERVAL,
   'M','E','M',KW_MEM,
-  'M','I','L','L','I','S','(',FUNC_MILLIS,
+  'M','I','L','L','I','S',FUNC_MILLIS,
   'M','I','N','_','C','O','N','N','_','I','N','T','E','R','V','A','L',KW_CONSTANT,CO_MIN_CONN_INTERVAL,
   'M','O','R','E',BLE_MORE,
   'M','S','B',SPI_MSB,

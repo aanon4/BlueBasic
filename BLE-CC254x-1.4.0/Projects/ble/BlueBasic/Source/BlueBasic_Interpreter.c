@@ -1287,16 +1287,16 @@ static VAR_TYPE expression(unsigned char mode)
         break;
 
       case FUNC_MILLIS:
-        ignore_blanks();
-        if (*txtpos++ != ')')
+        if (txtpos[0] != '(' || txtpos[1] != ')')
         {
           goto expr_error;
         }
+        txtpos += 2;
         if (queueptr == queueend)
         {
           goto expr_oom;
         }
-        *queueptr++ = (VAR_TYPE)OS_millis();
+        *queueptr++ = (VAR_TYPE)OS_get_millis();
         lastop = 0;
         break;
 
@@ -3930,39 +3930,63 @@ cmd_analog:
   goto run_next_statement;
 
 cmd_config:
-  switch (expression(EXPR_COMMA))
+  switch (*txtpos)
   {
-    case CO_POWER:
+    case FUNC_MILLIS:
     {
-      switch (expression(EXPR_NORMAL))
+      if (txtpos[1] != ',')
       {
-#ifdef FEATURE_BOOST_CONVERTER
-        case 0:
-          // Mode 0: Boost converter is always off
-          BlueBasic_powerMode = 0;
-          FEATURE_BOOST_CONVERTER = 0;
-          break;
-        case 1:
-          // Mode 1: Boost converter if always on
-          BlueBasic_powerMode = 1;
-          FEATURE_BOOST_CONVERTER = 1;
-          break;
-        case 2:
-          // Mode 2: Boost convert is on when awake, off when asleep
-          BlueBasic_powerMode = 2;
-          FEATURE_BOOST_CONVERTER = 1;
-          break;
-#else
-        case 0:
-          break;
-#endif // FEATURE_BOOST_CONVERTER
-        default:
-          goto qwhat;
+        goto qwhat;
       }
+      txtpos += 2;
+      VAR_TYPE time = expression(EXPR_NORMAL);
+      if (error_num)
+      {
+        goto qwhat;
+      }
+      OS_set_millis(time);
       break;
     }
     default:
-      goto qwhat;
+      switch (expression(EXPR_COMMA))
+      {
+        case CO_POWER:
+        {
+          unsigned char option = expression(EXPR_NORMAL);
+          if (error_num)
+          {
+            goto qwhat;
+          }
+          switch (option)
+          {
+#ifdef FEATURE_BOOST_CONVERTER
+            case 0:
+              // Mode 0: Boost converter is always off
+              BlueBasic_powerMode = 0;
+              FEATURE_BOOST_CONVERTER = 0;
+              break;
+            case 1:
+              // Mode 1: Boost converter if always on
+              BlueBasic_powerMode = 1;
+              FEATURE_BOOST_CONVERTER = 1;
+              break;
+            case 2:
+              // Mode 2: Boost convert is on when awake, off when asleep
+              BlueBasic_powerMode = 2;
+              FEATURE_BOOST_CONVERTER = 1;
+              break;
+#else
+            case 0:
+              break;
+#endif // FEATURE_BOOST_CONVERTER
+            default:
+              goto qwhat;
+          }
+          break;
+        }
+        default:
+          goto qwhat;
+      }
   }
   goto run_next_statement;
 }

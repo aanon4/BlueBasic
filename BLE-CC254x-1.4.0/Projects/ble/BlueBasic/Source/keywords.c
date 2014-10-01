@@ -35,7 +35,7 @@ struct keyword
   { "ABS(", "FUNC_ABS" },
   { "LEN(", "FUNC_LEN" },
   { "RND(", "FUNC_RND" },
-  { "MILLIS(", "FUNC_MILLIS" },
+  { "MILLIS", "FUNC_MILLIS" },
   { "BATTERY(", "FUNC_BATTERY" },
   { "AUTORUN", "KW_AUTORUN" },
   { ">=", "OP_GE" },

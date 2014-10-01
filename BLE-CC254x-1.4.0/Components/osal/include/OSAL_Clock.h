@@ -106,6 +106,7 @@ typedef struct
    *              0 seconds, on the 1st of January 2000 UTC
    */
   extern UTCTime osal_getClock( void );
+  extern unsigned short osal_getMSClock ( void );
 
   /*
    * Converts UTCTime to UTCTimeStruct

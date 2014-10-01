@@ -34,7 +34,8 @@
 #define OS_putchar(A)         putchar(A)
 #define OS_breakcheck()       (0)
 #define OS_reboot(F)
-#define OS_millis()           (time(0) * 1000)
+#define OS_get_millis()       (time(0) * 1000)
+#define OS_set_millis(V)      do { } while ((void)(V), 0)
 #define OS_interrupt_attach(A, B) 0
 #define OS_interrupt_detach(A)    0
 #define OS_delaymicroseconds(A) do { } while ((void)(A), 0)
@@ -245,7 +246,8 @@ extern void OS_timer_stop(unsigned char id);
 extern char OS_timer_start(unsigned char id, unsigned long timeout, unsigned char repeat, unsigned short lineno);
 extern char OS_interrupt_attach(unsigned char pin, unsigned short lineno);
 extern char OS_interrupt_detach(unsigned char pin);
-extern long OS_millis(void);
+extern long OS_get_millis(void);
+extern void OS_set_millis(long time);
 extern void OS_delaymicroseconds(short micros);
 extern void OS_reboot(char flash);
 extern void OS_flashstore_init(void);

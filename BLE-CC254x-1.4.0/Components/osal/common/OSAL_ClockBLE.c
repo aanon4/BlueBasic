@@ -216,6 +216,20 @@ UTCTime osal_getClock( void )
 }
 
 /*********************************************************************
+ * @fn      osal_getMSClock
+ *
+ * @brief   Gets the millisecond part of the current time.
+ *
+ * @param   none
+ *
+ * @return  milliseconds
+ */
+unsigned short osal_getMSClock ( void )
+{
+  return ( timeMSec );
+}
+
+/*********************************************************************
  * @fn      osal_ConvertUTCTime
  *
  * @brief   Converts UTCTime to UTCTimeStruct

@@ -10,6 +10,7 @@
 
 #include "os.h"
 #include "OSAL.h"
+#include "OSAL_Clock.h"
 #include "hal_uart.h"
 #include "OSAL_PwrMgr.h"
 #ifdef FEATURE_OAD_HEADER
@@ -244,10 +245,15 @@ char OS_interrupt_detach(unsigned char pin)
   return 0;
 }
 
-long OS_millis(void)
+long OS_get_millis(void)
 {
   osalTimeUpdate();
-  return osal_GetSystemClock();
+  return osal_getClock() * 1000 + osal_getMSClock();
+}
+
+void OS_set_millis(long timems)
+{
+  osal_setClock(timems / 1000);
 }
 
 void OS_reboot(char flash)
