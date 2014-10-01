@@ -21,7 +21,6 @@ struct
 os_discover_t blueBasic_discover;
 
 static char alarmfire;
-static FILE* filep;
 static unsigned char* bstart;
 static unsigned char* bend;
 
