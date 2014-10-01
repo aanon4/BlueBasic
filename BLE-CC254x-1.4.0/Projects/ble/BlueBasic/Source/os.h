@@ -41,10 +41,6 @@
 
 extern void OS_prompt_buffer(unsigned char* start, unsigned char* end);
 extern char OS_prompt_available(void);
-extern short OS_file_open(unsigned char chan, unsigned char rw);
-extern unsigned char OS_file_read(unsigned char* buf, short len);
-extern unsigned char OS_file_write(unsigned char* buf, short len);
-extern void OS_file_close(void);
 extern void OS_timer_stop(unsigned char id);
 extern char OS_timer_start(unsigned char id, unsigned long timeout, unsigned char repeat, unsigned short lineno);
 extern void OS_flashstore_init(void);
@@ -245,10 +241,6 @@ extern void OS_type(char ch);
 extern void OS_prompt_buffer(unsigned char* start, unsigned char* end);
 extern char OS_prompt_available(void);
 extern void* OS_rmemcpy(void *dst, const void *src, unsigned int len);
-extern short OS_file_open(unsigned char chan, unsigned char rw);
-extern unsigned char OS_file_read(unsigned char* buf, short len);
-extern unsigned char OS_file_write(unsigned char* buf, short len);
-extern void OS_file_close(void);
 extern void OS_timer_stop(unsigned char id);
 extern char OS_timer_start(unsigned char id, unsigned long timeout, unsigned char repeat, unsigned short lineno);
 extern char OS_interrupt_attach(unsigned char pin, unsigned short lineno);

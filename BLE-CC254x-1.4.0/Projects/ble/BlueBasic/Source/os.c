@@ -188,25 +188,6 @@ void OS_init(void)
 #endif
 }
 
-short OS_file_open(unsigned char chan, unsigned char rw)
-{
-  return -1;
-}
-
-unsigned char OS_file_read(unsigned char* buf, short len)
-{
-  return 0;
-}
-
-unsigned char OS_file_write(unsigned char* buf, short len)
-{
-  return 0;
-}
-
-void OS_file_close(void)
-{
-}
-
 void OS_timer_stop(unsigned char id)
 {
   blueBasic_timers[id].linenum = 0;

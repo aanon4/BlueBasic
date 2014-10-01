@@ -88,50 +88,6 @@ char OS_prompt_available(void)
   }
 }
 
-short OS_file_open(unsigned char chan, unsigned char rw)
-{
-  short len = 0;
-  char filename[10];
-
-  if (filep)
-  {
-    return -1;
-  }
-
-  sprintf(filename, "saved%d", chan);
-  filep = fopen(filename, rw == 'r' ? "r" : "w");
-  if (!filep)
-  {
-    return -1;
-  }
-  if (rw == 'r')
-  {
-    fseek(filep, 0L, SEEK_END);
-    len = ftell(filep);
-    fseek(filep, 0L, SEEK_SET);
-  }
-  return len;
-}
-
-void OS_file_close(void)
-{
-  if (filep)
-  {
-    fclose(filep);
-    filep = NULL;
-  }
-}
-
-unsigned char OS_file_read(unsigned char* buf, short len)
-{
-  return fread(buf, len, sizeof(unsigned char), filep) == len;
-}
-
-unsigned char OS_file_write(unsigned char* buf, short len)
-{
-  return fwrite(buf, len, sizeof(unsigned char), filep) == len;
-}
-
 static void alarmhandler(int sig)
 {
   alarmfire = 1;
