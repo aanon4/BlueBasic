@@ -13,7 +13,7 @@ class DeviceManager: NSObject, CBCentralManagerDelegate {
   
   let manager: CBCentralManager!
   var scanning = false
-  var devices = [String: Device]()
+  var devices = [NSUUID: Device]()
   var connectCallbacks = OneTimeCallbacks<Bool>()
   var disconnectCallbacks = OneTimeCallbacks<Bool>()
   var findCallbacks = Callbacks<Device>()
@@ -75,34 +75,34 @@ class DeviceManager: NSObject, CBCentralManagerDelegate {
   }
 
   func scan() {
-    manager.scanForPeripheralsWithServices(nil, options: nil)
+    manager.scanForPeripheralsWithServices(nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
   }
 
   
   func centralManager(central: CBCentralManager!, didDiscoverPeripheral peripheral: CBPeripheral!, advertisementData: [NSObject : AnyObject]!, RSSI: NSNumber!) {
     let name = deviceName(peripheral)
-    if devices[name] == nil {
+    if devices[peripheral.identifier!] == nil {
       let device = Device(peripheral: peripheral, manager: self)
-      devices[name] = device
-      findCallbacks.call(device)
+      devices[peripheral.identifier] = device
     }
+    findCallbacks.call(devices[peripheral.identifier]!)
   }
   
   func centralManager(central: CBCentralManager!, didConnectPeripheral peripheral: CBPeripheral!) {
-    if let device = devices[deviceName(peripheral)] {
+    if let device = devices[peripheral.identifier] {
       device.isConnected = true
       connectCallbacks.call(true)
     }
   }
 
   func centralManager(central: CBCentralManager!, didFailToConnectPeripheral peripheral: CBPeripheral!, error: NSError!) {
-    if let device = devices[deviceName(peripheral)] {
+    if let device = devices[peripheral.identifier] {
       connectCallbacks.call(false)
     }
   }
   
   func centralManager(central: CBCentralManager!, didDisconnectPeripheral peripheral: CBPeripheral!, error: NSError!) {
-    if let device = devices[deviceName(peripheral)] {
+    if let device = devices[peripheral.identifier] {
       device.isConnected = false
       disconnectCallbacks.call(error == nil)
     }

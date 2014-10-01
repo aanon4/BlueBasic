@@ -14,7 +14,7 @@ class DeviceList: NSObject, NSTableViewDataSource, NSTableViewDelegate {
   
   let manager: DeviceManager
   let devices: NSTableView
-  var names = [String]()
+  var names = [Device]()
   var delegate: DeviceListDelegate?
   
   init(devices: NSTableView, manager: DeviceManager) {
@@ -30,10 +30,10 @@ class DeviceList: NSObject, NSTableViewDataSource, NSTableViewDelegate {
   func scan() {
     manager.findDevices() {
       device in
-      if !contains(self.names, device.name) {
-        self.names.append(device.name)
-        self.devices.reloadData()
+      if !contains(self.names, device) {
+        self.names.append(device)
       }
+      self.devices.reloadData()
     }
   }
   
@@ -42,12 +42,10 @@ class DeviceList: NSObject, NSTableViewDataSource, NSTableViewDelegate {
   }
   
   func tableView(tableView: NSTableView!, objectValueForTableColumn tableColumn: NSTableColumn!, row: Int) -> AnyObject! {
-    return names[row]
+    return names[row].name
   }
   
   func selectDevice(id: AnyObject) {
-    if let device = manager.devices[names[devices.clickedRow]] {
-      delegate?.onDeviceConnect(device)
-    }
+    delegate?.onDeviceConnect(names[devices.clickedRow])
   }
 }

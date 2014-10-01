@@ -82,6 +82,12 @@ class Device: NSObject, CBPeripheralDelegate {
     }
   }
   
+  var identifier: NSUUID {
+    get {
+      return peripheral.identifier;
+    }
+  }
+  
   func write(data: NSData, characteristic: CBCharacteristic, type: CBCharacteristicWriteType) {
     if isConnected {
       peripheral.writeValue(data, forCharacteristic: characteristic, type: type)
