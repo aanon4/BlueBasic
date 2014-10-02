@@ -1058,8 +1058,9 @@ static unsigned char* parse_variable_address(variable_frame** vframe)
 static void create_dim(unsigned char name, VAR_TYPE size, unsigned char* data)
 {
   unsigned char vname;
+  variable_frame* f;
   CHECK_SP_OOM(sizeof(variable_frame) + size, qoom);
-  variable_frame *f = (variable_frame *)sp;
+  f = (variable_frame*)sp;
   f->header.frame_type = FRAME_VARIABLE_FLAG;
   f->header.frame_size = sizeof(variable_frame) + size;
   f->type = VAR_DIM_BYTE;
