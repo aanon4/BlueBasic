@@ -409,46 +409,52 @@ typedef struct
 {
   char frame_type;
   unsigned short frame_size;
-} stack_header;
+} frame_header;
 
-typedef struct stack_for_frame
+typedef struct
 {
-  stack_header header;
+  frame_header header;
   char for_var;
   VAR_TYPE terminal;
   VAR_TYPE step;
   unsigned char** line;
-} stack_for_frame;
+} for_frame;
 
-typedef struct stack_gosub_frame
+typedef struct
 {
-  stack_header header;
+  frame_header header;
   unsigned char** line;
-} stack_gosub_frame;
+} gosub_frame;
 
-typedef struct stack_event_frame
+typedef struct
 {
-  stack_header header;
-} stack_event_frame;
+  frame_header header;
+} event_frame;
 
-typedef struct stack_variable_frame
+typedef struct
 {
-  stack_header header;
+  frame_header header;
   char type;
   char name;
   char oflags;
   struct gatt_variable_ref* ble;
   // .... bytes ...
-} stack_variable_frame;
+} variable_frame;
+
+typedef struct
+{
+  frame_header header;
+  gattAttribute_t* attrs;
+  LINENUM connect;
+} service_frame;
 
 enum
 {
-  STACK_GOSUB_FLAG = 'G',
-  STACK_FOR_FLAG = 'F',
-  STACK_VARIABLE_FLAG = 'V',
-  STACK_EVENT_FLAG = 'E',
-  STACK_SERVICE_FLAG = 'S',
-  STACK_VARIABLE_NORMAL = 'N'
+  FRAME_GOSUB_FLAG = 'G',
+  FRAME_FOR_FLAG = 'F',
+  FRAME_VARIABLE_FLAG = 'V',
+  FRAME_EVENT_FLAG = 'E',
+  FRAME_SERVICE_FLAG = 'S',
 };
 
 enum
@@ -466,15 +472,16 @@ static __data unsigned char** program_end;
 static __data unsigned char error_num;
 static __data unsigned char* variables_begin;
 static __data unsigned char* sp;
+static __data unsigned char* heap;
 
 static unsigned char* list_line;
 static unsigned char** program_start;
 static LINENUM linenum;
 
 static unsigned char cache_name;
-static stack_variable_frame* cache_frame;
+static variable_frame* cache_frame;
 static unsigned char* cache_ptr;
-static stack_variable_frame normal_variable = { { STACK_VARIABLE_FLAG, 0 }, VAR_INT, 0, 0, NULL };
+static variable_frame normal_variable = { { FRAME_VARIABLE_FLAG, 0 }, VAR_INT, 0, 0, NULL };
 
 #define VARIABLE_INT_ADDR(F)    (((VAR_TYPE*)variables_begin) + ((F) - 'A'))
 #define VARIABLE_INT_GET(F)     (*VARIABLE_INT_ADDR(F))
@@ -482,8 +489,8 @@ static stack_variable_frame normal_variable = { { STACK_VARIABLE_FLAG, 0 }, VAR_
 #define VARIABLE_FLAGS_GET(F)   (vname = (F) - 'A', (((*(variables_begin + 26 * VAR_SIZE + vname / 8)) >> (vname % 8)) & 0x01))
 #define VARIABLE_FLAGS_SET(F,V) do { vname = (F) - 'A'; unsigned char* v = variables_begin + 26 * VAR_SIZE + vname / 8; *v = (*v & (255 - (1 << (vname % 8)))) | ((V) << (vname % 8)); } while(0)
 
-#define CHECK_SP_OOM(S)   if (sp - (S) < (unsigned char*)program_end) goto qoom; else sp -= (S)
-#define CHECK_HEAP_OOM(S) if ((unsigned char*)program_end + (S) > sp) goto qhoom; else program_end = (unsigned char**)((unsigned char*)program_end + (S))
+#define CHECK_SP_OOM(S,E)   if (sp - (S) < heap) goto E; else sp -= (S)
+#define CHECK_HEAP_OOM(S,E) if (heap + (S) > sp) goto E; else heap += (S)
 
 #ifdef SIMULATE_PINS
 static unsigned char P0DIR, P1DIR, P2DIR;
@@ -523,13 +530,6 @@ static VAR_TYPE expression(unsigned char mode);
 unsigned char  ble_adbuf[31];
 unsigned char* ble_adptr;
 unsigned char  ble_isadvert;
-
-typedef struct stack_service_frame
-{
-  stack_header header;
-  gattAttribute_t* attrs;
-  LINENUM connect;
-} stack_service_frame;
 
 typedef struct gatt_variable_ref
 {
@@ -974,9 +974,9 @@ error:
 // as well as the simple, preset, variables. Regardless, we return appropriate information
 // so the caller doesn't need to worry about where the variable is stored.
 //
-static unsigned char* get_variable_frame(char name, stack_variable_frame** frame)
+static unsigned char* get_variable_frame(char name, variable_frame** frame)
 {
-  unsigned char* tsp;
+  unsigned char* ptr;
   unsigned char vname;
 
   if (name == cache_name)
@@ -986,33 +986,44 @@ static unsigned char* get_variable_frame(char name, stack_variable_frame** frame
   }
   if (VARIABLE_FLAGS_GET(name) == VAR_VARIABLE)
   {
-    for (tsp = sp; tsp < variables_begin; tsp += ((stack_header*)tsp)->frame_size)
+    // Search for variable on the stack - most likely to be there
+    for (ptr = sp; ptr < variables_begin; ptr += ((frame_header*)ptr)->frame_size)
     {
-      if (((stack_header*)tsp)->frame_type == STACK_VARIABLE_FLAG && ((stack_variable_frame*)tsp)->name == name)
+      if (((frame_header*)ptr)->frame_type == FRAME_VARIABLE_FLAG && ((variable_frame*)ptr)->name == name)
       {
-        *frame = (stack_variable_frame*)tsp;
-        if (((stack_variable_frame*)tsp)->type == VAR_INT)
-        {
-          return (unsigned char*)VARIABLE_INT_ADDR(name);
-        }
-        else
-        {
-          cache_name = name;
-          cache_frame = (stack_variable_frame*)tsp;
-          cache_ptr = tsp + sizeof(stack_variable_frame);
-          return cache_ptr;
-        }
+        goto found;
+      }
+    }
+    // Might be on the heap, but less likely
+    for (ptr = (unsigned char*)program_end; ptr < heap; ptr += ((frame_header*)ptr)->frame_size)
+    {
+      if (((frame_header*)ptr)->frame_type == FRAME_VARIABLE_FLAG && ((variable_frame*)ptr)->name == name)
+      {
+        goto found;
       }
     }
   }
   *frame = &normal_variable;
   return (unsigned char*)VARIABLE_INT_ADDR(name);
+found:
+  cache_name = name;
+  cache_frame = (variable_frame*)ptr;
+  *frame = cache_frame;
+  if (((variable_frame*)ptr)->type == VAR_INT)
+  {
+    cache_ptr = (unsigned char*)VARIABLE_INT_ADDR(name);
+  }
+  else
+  {
+    cache_ptr = ptr + sizeof(variable_frame);
+  }
+  return cache_ptr;
 }
 
 //
 // Parse the variable name and return a pointer to its memory and its size.
 //
-static unsigned char* parse_variable_address(stack_variable_frame** vframe)
+static unsigned char* parse_variable_address(variable_frame** vframe)
 {
   ignore_blanks();
 
@@ -1032,7 +1043,7 @@ static unsigned char* parse_variable_address(stack_variable_frame** vframe)
     }
     txtpos++;
     VAR_TYPE index = expression(EXPR_BRACES);
-    if (error_num || index < 0 || index >= (*vframe)->header.frame_size - sizeof(stack_variable_frame))
+    if (error_num || index < 0 || index >= (*vframe)->header.frame_size - sizeof(variable_frame))
     {
       return NULL;
     }
@@ -1047,26 +1058,24 @@ static unsigned char* parse_variable_address(stack_variable_frame** vframe)
 static void create_dim(unsigned char name, VAR_TYPE size, unsigned char* data)
 {
   unsigned char vname;
-  CHECK_SP_OOM(sizeof(stack_variable_frame) + size);
+  CHECK_SP_OOM(sizeof(variable_frame) + size, qoom);
+  variable_frame *f = (variable_frame *)sp;
+  f->header.frame_type = FRAME_VARIABLE_FLAG;
+  f->header.frame_size = sizeof(variable_frame) + size;
+  f->type = VAR_DIM_BYTE;
+  f->name = name;
+  f->oflags = VARIABLE_FLAGS_GET(name);
+  f->ble = NULL;
+  VARIABLE_FLAGS_SET(name, VAR_VARIABLE);
+  if (data)
   {
-    stack_variable_frame *f = (stack_variable_frame *)sp;
-    f->header.frame_type = STACK_VARIABLE_FLAG;
-    f->header.frame_size = sizeof(stack_variable_frame) + size;
-    f->type = VAR_DIM_BYTE;
-    f->name = name;
-    f->oflags = VARIABLE_FLAGS_GET(name);
-    f->ble = NULL;
-    VARIABLE_FLAGS_SET(name, VAR_VARIABLE);
-    if (data)
-    {
-      OS_memcpy(sp + sizeof(stack_variable_frame), data, size);
-    }
-    else
-    {
-      OS_memset(sp + sizeof(stack_variable_frame), 0, size);
-    }
-    cache_name = 0;
+    OS_memcpy(sp + sizeof(variable_frame), data, size);
   }
+  else
+  {
+    OS_memset(sp + sizeof(variable_frame), 0, size);
+  }
+  cache_name = 0;
   return;
 qoom:
   error_num = ERROR_OOM;
@@ -1074,9 +1083,9 @@ qoom:
 }
 
 //
-// Clean the stack
+// Clean the heap and stack
 //
-static void clean_stack(void)
+static void clean_memory(void)
 {
   // Use the 'lineptr' to track if we've done this before (so we dont keep doing it)
   if (!lineptr)
@@ -1087,24 +1096,31 @@ static void clean_stack(void)
 
   // Kill array cache
   cache_name = 0;
-  // Remove any persistent info from the stack. This includes array and services.
-  while (sp < variables_begin)
+  
+  // Reset variables to 0 and remove all types
+  OS_memset(variables_begin, 0, 26 * VAR_SIZE + 4);
+  
+  // Reset file handles
+  OS_memset(files, 0, sizeof(files));
+
+  // Remove any persistent info from the stack.
+  sp = (unsigned char*)variables_begin;
+  
+  // Remove any persistent info from the heap.
+  for (unsigned char* ptr = (unsigned char*)program_end; ptr < heap; )
   {
-    switch (((stack_header*)sp)->frame_type)
+    switch (((frame_header*)ptr)->frame_type)
     {
-      case STACK_SERVICE_FLAG:
+      case FRAME_SERVICE_FLAG:
       {
         gattAttribute_t* attr;
-        GATTServApp_DeregisterService(((stack_service_frame*)sp)->attrs[0].handle, &attr);
+        GATTServApp_DeregisterService(((service_frame*)ptr)->attrs[0].handle, &attr);
         break;
       }
     }
-    sp += ((stack_header*)sp)->frame_size;
+    ptr += ((frame_header*)ptr)->frame_size;
   }
-  // Reset variables to 0 and remove all types
-  OS_memset(variables_begin, 0, 26 * VAR_SIZE + 4);
-  // Reset file handles
-  OS_memset(files, 0, sizeof(files));
+  heap = (unsigned char*)program_end;
 }
 
 // -------------------------------------------------------------------------------------------
@@ -1238,7 +1254,7 @@ static VAR_TYPE expression(unsigned char mode)
         }
         else if (op >= 'A' && op <= 'Z')
         {
-          stack_variable_frame* frame;
+          variable_frame* frame;
           unsigned char* ptr = get_variable_frame(op, &frame);
           
           if (frame->type == VAR_DIM_BYTE)
@@ -1361,14 +1377,14 @@ static VAR_TYPE expression(unsigned char mode)
         {
           goto expr_oom;
         }
-        stack_variable_frame* frame;
+        variable_frame* frame;
         txtpos += 2;
         get_variable_frame(ch, &frame);
         if (frame->type != VAR_DIM_BYTE)
         {
           goto expr_error;
         }
-        *queueptr++ = frame->header.frame_size - sizeof(stack_variable_frame);
+        *queueptr++ = frame->header.frame_size - sizeof(variable_frame);
         lastop = 0;
         break;
       }
@@ -1488,10 +1504,10 @@ static VAR_TYPE expression(unsigned char mode)
             default:
               if (op >= 'A' && op <= 'Z')
               {
-                stack_variable_frame* frame;
+                variable_frame* frame;
                 unsigned char* ptr = get_variable_frame(op, &frame);
 
-                if (frame->type != VAR_DIM_BYTE || top < 0 || top >= frame->header.frame_size - sizeof(stack_variable_frame))
+                if (frame->type != VAR_DIM_BYTE || top < 0 || top >= frame->header.frame_size - sizeof(variable_frame))
                 {
                   goto expr_error;
                 }
@@ -1596,6 +1612,7 @@ void interpreter_init()
   variables_begin = (unsigned char*)program_start + kRamSize - 26 * VAR_SIZE - 4; // 4 bytes = 32 bits of flags
   sp = variables_begin;
   program_end = flashstore_init(program_start);
+  heap = (unsigned char*)program_end;
   interpreter_banner();
 }
 
@@ -1617,7 +1634,7 @@ void interpreter_setup(void)
 {
   OS_init();
   interpreter_init();
-  OS_prompt_buffer((unsigned char*)program_end + sizeof(LINENUM), sp);
+  OS_prompt_buffer(heap + sizeof(LINENUM), sp);
   
   if (flashstore_findspecial(FLASHSPECIAL_AUTORUN))
   {
@@ -1625,7 +1642,6 @@ void interpreter_setup(void)
     {
       OS_timer_start(DELAY_TIMER, OS_AUTORUN_TIMEOUT, 0, *(LINENUM*)*program_start);
     }
-    OS_prompt_buffer((unsigned char*)program_end + sizeof(LINENUM), sp);
   }
 }
 
@@ -1637,7 +1653,7 @@ void interpreter_loop(void)
   while (OS_prompt_available())
   {
     interpreter_run(0, 0);
-    OS_prompt_buffer((unsigned char*)program_end + sizeof(LINENUM), sp);
+    OS_prompt_buffer(heap + sizeof(LINENUM), sp);
   }
 }
 
@@ -1650,15 +1666,15 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
 
   if (gofrom)
   {
-    stack_event_frame *f;
+    event_frame *f;
 
     linenum = gofrom;
     if (canreturn)
     {
-      CHECK_SP_OOM(sizeof(stack_event_frame));
-      f = (stack_event_frame *)sp;
-      f->header.frame_type = STACK_EVENT_FLAG;
-      f->header.frame_size = sizeof(stack_event_frame);
+      CHECK_SP_OOM(sizeof(event_frame), qoom);
+      f = (event_frame *)sp;
+      f->header.frame_type = FRAME_EVENT_FLAG;
+      f->header.frame_size = sizeof(event_frame);
     }
     lineptr = findlineptr();
     txtpos = *lineptr + sizeof(LINENUM) + sizeof(char);
@@ -1672,7 +1688,7 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
   // Remove any pending WIRE parsing.
   pinParsePtr = NULL;
 
-  txtpos = (unsigned char*)program_end + sizeof(LINENUM);
+  txtpos = heap + sizeof(LINENUM);
   tokenize();
 
   {
@@ -1698,8 +1714,8 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
       goto qwhat;
     }
     
-    // Clean the stack if we're modifying the code
-    clean_stack();
+    // Clean the memory (heap & stack) if we're modifying the code
+    clean_memory();
 
     // Allow space for line header
     txtpos -= sizeof(LINENUM) + sizeof(char);
@@ -1722,9 +1738,6 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
       {
         // No space - attempt to compact flash
         flashstore_compact(linelen, (unsigned char*)program_start, sp);
-        // Will corrupt stack space so force clean it
-        lineptr = program_end;
-        clean_stack();
         newend = flashstore_addline(txtpos);
         if (!newend)
         {
@@ -1734,6 +1747,7 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
       }
       program_end = newend;
     }
+    heap = (unsigned char*)program_end;
   }
 
   return IX_PROMPT;
@@ -1741,7 +1755,7 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
 // -- Commands ---------------------------------------------------------------
 
 direct:
-  txtpos = (unsigned char*)program_end + sizeof(LINENUM);
+  txtpos = heap + sizeof(LINENUM);
   if (*txtpos == NL)
   {
     return IX_PROMPT;
@@ -1779,10 +1793,12 @@ interperate:
       {
         goto qwhat;
       }
+      clean_memory();
       program_end = flashstore_deleteall();
-      // Fall through
+      heap = (unsigned char*)program_end;
+      goto print_error_or_ok;
     case KW_RUN:
-      clean_stack();
+      clean_memory();
       lineptr = program_start;
       if (lineptr >= program_end)
       {
@@ -2014,7 +2030,7 @@ forloop:
     VAR_TYPE initial;
     VAR_TYPE step;
     VAR_TYPE terminal;
-    stack_for_frame *f;
+    for_frame *f;
 
     if (*txtpos < 'A' || *txtpos > 'Z')
     {
@@ -2064,11 +2080,11 @@ forloop:
       goto qwhat;
     }
 
-    CHECK_SP_OOM(sizeof(stack_for_frame));
-    f = (stack_for_frame *)sp;
+    CHECK_SP_OOM(sizeof(for_frame), qoom);
+    f = (for_frame *)sp;
     VARIABLE_INT_SET(var, initial);
-    f->header.frame_type = STACK_FOR_FLAG;
-    f->header.frame_size = sizeof(stack_for_frame);
+    f->header.frame_type = FRAME_FOR_FLAG;
+    f->header.frame_size = sizeof(for_frame);
     f->for_var = var;
     f->terminal = terminal;
     f->step = step;
@@ -2078,17 +2094,17 @@ forloop:
 
 cmd_gosub:
   {
-    stack_gosub_frame *f;
+    gosub_frame *f;
 
     linenum = expression(EXPR_NORMAL);
     if (error_num || *txtpos != NL)
     {
       goto qwhat;
     }
-    CHECK_SP_OOM(sizeof(stack_gosub_frame));
-    f = (stack_gosub_frame *)sp;
-    f->header.frame_type = STACK_GOSUB_FLAG;
-    f->header.frame_size = sizeof(stack_gosub_frame);
+    CHECK_SP_OOM(sizeof(gosub_frame), qoom);
+    f = (gosub_frame *)sp;
+    f->header.frame_type = FRAME_GOSUB_FLAG;
+    f->header.frame_size = sizeof(gosub_frame);
     f->line = lineptr;
     lineptr = findlineptr();
     if (lineptr >= program_end)
@@ -2110,30 +2126,30 @@ gosub_return:
   // Now walk up the stack frames and find the frame we want, if present
   while (sp < variables_begin)
   {
-    switch (((stack_header*)sp)->frame_type)
+    switch (((frame_header*)sp)->frame_type)
     {
-      case STACK_GOSUB_FLAG:
+      case FRAME_GOSUB_FLAG:
         if (txtpos[-1] == KW_RETURN)
         {
-          stack_gosub_frame *f = (stack_gosub_frame *)sp;
+          gosub_frame *f = (gosub_frame *)sp;
           lineptr = f->line;
           sp += f->header.frame_size;
           goto run_next_statement;
         }
         // This is not the loop you are looking for... so walk back up the stack
         break;
-      case STACK_EVENT_FLAG:
+      case FRAME_EVENT_FLAG:
         if (txtpos[-1] == KW_RETURN)
         {
-          sp += ((stack_header*)sp)->frame_size;
+          sp += ((frame_header*)sp)->frame_size;
           return IX_PROMPT;
         }
         break;
-      case STACK_FOR_FLAG:
+      case FRAME_FOR_FLAG:
         // Flag, Var, Final, Step
         if (txtpos[-1] == KW_NEXT)
         {
-          stack_for_frame *f = (stack_for_frame *)sp;
+          for_frame *f = (for_frame *)sp;
           // Is the the variable we are looking for?
           if (*txtpos == f->for_var)
           {
@@ -2156,24 +2172,18 @@ gosub_return:
         }
         // This is not the loop you are looking for... so Walk back up the stack
         break;
-      case STACK_VARIABLE_FLAG:
+      case FRAME_VARIABLE_FLAG:
       {
           unsigned char vname;
-          stack_variable_frame* f = (stack_variable_frame*)sp;
+          variable_frame* f = (variable_frame*)sp;
           VARIABLE_FLAGS_SET(f->name, f->oflags);
           cache_name = 0;
-        }
-        break;
-      case STACK_SERVICE_FLAG:
-        {
-          gattAttribute_t* attr;
-          GATTServApp_DeregisterService(((stack_service_frame*)sp)->attrs[0].handle, &attr);
         }
         break;
       default:
         goto qoom;
     }
-    sp += ((stack_header*)sp)->frame_size;
+    sp += ((frame_header*)sp)->frame_size;
   }
   // Didn't find the variable we've been looking for
   // If we're returning from the main entry point, then we're done
@@ -2218,7 +2228,7 @@ assignpin:
 //
 assignment:
   {
-    stack_variable_frame* frame;
+    variable_frame* frame;
     unsigned char* ptr;
 
     ptr = parse_variable_address(&frame);
@@ -2770,14 +2780,14 @@ ble_gatt:
         if (ch >= 'A' && ch <= 'Z')
         {
           unsigned char vname;
-          stack_variable_frame* vframe;
+          variable_frame* vframe;
           get_variable_frame(ch, &vframe);
-          if (vframe->type == STACK_VARIABLE_NORMAL)
+          if (vframe == &normal_variable)
           {
-            CHECK_SP_OOM(sizeof(stack_variable_frame));
-            vframe = (stack_variable_frame*)sp;
-            vframe->header.frame_type = STACK_VARIABLE_FLAG;
-            vframe->header.frame_size = sizeof(stack_variable_frame);
+            vframe = (variable_frame*)heap;
+            CHECK_HEAP_OOM(sizeof(variable_frame), qoom);
+            vframe->header.frame_type = FRAME_VARIABLE_FLAG;
+            vframe->header.frame_size = sizeof(variable_frame);
             vframe->type = VAR_INT;
             vframe->name = ch;
             vframe->oflags = VARIABLE_FLAGS_GET(ch);
@@ -3004,7 +3014,7 @@ ble_advert:
             }
             else if (ch >= 'A' && ch <= 'Z')
             {
-              stack_variable_frame* frame;
+              variable_frame* frame;
               unsigned char* ptr;
               
               if (txtpos[1] != NL && txtpos[1] != WS_SPACE)
@@ -3017,11 +3027,11 @@ ble_advert:
               {
                 goto qwhat;
               }
-              if (ble_adptr + frame->header.frame_size - sizeof(stack_variable_frame) > ble_adbuf + sizeof(ble_adbuf))
+              if (ble_adptr + frame->header.frame_size - sizeof(variable_frame) > ble_adbuf + sizeof(ble_adbuf))
               {
                 goto qtoobig;
               }
-              for (ch = sizeof(stack_variable_frame); ch < frame->header.frame_size; ch++)
+              for (ch = sizeof(variable_frame); ch < frame->header.frame_size; ch++)
               {
                 *ble_adptr++ = *ptr++;
               }
@@ -3112,13 +3122,13 @@ cmd_btset:
     // Expects an array
     if (param & 0x8000)
     {
-      stack_variable_frame* vframe;
+      variable_frame* vframe;
       ptr = get_variable_frame(*txtpos, &vframe);
       if (vframe->type != VAR_DIM_BYTE)
       {
         goto qwhat;
       }
-      if (GAPRole_SetParameter(_GAPROLE(param), 0, vframe->header.frame_size - sizeof(stack_variable_frame), ptr) != SUCCESS)
+      if (GAPRole_SetParameter(_GAPROLE(param), 0, vframe->header.frame_size - sizeof(variable_frame), ptr) != SUCCESS)
       {
         goto qwhat;
       }
@@ -3236,7 +3246,7 @@ cmd_read:
         {
           goto qwhat;
         }
-        stack_variable_frame* vframe = NULL;
+        variable_frame* vframe = NULL;
         unsigned char* ptr = parse_variable_address(&vframe);
         if (ptr)
         {
@@ -3252,8 +3262,8 @@ cmd_read:
         else if (vframe)
         {
           // No address, but we have a vframe - this is a full array
-          unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
-          for (ptr = (unsigned char*)vframe + sizeof(stack_variable_frame); alen; alen--)
+          unsigned char alen = vframe->header.frame_size - sizeof(variable_frame);
+          for (ptr = (unsigned char*)vframe + sizeof(variable_frame); alen; alen--)
           {
             *ptr++ = OS_serial_read(0);
           }
@@ -3292,7 +3302,7 @@ cmd_read:
         {
           goto qwhat;
         }
-        stack_variable_frame* vframe = NULL;
+        variable_frame* vframe = NULL;
         unsigned char* ptr = parse_variable_address(&vframe);
         if (ptr)
         {
@@ -3319,8 +3329,8 @@ cmd_read:
         else if (vframe)
         {
           // No address, but we have a vframe - this is a full array
-          unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
-          ptr = (unsigned char*)vframe + sizeof(stack_variable_frame);
+          unsigned char alen = vframe->header.frame_size - sizeof(variable_frame);
+          ptr = (unsigned char*)vframe + sizeof(variable_frame);
           while (alen)
           {
             if (file->poffset == len)
@@ -3375,7 +3385,7 @@ cmd_write:
         {
           goto qwhat;
         }
-        stack_variable_frame* vframe = NULL;
+        variable_frame* vframe = NULL;
         unsigned char* ptr = parse_variable_address(&vframe);
         if (ptr)
         {
@@ -3392,8 +3402,8 @@ cmd_write:
         {
           // No address, but we have a vframe - this is a full array
           unsigned char alen;
-          ptr = (unsigned char*)vframe + sizeof(stack_variable_frame);
-          for (alen = vframe->header.frame_size - sizeof(stack_variable_frame); alen; alen--)
+          ptr = (unsigned char*)vframe + sizeof(variable_frame);
+          for (alen = vframe->header.frame_size - sizeof(variable_frame); alen; alen--)
           {
             OS_serial_write(0, *ptr++);
           }
@@ -3431,10 +3441,10 @@ cmd_write:
       unsigned long special = FS_MAKE_FILE_SPECIAL(files[id].filename, files[id].record);
       files[id].record++;
       
-      unsigned char* item = (unsigned char*)program_end;
+      unsigned char* item = heap;
       unsigned char* iptr = item + FLASHSPECIAL_DATA_OFFSET;
       unsigned char ilen = FLASHSPECIAL_DATA_OFFSET;
-      CHECK_HEAP_OOM(ilen);
+      CHECK_HEAP_OOM(ilen, qhoom);
       *(unsigned short*)item = FLASHID_SPECIAL;
       *(unsigned long*)&item[FLASHSPECIAL_ITEM_ID] = special;
 
@@ -3448,14 +3458,14 @@ cmd_write:
         }
         else if (*txtpos++ != ',')
         {
-          program_end = (unsigned char**)item;
+          heap = item;
           goto qwhat;
         }
-        stack_variable_frame* vframe = NULL;
+        variable_frame* vframe = NULL;
         unsigned char* ptr = parse_variable_address(&vframe);
         if (ptr)
         {
-          CHECK_HEAP_OOM(1);
+          CHECK_HEAP_OOM(1, qhoom);
           if (vframe->type == VAR_DIM_BYTE)
           {
             *iptr = *ptr;
@@ -3468,19 +3478,19 @@ cmd_write:
         else if (vframe)
         {
           // No address, but we have a vframe - this is a full array
-          unsigned char alen = vframe->header.frame_size - sizeof(stack_variable_frame);
-          CHECK_HEAP_OOM(alen);
-          OS_memcpy(iptr, ((unsigned char*)vframe) + sizeof(stack_variable_frame), alen);
+          unsigned char alen = vframe->header.frame_size - sizeof(variable_frame);
+          CHECK_HEAP_OOM(alen, qhoom);
+          OS_memcpy(iptr, ((unsigned char*)vframe) + sizeof(variable_frame), alen);
         }
         else
         {
           VAR_TYPE val = expression(EXPR_COMMA);
           if (error_num)
           {
-            program_end = (unsigned char**)item;
+            heap = item;
             goto qwhat;
           }
-          CHECK_HEAP_OOM(1);
+          CHECK_HEAP_OOM(1, qhoom);
           *iptr = val;
           if (*txtpos != NL)
           {
@@ -3489,20 +3499,20 @@ cmd_write:
         }
         if (iptr - item > 0xFC)
         {
-          program_end = (unsigned char**)item;
+          heap = item;
           goto qtoobig;
         }
-        iptr = (unsigned char*)program_end;
+        iptr = heap;
       }
       item[FLASHSPECIAL_DATA_LEN] = iptr - item;
       if (!addspecial_with_compact(item))
       {
         goto qhoom;
       }
-      program_end = (unsigned char**)item;
+      heap = item;
       goto run_next_statement;
 qhoom:
-      program_end = (unsigned char**)item;
+      heap = item;
       goto qoom;
     }
   }
@@ -3594,7 +3604,7 @@ cmd_spi:
     {
       // Transfer
       unsigned char pin[2];
-      stack_variable_frame* vframe;
+      variable_frame* vframe;
       unsigned char* ptr;
       unsigned short len;
       
@@ -3623,7 +3633,7 @@ cmd_spi:
       pin_wire(pin, pin + 1);
       if (spiChannel == 0)
       {
-        for (len = vframe->header.frame_size - sizeof(stack_variable_frame); len; len--, ptr++)
+        for (len = vframe->header.frame_size - sizeof(variable_frame); len; len--, ptr++)
         {
           U0CSR &= 0xF9; // Clear flags
           U0DBUF = *ptr;
@@ -3637,7 +3647,7 @@ cmd_spi:
       }
       else
       {
-        for (len = vframe->header.frame_size - sizeof(stack_variable_frame); len; len--, ptr++)
+        for (len = vframe->header.frame_size - sizeof(variable_frame); len; len--, ptr++)
         {
           U1CSR &= 0xF9;
           U1DBUF = *ptr;
@@ -3671,7 +3681,7 @@ cmd_i2c:
   {
     case SPI_MASTER:
     {
-      unsigned char* ptr = (unsigned char*)program_end;
+      unsigned char* ptr = heap;
 
       i2cScl = pin_parse();
       i2cSda = pin_parse();
@@ -3689,7 +3699,7 @@ cmd_i2c:
       *ptr++ = WIRE_INPUT_PULLUP;
       *ptr++ = WIRE_LOW;
       
-      pin_wire((unsigned char*)program_end, ptr);
+      pin_wire(heap, ptr);
       break;
     }
 
@@ -3707,7 +3717,7 @@ cmd_i2c:
       unsigned char* data;
       unsigned char len = 0;
       unsigned char i = 0;
-      unsigned char* ptr = (unsigned char*)program_end;
+      unsigned char* ptr = heap;
       unsigned char rnw = (txtpos[-1] == KW_READ ? 1 : 0);
 
       *ptr++ = WIRE_INPUT_SET;
@@ -3786,7 +3796,7 @@ cmd_i2c:
       }
 
       // Encode data we want to read
-      stack_variable_frame* vframe;
+      variable_frame* vframe;
       ignore_blanks();
       i = *txtpos;
       if (i < 'A' || i > 'Z')
@@ -3797,7 +3807,7 @@ cmd_i2c:
       rdata = get_variable_frame(i, &vframe);
       if (vframe->type == VAR_DIM_BYTE)
       {
-        len = vframe->header.frame_size - sizeof(stack_variable_frame);
+        len = vframe->header.frame_size - sizeof(variable_frame);
         OS_memset(rdata, 0, len);
       }
       else
@@ -3850,7 +3860,7 @@ i2c_end:
         OS_memset(ptr, 0, len * 8 * 2);
       }
       
-      pin_wire((unsigned char*)program_end, ptr);
+      pin_wire(heap, ptr);
       if (error_num)
       {
         break;
@@ -4077,7 +4087,7 @@ static void pin_wire_parse(void)
   // Starting a new set of WIRE operations?
   if (pinParsePtr == NULL)
   {
-    pinParsePtr = (unsigned char*)program_end;
+    pinParsePtr = heap;
     pinParseCurrent = 0;
     pinParseReadAddr = NULL;
   }
@@ -4094,7 +4104,7 @@ static void pin_wire_parse(void)
       case ',':
         break;
       case KW_END:
-        pin_wire((unsigned char*)program_end, pinParsePtr);
+        pin_wire(heap, pinParsePtr);
         pinParsePtr = NULL;
         return;
       case KW_PIN_P0:
@@ -4132,7 +4142,7 @@ static void pin_wire_parse(void)
           txtpos += 2;
 
           unsigned char size;
-          stack_variable_frame* vframe;
+          variable_frame* vframe;
           unsigned char* vptr = parse_variable_address(&vframe);
           if (!vptr)
           {
@@ -4179,7 +4189,7 @@ static void pin_wire_parse(void)
           adc = 1;
           txtpos++;
         }
-        stack_variable_frame* vframe;
+        variable_frame* vframe;
         unsigned char* vptr = parse_variable_address(&vframe);
         if (!vptr)
         {
@@ -4219,7 +4229,7 @@ static void pin_wire_parse(void)
         unsigned char v = *txtpos++;
         if (v >= 'A' && v <= 'Z')
         {
-          stack_variable_frame* vframe;
+          variable_frame* vframe;
           unsigned char* vptr = get_variable_frame(v, &vframe);
           
           const unsigned char size = (vframe->type == VAR_DIM_BYTE ? sizeof(unsigned char) : sizeof(VAR_TYPE));
@@ -4236,7 +4246,7 @@ static void pin_wire_parse(void)
           *pinParsePtr++ = WIRE_INPUT_PULSE;
           if (size == sizeof(unsigned char))
           {
-            *pinParsePtr++ = vframe->header.frame_size - sizeof(stack_variable_frame);
+            *pinParsePtr++ = vframe->header.frame_size - sizeof(variable_frame);
           }
           else
           {
@@ -4641,7 +4651,7 @@ unsigned char addspecial_with_compact(unsigned char* item)
 {
   if (!flashstore_addspecial(item))
   {
-    flashstore_compact(item[sizeof(unsigned short)], (unsigned char*)program_end, sp);
+    flashstore_compact(item[sizeof(unsigned short)], heap, sp);
     return flashstore_addspecial(item);
   }
   return 1;
@@ -4653,7 +4663,6 @@ unsigned char addspecial_with_compact(unsigned char* item)
 static char ble_build_service(void)
 {
   unsigned char** line;
-  unsigned char* origsp;
   gattAttribute_t* attributes;
   unsigned char ch;
   unsigned char cmd;
@@ -4661,17 +4670,21 @@ static char ble_build_service(void)
   short count = 0;
   unsigned char* chardesc = NULL;
   unsigned char chardesclen = 0;
-  stack_service_frame* frame;
   LINENUM onconnect = 0;
 
   linenum = servicestart;
   line = findlineptr();
   txtpos = *line + sizeof(LINENUM) + sizeof(char);
 
-  origsp = sp;
+  unsigned char* origheap = heap;
+  
+  // Allocate the service frame info (to be filled in later)
+  service_frame* frame = (service_frame*)heap;
+  CHECK_HEAP_OOM(sizeof(service_frame), qoom);
+
   // Allocate space on the stack for the service attributes
-  CHECK_SP_OOM(sizeof(gattAttribute_t) * servicecount + sizeof(unsigned short));
-  attributes = (gattAttribute_t*)(sp + sizeof(unsigned short));
+  attributes = (gattAttribute_t*)(heap + sizeof(unsigned short));
+  CHECK_HEAP_OOM(sizeof(gattAttribute_t) * servicecount + sizeof(unsigned short), qoom);
   
   for (count = 0; count < servicecount; count++)
   {
@@ -4707,11 +4720,12 @@ static char ble_build_service(void)
         if (cmd == BLE_SERVICE)
         {
           attributes[count].type.uuid = ble_primary_service_uuid;
-          CHECK_SP_OOM(ble_uuid_len + sizeof(gattAttrType_t));
-          OS_memcpy(sp + sizeof(gattAttrType_t), ble_uuid, ble_uuid_len);
-          ((gattAttrType_t*)sp)->len = ble_uuid_len;
-          ((gattAttrType_t*)sp)->uuid = sp + sizeof(gattAttrType_t);
-          *(unsigned char**)&attributes[count].pValue = sp;
+          unsigned char* ptr = heap;
+          CHECK_HEAP_OOM(ble_uuid_len + sizeof(gattAttrType_t), qoom);
+          OS_memcpy(ptr + sizeof(gattAttrType_t), ble_uuid, ble_uuid_len);
+          ((gattAttrType_t*)ptr)->len = ble_uuid_len;
+          ((gattAttrType_t*)ptr)->uuid = ptr + sizeof(gattAttrType_t);
+          *(unsigned char**)&attributes[count].pValue = ptr;
           
           ignore_blanks();
           if (*txtpos == BLE_ONCONNECT)
@@ -4787,9 +4801,9 @@ static char ble_build_service(void)
         }
       }
 done:
-      CHECK_SP_OOM(1);
-      sp[0] = ch;
-      *(unsigned char**)&attributes[count - 1].pValue = sp;
+      CHECK_HEAP_OOM(1, qoom);
+      heap[-1] = ch;
+      *(unsigned char**)&attributes[count - 1].pValue = heap - 1;
       
       ch = *txtpos;
       if (ch < 'A' || ch > 'Z')
@@ -4797,25 +4811,25 @@ done:
         goto error;
       }
 
-      gatt_variable_ref* vref;
-      stack_variable_frame* vframe;
-      
       txtpos++;
       if (*txtpos != WS_SPACE && *txtpos != NL && *txtpos < 0x80)
+      {
         goto error;
+      }
       
-      CHECK_SP_OOM(ble_uuid_len + sizeof(gatt_variable_ref));
-      vref = (gatt_variable_ref*)(sp + ble_uuid_len);
+      unsigned char* uuid = heap;
+      gatt_variable_ref* vref = (gatt_variable_ref*)(uuid + ble_uuid_len);
+      CHECK_HEAP_OOM(ble_uuid_len + sizeof(gatt_variable_ref), qoom);
       vref->read = 0;
       vref->write = 0;
       vref->var = ch;
       vref->attrs = attributes;
       vref->cfg = NULL;
       
-      OS_memcpy(sp, ble_uuid, ble_uuid_len);
+      OS_memcpy(uuid, ble_uuid, ble_uuid_len);
       *(unsigned char**)&attributes[count].pValue = (unsigned char*)vref;
       attributes[count].permissions = GATT_PERMIT_READ | GATT_PERMIT_WRITE;
-      attributes[count].type.uuid = sp;
+      attributes[count].type.uuid = uuid;
       attributes[count].type.len = ble_uuid_len;
 
       for (;;)
@@ -4856,24 +4870,20 @@ done:
 
       if ((attributes[count - 1].pValue[0] & (GATT_PROP_INDICATE|GATT_PROP_NOTIFY)) != 0)
       {
-        CHECK_SP_OOM(sizeof(gattCharCfg_t) * GATT_MAX_NUM_CONN);
-        GATTServApp_InitCharCfg(INVALID_CONNHANDLE, (gattCharCfg_t*)sp);
+        unsigned char* conns = heap;
+        CHECK_HEAP_OOM(sizeof(gattCharCfg_t) * GATT_MAX_NUM_CONN, qoom);
+        GATTServApp_InitCharCfg(INVALID_CONNHANDLE, (gattCharCfg_t*)conns);
 
         count++;
         attributes[count].type.uuid = ble_client_characteristic_config_uuid;
         attributes[count].type.len = 2;
         attributes[count].permissions = GATT_PERMIT_READ | GATT_PERMIT_WRITE;
         attributes[count].handle = 0;
-        *(unsigned char**)&attributes[count].pValue = sp;
-        vref->cfg = sp;
-
-        CHECK_SP_OOM(sizeof(stack_service_frame));
-        frame = (stack_service_frame*)sp;
-        frame->header.frame_type = STACK_SERVICE_FLAG;
-        frame->header.frame_size = origsp - sp;
+        *(unsigned char**)&attributes[count].pValue = conns;
+        vref->cfg = conns;
+        variable_frame* vframe;
         get_variable_frame(vref->var, &vframe);
         vframe->ble = vref;
-        sp += sizeof(stack_service_frame);
       }
  
       if (chardesclen > 0)
@@ -4884,10 +4894,11 @@ done:
         attributes[count].permissions = GATT_PERMIT_READ;
         attributes[count].handle = 0;
 
-        CHECK_SP_OOM(chardesclen + 1);
-        OS_memcpy(sp, chardesc, chardesclen);
-        sp[chardesclen] = 0;
-        *(unsigned char**)&attributes[count].pValue = sp;
+        unsigned char* desc = heap;
+        CHECK_HEAP_OOM(chardesclen + 1, qoom);
+        OS_memcpy(desc, chardesc, chardesclen);
+        desc[chardesclen] = 0;
+        *(unsigned char**)&attributes[count].pValue = desc;
         chardesclen = 0;
       }
     }
@@ -4900,10 +4911,8 @@ done:
   }
 
   // Build a stack header for this service
-  CHECK_SP_OOM(sizeof(stack_service_frame));
-  frame = (stack_service_frame*)sp;
-  frame->header.frame_type = STACK_SERVICE_FLAG;
-  frame->header.frame_size = origsp - sp;
+  frame->header.frame_type = FRAME_SERVICE_FLAG;
+  frame->header.frame_size = heap - origheap;
   frame->attrs = attributes;
   frame->connect = onconnect;
   ((unsigned short*)attributes)[-1] = count;
@@ -4918,11 +4927,11 @@ done:
   return 0;
 
 error:
-  sp = origsp;
+  heap = origheap;
   txtpos = *line + sizeof(LINENUM) + sizeof(char);
   return 1;
 qoom:
-  sp = origsp;
+  heap = origheap;
   txtpos = *line + sizeof(LINENUM) + sizeof(char);
   return 2;
 }
@@ -4981,16 +4990,16 @@ static char ble_get_uuid(void)
 //
 static unsigned short ble_max_offset(gatt_variable_ref* vref, unsigned short offset, unsigned char maxlen)
 {
-  stack_variable_frame* frame;
+  variable_frame* frame;
   unsigned char moffset = offset + maxlen;
 
   get_variable_frame(vref->var, &frame);
 
   if (frame->type == VAR_DIM_BYTE)
   {
-    if (moffset > frame->header.frame_size - sizeof(stack_variable_frame))
+    if (moffset > frame->header.frame_size - sizeof(variable_frame))
     {
-      moffset = frame->header.frame_size - sizeof(stack_variable_frame);
+      moffset = frame->header.frame_size - sizeof(variable_frame);
     }
   }
   else
@@ -5014,7 +5023,7 @@ static unsigned char ble_read_callback(unsigned short handle, gattAttribute_t* a
   gatt_variable_ref* vref;
   unsigned char moffset;
   unsigned char* v;
-  stack_variable_frame* frame;
+  variable_frame* frame;
   
   vref = (gatt_variable_ref*)attr->pValue;
   moffset = ble_max_offset(vref, offset, maxlen);
@@ -5059,7 +5068,7 @@ static unsigned char ble_write_callback(unsigned short handle, gattAttribute_t* 
   gatt_variable_ref* vref;
   unsigned char moffset;
   unsigned char* v;
-  stack_variable_frame* frame;
+  variable_frame* frame;
   
   if (attr->type.uuid == ble_client_characteristic_config_uuid)
   {
@@ -5119,15 +5128,15 @@ static void ble_notify_assign(gatt_variable_ref* vref)
 void ble_connection_status(unsigned short connHandle, unsigned char changeType, signed char rssi)
 {
   unsigned char* ptr;
-  stack_service_frame* vframe;
+  service_frame* vframe;
   unsigned char j;
   unsigned char f;
   short i;
 
-  for (ptr = sp; ptr < variables_begin; ptr += ((stack_header*)ptr)->frame_size)
+  for (ptr = (unsigned char*)program_end; ptr < heap; ptr += ((frame_header*)ptr)->frame_size)
   {
-    vframe = (stack_service_frame*)ptr;
-    if (vframe->header.frame_type == STACK_SERVICE_FLAG)
+    vframe = (service_frame*)ptr;
+    if (vframe->header.frame_type == FRAME_SERVICE_FLAG)
     {
       if (vframe->connect)
       {
