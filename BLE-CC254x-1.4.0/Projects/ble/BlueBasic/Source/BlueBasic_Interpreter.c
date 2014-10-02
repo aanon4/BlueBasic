@@ -2136,7 +2136,6 @@ gosub_return:
           sp += f->header.frame_size;
           goto run_next_statement;
         }
-        // This is not the loop you are looking for... so walk back up the stack
         break;
       case FRAME_EVENT_FLAG:
         if (txtpos[-1] == KW_RETURN)
@@ -2170,14 +2169,16 @@ gosub_return:
             goto run_next_statement;
           }
         }
-        // This is not the loop you are looking for... so Walk back up the stack
         break;
       case FRAME_VARIABLE_FLAG:
-      {
+        {
           unsigned char vname;
           variable_frame* f = (variable_frame*)sp;
           VARIABLE_FLAGS_SET(f->name, f->oflags);
-          cache_name = 0;
+          if (cache_name == f->name)
+          {
+            cache_name = 0;
+          }
         }
         break;
       default:
