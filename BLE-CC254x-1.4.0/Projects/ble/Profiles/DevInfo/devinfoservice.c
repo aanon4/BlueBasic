@@ -181,7 +181,7 @@ static const uint8 devInfoSoftwareRev[] = "BlueBasic " kVersion;
 
 // Manufacturer Name String characteristic
 static uint8 devInfoMfrNameProps = GATT_PROP_READ;
-static const uint8 devInfoMfrName[] = "-";
+static const uint8 devInfoMfrName[] = "http://blog.xojs.org/bluebasic";
 
 // IEEE 11073-20601 Regulatory Certification Data List characteristic
 static uint8 devInfo11073CertProps = GATT_PROP_READ;
