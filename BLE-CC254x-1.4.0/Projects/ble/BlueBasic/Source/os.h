@@ -21,6 +21,8 @@
 #define __data
 
 #define SIMULATE_PINS   1
+#define ENABLE_PORT0    1
+#define ENABLE_PORT1    1
 #define SIMULATE_FLASH  1
 
 #define OS_init()
@@ -179,6 +181,9 @@ extern unsigned char GAPObserverRole_CancelDiscovery(void);
 #define ENABLE_DEBUG_INTERFACE  1
 #define ENABLE_BLE_CONSOLE  1
 #define ENABLE_FAKE_OAD_PROFILE 1
+#define ENABLE_PORT0 1
+#define ENABLE_PORT1 1
+#define ENABLE_PORT2 1
 
 extern unsigned char blueBasic_TaskID;
 
