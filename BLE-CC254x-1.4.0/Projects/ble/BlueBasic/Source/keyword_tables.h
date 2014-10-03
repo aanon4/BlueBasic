@@ -1,6 +1,6 @@
 static const unsigned char keywords_0[] =
 {
-  'A','B','S','(',FUNC_ABS,
+  'A','B','S',FUNC_ABS,
   'A','C','T','I','V','E',BLE_ACTIVE,
   'A','D','C',PM_ADC,
   'A','D','V','E','R','T','_','E','N','A','B','L','E','D',KW_CONSTANT,CO_ADVERT_ENABLED,
@@ -18,8 +18,8 @@ static const unsigned char keywords_0[] =
 };
 static const unsigned char keywords_1[] =
 {
-  'B','A','T','T','E','R','Y','(',FUNC_BATTERY,
-  'B','T','G','E','T','(',BLE_FUNC_BTGET,
+  'B','A','T','T','E','R','Y',FUNC_BATTERY,
+  'B','T','G','E','T',BLE_FUNC_BTGET,
   'B','T','S','E','T',KW_BTSET,
   'O','F','F',KW_CONSTANT,CO_OFF,
   'O','N','C','O','N','N','E','C','T',BLE_ONCONNECT,
@@ -37,9 +37,9 @@ static const unsigned char keywords_2[] =
   'C','L','O','S','E',KW_CLOSE,
   'C','O','N','F','I','G',KW_CONFIG,
   'C','U','S','T','O','M',BLE_CUSTOM,
-  'P','0','(',KW_PIN_P0,
-  'P','1','(',KW_PIN_P1,
-  'P','2','(',KW_PIN_P2,
+  'P','0',KW_PIN_P0,
+  'P','1',KW_PIN_P1,
+  'P','2',KW_PIN_P2,
   'P','I','N','M','O','D','E',KW_PINMODE,
   'P','O','W','E','R',KW_CONSTANT,CO_POWER,
   'P','R','I','N','T',KW_PRINT,
@@ -65,7 +65,7 @@ static const unsigned char keywords_4[] =
   'E','L','I','F',KW_ELIF,
   'E','L','S','E',KW_ELSE,
   'E','N','D',KW_END,
-  'E','O','F','(',FUNC_EOF,
+  'E','O','F',FUNC_EOF,
   'E','X','T','E','R','N','A','L',KW_CONSTANT,CO_EXTERNAL,
   'R','E','A','D',KW_READ,
   'R','E','B','O','O','T',KW_REBOOT,
@@ -75,7 +75,7 @@ static const unsigned char keywords_4[] =
   'R','E','S','O','L','U','T','I','O','N',KW_CONSTANT,CO_RESOLUTION,
   'R','E','T','U','R','N',KW_RETURN,
   'R','I','S','I','N','G',PM_RISING,
-  'R','N','D','(',FUNC_RND,
+  'R','N','D',FUNC_RND,
   'R','U','N',KW_RUN,
   'R','X','G','A','I','N',KW_CONSTANT,CO_RXGAIN,
   0
@@ -159,7 +159,7 @@ static const unsigned char keywords_10[] =
 static const unsigned char keywords_11[] =
 {
   '%',OP_REM,
-  'L','E','N','(',FUNC_LEN,
+  'L','E','N',FUNC_LEN,
   'L','I','M','I','T','E','D',BLE_LIMITED,
   'L','I','M','_','A','D','V','_','T','I','M','E','O','U','T',KW_CONSTANT,CO_LIM_ADV_TIMEOUT,
   'L','I','M','_','D','I','S','C','_','A','D','V','_','I','N','T','_','M','A','X',KW_CONSTANT,CO_LIM_DISC_INT_MAX,

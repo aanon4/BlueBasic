@@ -908,7 +908,7 @@ static void printline(unsigned char nindent, unsigned char indent)
             {
               OS_putchar(c);
             }
-            if (begin[-2] != '(' && *list_line != ',' && begin[-1] != FUNC_HEX)
+            if (*list_line != '(' && *list_line != ',' && begin[-1] != FUNC_HEX)
             {
               OS_putchar(WS_SPACE);
               c = WS_SPACE;
@@ -1037,11 +1037,6 @@ static unsigned char* parse_variable_address(variable_frame** vframe)
   unsigned char* ptr = get_variable_frame(name, vframe);
   if ((*vframe)->type == VAR_DIM_BYTE)
   {
-    if (*txtpos != '(')
-    {
-      return NULL;
-    }
-    txtpos++;
     VAR_TYPE index = expression(EXPR_BRACES);
     if (error_num || index < 0 || index >= (*vframe)->header.frame_size - sizeof(variable_frame))
     {
@@ -1302,58 +1297,15 @@ static VAR_TYPE expression(unsigned char mode)
         error_num = ERROR_OK;
         lastop = 0;
         break;
-
-      case FUNC_MILLIS:
-        if (txtpos[0] != '(' || txtpos[1] != ')')
-        {
-          goto expr_error;
-        }
-        txtpos += 2;
-        if (queueptr == queueend)
-        {
-          goto expr_oom;
-        }
-        *queueptr++ = (VAR_TYPE)OS_get_millis();
-        lastop = 0;
-        break;
-
-      case FUNC_BATTERY:
-      {
-        VAR_TYPE top;
-
-        ignore_blanks();
-        if (*txtpos++ != ')')
-        {
-          goto expr_error;
-        }
-        if (queueptr == queueend)
-        {
-          goto expr_oom;
-        }
-#ifdef FEATURE_BOOST_CONVERTER
-        top = BlueBasic_rawBattery;
-#else
-        ADCCON3 = 0x0F | 0x10 | 0x00; // VDD/3, 10-bit, internal voltage reference
-#ifdef SIMULATE_PINS
-        ADCCON1 = 0x80;
-#endif
-        while ((ADCCON1 & 0x80) == 0)
-          ;
-        top = ADCL;
-        top |= ADCH << 8;
-#endif // FEATURE_BOOST_CONVERTER
-        top = top >> 6;
-        // VDD can be in the range 2v to 3.6v. Internal reference voltage is 1.24v (per datasheet)
-        // So we're measuring VDD/3 against 1.24v giving us (VDD x 511) / 3.72
-        // or VDD = (ADC * 3.72 / 511). x 1000 to get result in mV.
-        *queueptr++ = (top * 3720L) / 511L;
-        lastop = 0;
-        break;
-      }
         
       case FUNC_LEN:
       {
         unsigned char ch = *txtpos;
+        if (ch != '(')
+        {
+          goto expr_error;
+        }
+        ch = *++txtpos;
         if (ch == KW_SERIAL)
         {
           ch = txtpos[1];
@@ -1399,19 +1351,26 @@ static VAR_TYPE expression(unsigned char mode)
         lastop = 1;
         break;
 
+      case FUNC_MILLIS:
+      case FUNC_BATTERY:
       case FUNC_ABS:
       case FUNC_RND:
       case FUNC_EOF:
+#ifdef ENABLE_PORT0
       case KW_PIN_P0:
+#endif
+#ifdef ENABLE_PORT1
       case KW_PIN_P1:
+#endif
+#ifdef ENABLE_PORT2
       case KW_PIN_P2:
+#endif
       case BLE_FUNC_BTGET:
-        if (stackptr + 1 >= stackend)
+        if (stackptr == stackend)
         {
           goto expr_oom;
         }
         *stackptr++ = op;
-        *stackptr++ = '(';
         lastop = 1;
         break;
 
@@ -1444,17 +1403,13 @@ static VAR_TYPE expression(unsigned char mode)
       {
         for (;;)
         {
-          if (stackptr == stack)
-          {
-            if (mode == EXPR_BRACES)
-            {
-              goto done;
-            }
-            goto expr_error;
-          }
           unsigned const op2 = *--stackptr;
           if (op2 == '(')
           {
+            if (stackptr == stack && mode == EXPR_BRACES)
+            {
+              goto done;
+            }
             break;
           }
           if ((queueptr = expression_operate(op2, queueptr)) <= queue)
@@ -1464,63 +1419,100 @@ static VAR_TYPE expression(unsigned char mode)
         }
         if (stackptr > stack)
         {
+          op = *--stackptr;
           if (queueptr == queue)
           {
-            goto expr_error;
-          }
-          const VAR_TYPE top = queueptr[-1];
-          op = *--stackptr;
-          switch (op)
-          {
-            case FUNC_ABS:
-              queueptr[-1] = top < 0 ? -top : top;
-              break;
-            case FUNC_RND:
-              queueptr[-1] = OS_rand() % top;
-              break;
-            case FUNC_EOF:
-              if (top < 0 || top > FS_NR_FILE_HANDLES || !files[top].action)
+            switch (op)
+            {
+              case FUNC_BATTERY:
               {
+#ifdef FEATURE_BOOST_CONVERTER
+                VAR_TYPE top = BlueBasic_rawBattery;
+#else
+                ADCCON3 = 0x0F | 0x10 | 0x00; // VDD/3, 10-bit, internal voltage reference
+#ifdef SIMULATE_PINS
+                ADCCON1 = 0x80;
+#endif
+                while ((ADCCON1 & 0x80) == 0)
+                  ;
+                VAR_TYPE top = ADCL;
+                top |= ADCH << 8;
+#endif // FEATURE_BOOST_CONVERTER
+                top = top >> 6;
+                // VDD can be in the range 2v to 3.6v. Internal reference voltage is 1.24v (per datasheet)
+                // So we're measuring VDD/3 against 1.24v giving us (VDD x 511) / 3.72
+                // or VDD = (ADC * 3.72 / 511). x 1000 to get result in mV.
+                *queueptr++ = (top * 3720L) / 511L;
+                break;
+              }
+              case FUNC_MILLIS:
+                *queueptr++ = (VAR_TYPE)OS_get_millis();
+                break;
+              default:
                 goto expr_error;
-              }
-              queueptr[-1] = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(files[top].filename, files[top].record)) ? 0 : 1;
-              break;
-            case KW_PIN_P0:
-              queueptr[-1] = pin_read(0, top);
-              break;
-            case KW_PIN_P1:
-              queueptr[-1] = pin_read(1, top);
-              break;
-            case KW_PIN_P2:
-              queueptr[-1] = pin_read(2, top);
-              break;
-            case BLE_FUNC_BTGET:
-              if (top & 0x8000)
-              {
-                goto expr_error; // Not supported
-              }
-              GAPRole_GetParameter(top, (unsigned long*)&queueptr[-1], 0, NULL);
-              break;
-
-            default:
-              if (op >= 'A' && op <= 'Z')
-              {
-                variable_frame* frame;
-                unsigned char* ptr = get_variable_frame(op, &frame);
-
-                if (frame->type != VAR_DIM_BYTE || top < 0 || top >= frame->header.frame_size - sizeof(variable_frame))
+            }
+          }
+          else
+          {
+            const VAR_TYPE top = queueptr[-1];
+            switch (op)
+            {
+              case FUNC_ABS:
+                queueptr[-1] = top < 0 ? -top : top;
+                break;
+              case FUNC_RND:
+                queueptr[-1] = OS_rand() % top;
+                break;
+              case FUNC_EOF:
+                if (top < 0 || top > FS_NR_FILE_HANDLES || !files[top].action)
                 {
                   goto expr_error;
                 }
-                queueptr[-1] = ptr[top];
-              }
-              else
-              {
-                stackptr++;
-              }
-              break;
+                queueptr[-1] = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(files[top].filename, files[top].record)) ? 0 : 1;
+                break;
+#ifdef ENABLE_PORT0
+              case KW_PIN_P0:
+                queueptr[-1] = pin_read(0, top);
+                break;
+#endif
+#ifdef ENABLE_PORT1
+              case KW_PIN_P1:
+                queueptr[-1] = pin_read(1, top);
+                break;
+#endif
+#ifdef ENABLE_PORT2
+              case KW_PIN_P2:
+                queueptr[-1] = pin_read(2, top);
+                break;
+#endif
+              case BLE_FUNC_BTGET:
+                if (top & 0x8000)
+                {
+                  goto expr_error; // Not supported
+                }
+                GAPRole_GetParameter(top, (unsigned long*)&queueptr[-1], 0, NULL);
+                break;
+
+              default:
+                if (op >= 'A' && op <= 'Z')
+                {
+                  variable_frame* frame;
+                  unsigned char* ptr = get_variable_frame(op, &frame);
+
+                  if (frame->type != VAR_DIM_BYTE || top < 0 || top >= frame->header.frame_size - sizeof(variable_frame))
+                  {
+                    goto expr_error;
+                  }
+                  queueptr[-1] = ptr[top];
+                }
+                else
+                {
+                  stackptr++;
+                }
+                break;
+            }
           }
-          lastop = 1;
+          lastop = 0;
         }
         break;
       }
@@ -1850,9 +1842,15 @@ interperate:
       goto cmd_delay;
     case KW_AUTORUN:
       goto cmd_autorun;
+#ifdef ENABLE_PORT0
     case KW_PIN_P0:
+#endif
+#ifdef ENABLE_PORT1
     case KW_PIN_P1:
+#endif
+#ifdef ENABLE_PORT2
     case KW_PIN_P2:
+#endif
       txtpos--;
       goto assignpin;
     case KW_GATT:
@@ -2376,12 +2374,6 @@ cmd_dim:
       goto qwhat;
     }
     name = *txtpos++;
-    ignore_blanks();
-    if (*txtpos != '(')
-    {
-      goto qwhat;
-    }
-    txtpos++;
     size = expression(EXPR_BRACES);
     if (error_num)
     {
@@ -4020,10 +4012,21 @@ static unsigned char pin_parse(void)
   ignore_blanks();
   
   major = *txtpos++;
-  if (major < KW_PIN_P0 || major > KW_PIN_P2)
+  switch (major)
   {
-    txtpos--;
-    goto badpin;
+#ifdef ENABLE_PORT0
+    case KW_PIN_P0:
+#endif
+#ifdef ENABLE_PORT1
+    case KW_PIN_P1:
+#endif
+#ifdef ENABLE_PORT2
+    case KW_PIN_P2:
+#endif
+      break;
+    default:
+      txtpos--;
+      goto badpin;
   }
   minor = expression(EXPR_BRACES);
   if (error_num || minor > 7)
@@ -4109,9 +4112,15 @@ static void pin_wire_parse(void)
         pin_wire(heap, pinParsePtr);
         pinParsePtr = NULL;
         return;
+#ifdef ENABLE_PORT0
       case KW_PIN_P0:
+#endif
+#ifdef ENABLE_PORT1
       case KW_PIN_P1:
+#endif
+#ifdef ENABLE_PORT2
       case KW_PIN_P2:
+#endif
         txtpos--;
         *pinParsePtr++ = WIRE_PIN;
         pinParseCurrent = pin_parse();
