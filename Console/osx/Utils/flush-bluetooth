@@ -1,0 +1,4 @@
+#! /bin/sh
+sudo defaults write /Library/Preferences/com.apple.Bluetooth CoreBluetoothCache -dict
+sudo launchctl unload /System/Library/LaunchDaemons/com.apple.blued.plist
+sudo launchctl load /System/Library/LaunchDaemons/com.apple.blued.plist
