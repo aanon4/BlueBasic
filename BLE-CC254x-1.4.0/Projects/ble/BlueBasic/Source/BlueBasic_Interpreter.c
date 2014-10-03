@@ -1209,8 +1209,13 @@ static VAR_TYPE expression(unsigned char mode)
 {
   VAR_TYPE queue[EXPRESSION_QUEUE_SIZE];
   VAR_TYPE* queueend = &queue[EXPRESSION_QUEUE_SIZE];
-  unsigned char stack[EXPRESSION_STACK_SIZE];
-  unsigned char* stackend = &stack[EXPRESSION_STACK_SIZE];
+  struct stack_t
+  {
+    unsigned char op;
+    unsigned char depth;
+  };
+  struct stack_t stack[EXPRESSION_STACK_SIZE];
+  struct stack_t* stackend = &stack[EXPRESSION_STACK_SIZE];
   unsigned char lastop = 1;
 
   // Done parse if we have a pending error
@@ -1220,7 +1225,7 @@ static VAR_TYPE expression(unsigned char mode)
   }
   
   VAR_TYPE* queueptr = queue;
-  unsigned char* stackptr = stack;
+  struct stack_t* stackptr = stack;
 
   for (;;)
   {
@@ -1259,7 +1264,7 @@ static VAR_TYPE expression(unsigned char mode)
             {
               goto expr_oom;
             }
-            *stackptr++ = op;
+            (stackptr++)->op = op;
             lastop = 1;
           }
           else
@@ -1348,7 +1353,8 @@ static VAR_TYPE expression(unsigned char mode)
         {
           goto expr_oom;
         }
-        *stackptr++ = op;
+        stackptr->depth = queueptr - queue;
+        (stackptr++)->op = op;
         lastop = 1;
         break;
 
@@ -1371,7 +1377,7 @@ static VAR_TYPE expression(unsigned char mode)
         {
           goto expr_oom;
         }
-        *stackptr++ = op;
+        (stackptr++)->op = op;
         lastop = 1;
         break;
 
@@ -1386,7 +1392,7 @@ static VAR_TYPE expression(unsigned char mode)
             }
             goto expr_error;
           }
-          unsigned const op2 = *--stackptr;
+          unsigned const op2 = (--stackptr)->op;
           if (op2 == '(')
           {
             stackptr++;
@@ -1402,11 +1408,13 @@ static VAR_TYPE expression(unsigned char mode)
 
       case ')':
       {
+        signed char depth = -1;
         for (;;)
         {
-          unsigned const op2 = *--stackptr;
+          unsigned const op2 = (--stackptr)->op;
           if (op2 == '(')
           {
+            depth = (queueptr - queue) - stackptr->depth;
             if (stackptr == stack && mode == EXPR_BRACES)
             {
               goto done;
@@ -1420,96 +1428,101 @@ static VAR_TYPE expression(unsigned char mode)
         }
         if (stackptr > stack)
         {
-          op = *--stackptr;
-          switch (op)
+          op = (--stackptr)->op;
+          if (depth == 0)
           {
-            case FUNC_BATTERY:
+            switch (op)
             {
+              case FUNC_BATTERY:
+              {
 #ifdef FEATURE_BOOST_CONVERTER
-              VAR_TYPE top = BlueBasic_rawBattery;
+                VAR_TYPE top = BlueBasic_rawBattery;
 #else
-              ADCCON3 = 0x0F | 0x10 | 0x00; // VDD/3, 10-bit, internal voltage reference
+                ADCCON3 = 0x0F | 0x10 | 0x00; // VDD/3, 10-bit, internal voltage reference
 #ifdef SIMULATE_PINS
-              ADCCON1 = 0x80;
+                ADCCON1 = 0x80;
 #endif
-              while ((ADCCON1 & 0x80) == 0)
-                ;
-              VAR_TYPE top = ADCL;
-              top |= ADCH << 8;
+                while ((ADCCON1 & 0x80) == 0)
+                  ;
+                VAR_TYPE top = ADCL;
+                top |= ADCH << 8;
 #endif // FEATURE_BOOST_CONVERTER
-              top = top >> 6;
-              // VDD can be in the range 2v to 3.6v. Internal reference voltage is 1.24v (per datasheet)
-              // So we're measuring VDD/3 against 1.24v giving us (VDD x 511) / 3.72
-              // or VDD = (ADC * 3.72 / 511). x 1000 to get result in mV.
-              *queueptr++ = (top * 3720L) / 511L;
-              break;
-            }
-            case FUNC_MILLIS:
-              *queueptr++ = (VAR_TYPE)OS_get_millis();
-              break;
-
-            default:
-              if (queueptr == queue)
-              {
-                goto expr_error;
+                top = top >> 6;
+                // VDD can be in the range 2v to 3.6v. Internal reference voltage is 1.24v (per datasheet)
+                // So we're measuring VDD/3 against 1.24v giving us (VDD x 511) / 3.72
+                // or VDD = (ADC * 3.72 / 511). x 1000 to get result in mV.
+                *queueptr++ = (top * 3720L) / 511L;
+                break;
               }
-              const VAR_TYPE top = queueptr[-1];
-              switch (op)
-              {
-                case FUNC_ABS:
-                  queueptr[-1] = top < 0 ? -top : top;
-                  break;
-                case FUNC_RND:
-                  queueptr[-1] = OS_rand() % top;
-                  break;
-                case FUNC_EOF:
-                  if (top < 0 || top > FS_NR_FILE_HANDLES || !files[top].action)
+              case FUNC_MILLIS:
+                *queueptr++ = (VAR_TYPE)OS_get_millis();
+                break;
+              default:
+                goto expr_error;
+            }
+          }
+          else if (depth == 1)
+          {
+            const VAR_TYPE top = queueptr[-1];
+            switch (op)
+            {
+              case FUNC_ABS:
+                queueptr[-1] = top < 0 ? -top : top;
+                break;
+              case FUNC_RND:
+                queueptr[-1] = OS_rand() % top;
+                break;
+              case FUNC_EOF:
+                if (top < 0 || top > FS_NR_FILE_HANDLES || !files[top].action)
+                {
+                  goto expr_error;
+                }
+                queueptr[-1] = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(files[top].filename, files[top].record)) ? 0 : 1;
+                break;
+#ifdef ENABLE_PORT0
+              case KW_PIN_P0:
+                queueptr[-1] = pin_read(0, top);
+                break;
+#endif
+#ifdef ENABLE_PORT1
+              case KW_PIN_P1:
+                queueptr[-1] = pin_read(1, top);
+                break;
+#endif
+#ifdef ENABLE_PORT2
+              case KW_PIN_P2:
+                queueptr[-1] = pin_read(2, top);
+                break;
+#endif
+              case BLE_FUNC_BTPEEK:
+                if (top & 0x8000)
+                {
+                  goto expr_error; // Not supported
+                }
+                GAPRole_GetParameter(top, (unsigned long*)&queueptr[-1], 0, NULL);
+                break;
+
+              default:
+                if (op >= 'A' && op <= 'Z')
+                {
+                  variable_frame* frame;
+                  unsigned char* ptr = get_variable_frame(op, &frame);
+                  if (frame->type != VAR_DIM_BYTE || top < 0 || top >= frame->header.frame_size - sizeof(variable_frame))
                   {
                     goto expr_error;
                   }
-                  queueptr[-1] = flashstore_findspecial(FS_MAKE_FILE_SPECIAL(files[top].filename, files[top].record)) ? 0 : 1;
-                  break;
-#ifdef ENABLE_PORT0
-                case KW_PIN_P0:
-                  queueptr[-1] = pin_read(0, top);
-                  break;
-#endif
-#ifdef ENABLE_PORT1
-                case KW_PIN_P1:
-                  queueptr[-1] = pin_read(1, top);
-                  break;
-#endif
-#ifdef ENABLE_PORT2
-                case KW_PIN_P2:
-                  queueptr[-1] = pin_read(2, top);
-                  break;
-#endif
-                case BLE_FUNC_BTPEEK:
-                  if (top & 0x8000)
-                  {
-                    goto expr_error; // Not supported
-                  }
-                  GAPRole_GetParameter(top, (unsigned long*)&queueptr[-1], 0, NULL);
-                  break;
-
-                default:
-                  if (op >= 'A' && op <= 'Z')
-                  {
-                    variable_frame* frame;
-                    unsigned char* ptr = get_variable_frame(op, &frame);
-
-                    if (frame->type != VAR_DIM_BYTE || top < 0 || top >= frame->header.frame_size - sizeof(variable_frame))
-                    {
-                      goto expr_error;
-                    }
-                    queueptr[-1] = ptr[top];
-                  }
-                  else
-                  {
-                    stackptr++;
-                  }
-                  break;
-              }
+                  queueptr[-1] = ptr[top];
+                }
+                else
+                {
+                  stackptr++;
+                }
+                break;
+            }
+          }
+          else
+          {
+            goto expr_error;
           }
           lastop = 1;
         }
@@ -1544,12 +1557,12 @@ static VAR_TYPE expression(unsigned char mode)
         const unsigned char op1precedence = operator_precedence[op - OP_ADD];
         for (;;)
         {
-          const unsigned char op2 = stackptr[-1] - OP_ADD;
+          const unsigned char op2 = stackptr[-1].op - OP_ADD;
           if (stackptr == stack || op2 >= sizeof(operator_precedence) || op1precedence < operator_precedence[op2])
           {
             break;
           }
-          if ((queueptr = expression_operate(*--stackptr, queueptr)) <= queue)
+          if ((queueptr = expression_operate((--stackptr)->op, queueptr)) <= queue)
           {
             goto expr_error;
           }
@@ -1558,7 +1571,7 @@ static VAR_TYPE expression(unsigned char mode)
         {
           goto expr_oom;
         }
-        *stackptr++ = op;
+        (stackptr++)->op = op;
         lastop = 1;
         break;
       }
@@ -1567,7 +1580,7 @@ static VAR_TYPE expression(unsigned char mode)
 done:
   while (stackptr > stack)
   {
-    if ((queueptr = expression_operate(*--stackptr, queueptr)) <= queue)
+    if ((queueptr = expression_operate((--stackptr)->op, queueptr)) <= queue)
     {
       goto expr_error;
     }
