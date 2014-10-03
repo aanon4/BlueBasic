@@ -137,7 +137,7 @@ enum
   KW_GATT,
   KW_ADVERT,
   KW_SCAN,
-  KW_BTSET,
+  KW_BTPOKE,
   KW_PINMODE,
   KW_INTERRUPT,
   KW_SERIAL,
@@ -247,7 +247,7 @@ enum
   BLE_MORE,
   BLE_NAME,
   BLE_CUSTOM,
-  BLE_FUNC_BTGET,
+  BLE_FUNC_BTPEEK,
   BLE_ACTIVE,
   BLE_DUPLICATES,
 
@@ -1366,7 +1366,7 @@ static VAR_TYPE expression(unsigned char mode)
 #ifdef ENABLE_PORT2
       case KW_PIN_P2:
 #endif
-      case BLE_FUNC_BTGET:
+      case BLE_FUNC_BTPEEK:
         if (stackptr == stackend)
         {
           goto expr_oom;
@@ -1484,7 +1484,7 @@ static VAR_TYPE expression(unsigned char mode)
                   queueptr[-1] = pin_read(2, top);
                   break;
 #endif
-                case BLE_FUNC_BTGET:
+                case BLE_FUNC_BTPEEK:
                   if (top & 0x8000)
                   {
                     goto expr_error; // Not supported
@@ -1860,8 +1860,8 @@ interperate:
     case KW_SCAN:
       ble_isadvert = 0;
       goto ble_scan;
-    case KW_BTSET:
-      goto cmd_btset;
+    case KW_BTPOKE:
+      goto cmd_btpoke;
     case KW_PINMODE:
       goto cmd_pinmode;
     case KW_INTERRUPT:
@@ -3100,9 +3100,9 @@ ble_advert:
   }
 
 //
-// BTSET <paramater>, <value>|<array>
+// BTPOKE <paramater>, <value>|<array>
 //
-cmd_btset:
+cmd_btpoke:
   {
     unsigned short param;
     unsigned char* ptr;
