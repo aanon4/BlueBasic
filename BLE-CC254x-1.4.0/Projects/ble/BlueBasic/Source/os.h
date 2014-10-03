@@ -173,17 +173,33 @@ extern unsigned char GAPObserverRole_CancelDiscovery(void);
 #include "hal_flash.h"
 #include "timestamp.h"
 
+// Configurations
+#ifdef TARGET_PETRA
+
+#define TARGET_CC2540           1
+#define ENABLE_DEBUG_INTERFACE  1
+#define ENABLE_BLE_CONSOLE      1
+#define ENABLE_FAKE_OAD_PROFILE 1
+#define ENABLE_PORT0            1
+#define ENABLE_PORT1            1
+#define FEATURE_BOOST_CONVERTER P2_0
+
+#else // TARGET_PETRA
+
+#define ENABLE_DEBUG_INTERFACE  1
+#define ENABLE_BLE_CONSOLE      1
+#define ENABLE_FAKE_OAD_PROFILE 1
+#define ENABLE_PORT0            1
+#define ENABLE_PORT1            1
+#define ENABLE_PORT2            1
+
+#endif // TARGET_PETRA
+
 #if TARGET_CC2540 || TARGET_CC2541
 #define TARGET_CC254X   1
 #else
 #error "Unknown TARGET_XXX"
 #endif
-#define ENABLE_DEBUG_INTERFACE  1
-#define ENABLE_BLE_CONSOLE  1
-#define ENABLE_FAKE_OAD_PROFILE 1
-#define ENABLE_PORT0 1
-#define ENABLE_PORT1 1
-#define ENABLE_PORT2 1
 
 extern unsigned char blueBasic_TaskID;
 

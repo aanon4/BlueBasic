@@ -15,6 +15,10 @@
         <project>BlueBasic</project>
         <configuration>CC2541-ImgB</configuration>
       </member>
+      <member>
+        <project>BlueBasic</project>
+        <configuration>Petra</configuration>
+      </member>
     </batchDefinition>
   </batchBuild>
 </workspace>
