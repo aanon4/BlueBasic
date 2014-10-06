@@ -10,6 +10,7 @@ import UIKit
 import CoreBluetooth
 
 var current: Device?
+var currentOwner: UIViewController?
 
 class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate {
 
@@ -26,27 +27,31 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
   
   var detailItem: AnyObject? {
     didSet {
+      currentOwner = self
       connectTo(detailItem as Device)
     }
-  }
-
-
-  func configureView() {
-    console.layoutManager.allowsNonContiguousLayout = false // Fix scroll jump when keyboard dismissed
-    statusField?.text = status
   }
 
   override func viewDidLoad() {
     super.viewDidLoad()
     console.dataDetectorTypes = .None
     console.delegate = self
-    self.configureView()
+    console.layoutManager.allowsNonContiguousLayout = false // Fix scroll jump when keyboard dismissed
+    statusField?.text = status
+
   }
   
   override func viewWillAppear(animated: Bool) {
     super.viewWillAppear(animated)
     NSNotificationCenter.defaultCenter().addObserver(self, selector: "keyboardDidShow:", name: "UIKeyboardDidShowNotification", object: nil)
     NSNotificationCenter.defaultCenter().addObserver(self, selector: "keyboardDidHide:", name: "UIKeyboardDidHideNotification", object: nil)
+  }
+  
+  override func viewDidAppear(animated: Bool) {
+    super.viewDidAppear(animated)
+    if detailItem == nil {
+      popover?.presentPopoverFromBarButtonItem((view.window!.rootViewController as UISplitViewController).displayModeButtonItem(), permittedArrowDirections: .Any, animated: true)
+    }
   }
 
   override func viewWillDisappear(animated: Bool) {
@@ -216,7 +221,7 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
   }
   
   func resignActive() {
-    if detailItem as? Device == current {
+    if currentOwner == self {
       disconnect()
     }
   }

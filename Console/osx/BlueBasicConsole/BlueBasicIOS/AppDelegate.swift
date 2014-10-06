@@ -9,6 +9,7 @@
 import UIKit
 
 let deviceManager = DeviceManager()
+var popover: UIPopoverController? = nil
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, UISplitViewControllerDelegate {
@@ -61,6 +62,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UISplitViewControllerDele
           }
       }
       return false
+  }
+  
+  func splitViewController(svc: UISplitViewController, willHideViewController aViewController: UIViewController, withBarButtonItem barButtonItem: UIBarButtonItem, forPopoverController pc: UIPopoverController) {
+    popover = pc
   }
 
 }
