@@ -57,7 +57,7 @@ class Firmware: ConsoleDelegate {
     case UUIDS.imgIdentityUUID:
       var nrblocks = (firmware!.length + blocksize - 1) / blocksize
       for i in 0...nrblocks-1 {
-        var block = NSMutableData(capacity: blocksize + 2)
+        var block = NSMutableData(capacity: blocksize + 2)!
         var blockheader = [ Byte(i & 255), Byte(i >> 8) ]
         block.appendBytes(blockheader, length: 2)
         block.appendData(self.firmware!.subdataWithRange(NSMakeRange(i * blocksize, blocksize)))

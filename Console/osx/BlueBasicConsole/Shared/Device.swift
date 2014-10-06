@@ -136,7 +136,7 @@ class Device: NSObject, CBPeripheralDelegate {
   }
   
   func peripheral(peripheral: CBPeripheral!, didUpdateValueForCharacteristic characteristic: CBCharacteristic!, error: NSError!) {
-    var value = characteristic.value()
+    var value = Utilities.getValue(characteristic)
     if let callback = readCallbacks[characteristic.UUID] {
       readCallbacks.removeValueForKey(characteristic.UUID)
       callback.call(error == nil ? value : nil)

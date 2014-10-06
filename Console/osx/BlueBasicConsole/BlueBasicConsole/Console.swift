@@ -115,8 +115,8 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate {
     case UUIDS.inputCharacteristicUUID:
       if delegate == nil || delegate!.onNotification(uuid, data: data) {
         var str = NSString(data: data, encoding: NSASCIIStringEncoding)!
-        console.replaceCharactersInRange(NSMakeRange(console.string.utf16Count, 0), withString: str)
-        console.scrollRangeToVisible(NSMakeRange(console.string.utf16Count, 0))
+        console.replaceCharactersInRange(NSMakeRange(console.string!.utf16Count, 0), withString: str)
+        console.scrollRangeToVisible(NSMakeRange(console.string!.utf16Count, 0))
         console.needsDisplay = true
       }
     default:
@@ -146,14 +146,14 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate {
     for ch in str {
       pending.append(ch)
       if ch == "\n" || pending.utf16Count > 64 {
-        current!.write(pending.dataUsingEncoding(NSASCIIStringEncoding, allowLossyConversion: false)!, characteristic: outputCharacteristic!, type: .WithoutResponse)
+        current!.write(pending.dataUsingEncoding(NSASCIIStringEncoding, allowLossyConversion: false)!, characteristic: outputCharacteristic!, type: .WithResponse)
         pending = ""
       }
     }
   }
   
   func textView(textView: NSTextView!, shouldChangeTextInRange affectedCharRange: NSRange, replacementString: String!) -> Bool {
-    var consoleCount = console.string.utf16Count
+    var consoleCount = console.string!.utf16Count
     if current == nil {
       return false
     } else if replacementString.utf16Count > 0 {
@@ -162,7 +162,7 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate {
         return true
       } else {
         textView.replaceCharactersInRange(NSMakeRange(consoleCount, 0), withString: replacementString)
-        textView.setSelectedRange(NSMakeRange(console.string.utf16Count, 0))
+        textView.setSelectedRange(NSMakeRange(console.string!.utf16Count, 0))
         return false
       }
     } else if affectedCharRange.location == consoleCount - 1 && pending.utf16Count > 0 {
