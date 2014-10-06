@@ -33,20 +33,30 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
 
   func configureView() {
     console.layoutManager.allowsNonContiguousLayout = false // Fix scroll jump when keyboard dismissed
+    statusField?.text = status
   }
 
   override func viewDidLoad() {
     super.viewDidLoad()
     console.dataDetectorTypes = .None
     console.delegate = self
+    self.configureView()
+  }
+  
+  override func viewWillAppear(animated: Bool) {
+    super.viewWillAppear(animated)
     NSNotificationCenter.defaultCenter().addObserver(self, selector: "keyboardDidShow:", name: "UIKeyboardDidShowNotification", object: nil)
     NSNotificationCenter.defaultCenter().addObserver(self, selector: "keyboardDidHide:", name: "UIKeyboardDidHideNotification", object: nil)
-    self.configureView()
+  }
+
+  override func viewWillDisappear(animated: Bool) {
+    super.viewWillDisappear(animated)
+    NSNotificationCenter.defaultCenter().removeObserver(self, name: "UIKeyboardDidShowNotification", object: nil)
+    NSNotificationCenter.defaultCenter().removeObserver(self, name: "UIKeyboardDidHideNotification", object: nil)
   }
 
   override func didReceiveMemoryWarning() {
     super.didReceiveMemoryWarning()
-    // Dispose of any resources that can be recreated.
   }
 
   // MARK: - Console mechanics
@@ -56,6 +66,7 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
       statusField?.text = status
       if status == "Connected" {
         console?.editable = true
+        console.becomeFirstResponder()
       } else {
         console?.editable = false
       }
@@ -206,11 +217,13 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
     if keyboardOpen == nil {
       let info = notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as NSValue
       let size = info.CGRectValue().size
+
       var frame = console.frame
       keyboardOpen = frame
-      var bottom = UIScreen.mainScreen().bounds.size.height - (frame.origin.y + frame.size.height)
-      frame.size.height -= (size.height - bottom)
+      let bottom = UIScreen.mainScreen().bounds.size.height - (frame.origin.y + frame.size.height)
+      frame.size.height -= (size.height - bottom) + console.font.lineHeight
       console.frame = frame
+
       console.selectedRange = NSMakeRange(console.text!.utf16Count, 0)
       console.scrollRangeToVisible(NSMakeRange(console.text.utf16Count, 0))
     }
@@ -218,11 +231,10 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
   
   func keyboardDidHide(notification: NSNotification) {
     if keyboardOpen != nil {
-      self.console.frame = self.keyboardOpen!
+      self.console.frame.size.height = self.keyboardOpen!.size.height
       self.keyboardOpen = nil
       self.console.scrollRangeToVisible(NSMakeRange(self.console.text.utf16Count, 0))
     }
   }
 
 }
-
