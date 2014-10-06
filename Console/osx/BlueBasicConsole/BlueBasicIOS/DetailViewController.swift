@@ -53,6 +53,7 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
     super.viewWillDisappear(animated)
     NSNotificationCenter.defaultCenter().removeObserver(self, name: "UIKeyboardDidShowNotification", object: nil)
     NSNotificationCenter.defaultCenter().removeObserver(self, name: "UIKeyboardDidHideNotification", object: nil)
+    resignActive()
   }
 
   override func didReceiveMemoryWarning() {
@@ -98,23 +99,28 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
             if list[UUIDS.commsServiceUUID] != nil {
               self.inputCharacteristic = list[UUIDS.commsServiceUUID]!.characteristics[UUIDS.inputCharacteristicUUID]
               self.outputCharacteristic = list[UUIDS.commsServiceUUID]!.characteristics[UUIDS.outputCharacteristicUUID]
-              current!.read(self.inputCharacteristic!) {
-                data in
-                if data == nil {
-                  if list[UUIDS.oadServiceUUID] != nil {
-                    current!.delegate = self
-                    self.status = "Upgradable"
-                    onConnected?(true)
+              if current == nil {
+                self.status = "Failed"
+                onConnected?(false)
+              } else {
+                current!.read(self.inputCharacteristic!) {
+                  data in
+                  if data == nil {
+                    if list[UUIDS.oadServiceUUID] != nil {
+                      current!.delegate = self
+                      self.status = "Upgradable"
+                      onConnected?(true)
+                    } else {
+                      self.status = "Failed"
+                      self.disconnect()
+                      onConnected?(false)
+                    }
                   } else {
-                    self.status = "Failed"
-                    self.disconnect()
-                    onConnected?(false)
+                    self.status = "Connected"
+                    current!.delegate = self
+                    current!.notify(UUIDS.inputCharacteristicUUID, serviceUUID: UUIDS.commsServiceUUID)
+                    onConnected?(true)
                   }
-                } else {
-                  self.status = "Connected"
-                  current!.delegate = self
-                  current!.notify(UUIDS.inputCharacteristicUUID, serviceUUID: UUIDS.commsServiceUUID)
-                  onConnected?(true)
                 }
               }
             } else if list[UUIDS.oadServiceUUID] != nil {
@@ -210,7 +216,9 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
   }
   
   func resignActive() {
-    disconnect()
+    if detailItem as? Device == current {
+      disconnect()
+    }
   }
   
   func keyboardDidShow(notification: NSNotification) {
