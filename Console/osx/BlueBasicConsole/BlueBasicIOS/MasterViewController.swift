@@ -23,6 +23,8 @@ class MasterViewController: UITableViewController {
 
   override func viewDidLoad() {
     super.viewDidLoad()
+    self.refreshControl = UIRefreshControl()
+    self.refreshControl?.addTarget(self, action: "pullToRefresh:", forControlEvents: .ValueChanged)
     scan()
   }
 
@@ -46,6 +48,13 @@ class MasterViewController: UITableViewController {
       self.tableView.cellForRowAtIndexPath(path)?.backgroundColor = nil
       lastIndexPath = nil
     }
+  }
+  
+  func pullToRefresh(sender: UIRefreshControl) {
+    resignActive()
+    names.removeAll(keepCapacity: true)
+    tableView.reloadData();
+    sender.endRefreshing()
   }
   
   // MARK: - Segues
