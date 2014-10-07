@@ -3387,9 +3387,9 @@ cmd_write:
         {
           break;
         }
-        else if (*txtpos++ != ',')
+        if (*txtpos == ',')
         {
-          goto qwhat;
+          txtpos++;
         }
         variable_frame* vframe = NULL;
         unsigned char* ptr = parse_variable_address(&vframe);
@@ -3428,6 +3428,7 @@ cmd_write:
           OS_serial_write(0, val);
         }
       }
+      goto run_next_statement;
     }
     else
     {

@@ -331,14 +331,14 @@ unsigned char OS_serial_open(unsigned char port, unsigned long baud, unsigned ch
   }
  
   // Only support port 0, no-parity, 8-bits, 1 stop bit
-  if (port != 0 || parity != 'N' || bits != 8 || stop != 1 || !(flow == 'H' || flow == 'N'))
+  if (port != 0 || parity != 'N' || bits != 8 || stop != 1 || flow != 'H')
   {
     return 3;
   }
 
   config.configured = 1;
   config.baudRate = baud;
-  config.flowControl = (flow == 'H' ? 1 : 0);
+  config.flowControl = 1;
   config.flowControlThreshold = 64;
   config.idleTimeout = 0;
   config.rx.maxBufSize = 128;
