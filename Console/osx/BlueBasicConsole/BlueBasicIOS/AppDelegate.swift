@@ -35,6 +35,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UISplitViewControllerDele
       else if let detail = controller as? DetailViewController {
         detail.resignActive()
       }
+      else if let nav = controller as? UINavigationController {
+        if let detail = nav.topViewController as? DetailViewController {
+          detail.resignActive()
+        }
+      }
     }
   }
 
