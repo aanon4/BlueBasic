@@ -53,6 +53,7 @@
 #include "peripheral.h"
 #include "gapbondmgr.h"
 #include "devinfoservice.h"
+#include "gapgattserver.h"
 #include "os.h"
 
 /*********************************************************************
