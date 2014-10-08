@@ -19,4 +19,7 @@ struct UUIDS {
   static let imgIdentityUUID = CBUUID(string: "F000FFC1-0451-4000-B000-000000000000")
   static let imgBlockUUID = CBUUID(string: "F000FFC2-0451-4000-B000-000000000000")
   
+  static let deviceInfoServiceUUID = CBUUID(string: "180A")
+  static let firmwareRevisionUUID = CBUUID(string: "2A26")
+  
 }

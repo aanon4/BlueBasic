@@ -161,15 +161,7 @@ static const uint8 devInfoSerialNumber[] = "-";
 
 // Firmware Revision String characteristic
 static uint8 devInfoFirmwareRevProps = GATT_PROP_READ;
-#ifdef FEATURE_OAD_HEADER
-#define __STR(X) #X
-#define _STR(X) __STR(X)
-static const uint8 devInfoFirmwareRev[] = BUILD_TIMESTAMP "/" _STR(OAD_IMAGE_VERSION);
-#undef _STR
-#undef __STR
-#else
 static const uint8 devInfoFirmwareRev[] = BUILD_TIMESTAMP;
-#endif
 
 // Hardware Revision String characteristic
 static uint8 devInfoHardwareRevProps = GATT_PROP_READ;

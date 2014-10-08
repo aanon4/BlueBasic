@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		221E095019E5F7EB0015992F /* AutoUpdateFirmware.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221E094F19E5F7EB0015992F /* AutoUpdateFirmware.swift */; };
 		222C27C219DFCC5A001031AB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C27C119DFCC5A001031AB /* AppDelegate.swift */; };
 		222C27C419DFCC5A001031AB /* MasterViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C27C319DFCC5A001031AB /* MasterViewController.swift */; };
 		222C27C619DFCC5A001031AB /* DetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C27C519DFCC5A001031AB /* DetailViewController.swift */; };
@@ -61,6 +62,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		221E094F19E5F7EB0015992F /* AutoUpdateFirmware.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutoUpdateFirmware.swift; sourceTree = "<group>"; };
 		222C27BD19DFCC5A001031AB /* BlueBasicIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BlueBasicIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		222C27C019DFCC5A001031AB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		222C27C119DFCC5A001031AB /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -212,6 +214,7 @@
 		22567DAC19D1DB170029B430 /* BlueBasicConsole */ = {
 			isa = PBXGroup;
 			children = (
+				221E094F19E5F7EB0015992F /* AutoUpdateFirmware.swift */,
 				222C285B19DFD069001031AB /* DeviceList.swift */,
 				22567DAF19D1DB170029B430 /* AppDelegate.swift */,
 				22567DB119D1DB170029B430 /* Images.xcassets */,
@@ -443,6 +446,7 @@
 				222C285E19DFD8A9001031AB /* Utilities.swift in Sources */,
 				22E1F47D19D3919700A0F716 /* Uploader.swift in Sources */,
 				222C285119DFD00C001031AB /* DeviceDelegate.swift in Sources */,
+				221E095019E5F7EB0015992F /* AutoUpdateFirmware.swift in Sources */,
 				222C285319DFD00C001031AB /* Callbacks.swift in Sources */,
 				22E1F47F19D391B200A0F716 /* Firmware.swift in Sources */,
 				222C285519DFD00C001031AB /* UUIDS.swift in Sources */,

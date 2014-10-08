@@ -139,12 +139,21 @@ class Device: NSObject, CBPeripheralDelegate {
   }
   
   func peripheral(peripheral: CBPeripheral!, didUpdateValueForCharacteristic characteristic: CBCharacteristic!, error: NSError!) {
-    var value = Utilities.getValue(characteristic)
-    if let callback = readCallbacks[characteristic.UUID] {
-      readCallbacks.removeValueForKey(characteristic.UUID)
-      callback.call(error == nil ? value : nil)
+    if error == nil {
+      var value = Utilities.getValue(characteristic)
+      if let callback = readCallbacks[characteristic.UUID] {
+        readCallbacks.removeValueForKey(characteristic.UUID)
+        callback.call(error == nil ? value : nil)
+      } else {
+        delegate?.onNotification(error == nil, uuid: characteristic.UUID, data: value)
+      }
     } else {
-      delegate?.onNotification(error == nil, uuid: characteristic.UUID, data: value)
+      if let callback = readCallbacks[characteristic.UUID] {
+        readCallbacks.removeValueForKey(characteristic.UUID)
+        callback.call(nil)
+      } else {
+        delegate?.onNotification(true, uuid: characteristic.UUID, data: NSData())
+      }
     }
   }
   

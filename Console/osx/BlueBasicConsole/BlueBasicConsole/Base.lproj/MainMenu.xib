@@ -17,6 +17,8 @@
                 <outlet property="consoleView" destination="13w-pp-UfM" id="GKI-aq-6BV"/>
                 <outlet property="devicesView" destination="2qw-iX-yKG" id="fDl-6C-vKV"/>
                 <outlet property="statusField" destination="oc2-sp-PrI" id="yeb-uo-yQV"/>
+                <outlet property="toDeviceMenu" destination="rsp-xo-957" id="KHl-yO-kOw"/>
+                <outlet property="upgradeMenu" destination="8RJ-h7-YJ8" id="axa-i8-6L3"/>
                 <outlet property="window" destination="QvC-M9-y7g" id="gIp-Ho-8D9"/>
             </connections>
         </customObject>
@@ -62,9 +64,9 @@
                 </menuItem>
                 <menuItem title="File" id="nqY-wq-q18">
                     <modifierMask key="keyEquivalentModifierMask"/>
-                    <menu key="submenu" title="File" id="h1R-wf-hEg">
+                    <menu key="submenu" title="File" autoenablesItems="NO" id="h1R-wf-hEg">
                         <items>
-                            <menuItem title="Load to device" id="rsp-xo-957">
+                            <menuItem title="Load to device" enabled="NO" id="rsp-xo-957">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
                                     <action selector="toDevice:" target="Voe-Tx-rLC" id="Mvj-wY-Yf9"/>
@@ -76,10 +78,10 @@
                                     <action selector="fromDevice:" target="Voe-Tx-rLC" id="uhD-ge-I4H"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="Upgrade firmware" id="k3k-an-iIG" userLabel="Menu Item - Upgrade firmware">
+                            <menuItem title="Upgrade" enabled="NO" id="8RJ-h7-YJ8" userLabel="Upgrade">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
-                                    <action selector="updateFirmware:" target="Voe-Tx-rLC" id="KYa-gb-YOF"/>
+                                    <action selector="upgrade:" target="Voe-Tx-rLC" id="djh-17-FeL"/>
                                 </connections>
                             </menuItem>
                         </items>
@@ -160,10 +162,10 @@
                                     <rect key="frame" x="0.0" y="0.0" width="433" height="385"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
-                                    <size key="minSize" width="430" height="385"/>
+                                    <size key="minSize" width="433" height="385"/>
                                     <size key="maxSize" width="526" height="10000000"/>
                                     <color key="insertionPointColor" white="0.0" alpha="1" colorSpace="calibratedWhite"/>
-                                    <size key="minSize" width="430" height="385"/>
+                                    <size key="minSize" width="433" height="385"/>
                                     <size key="maxSize" width="526" height="10000000"/>
                                     <allowedInputSourceLocales>
                                         <string>NSAllRomanInputSourcesLocaleIdentifier</string>

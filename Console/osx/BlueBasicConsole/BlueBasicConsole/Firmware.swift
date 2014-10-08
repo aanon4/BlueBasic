@@ -24,11 +24,10 @@ class Firmware: ConsoleDelegate {
     self.device = console.current!
   }
   
-  func upgrade(url: NSURL, onComplete: CompletionHandler? = nil) {
+  func upgrade(firmware: NSData, onComplete: CompletionHandler? = nil) {
     
+    self.firmware = firmware
     self.complete = onComplete
-
-    firmware = NSData(contentsOfURL: url)
     
     if console.isUpgradable {
       flash()

@@ -35,7 +35,7 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate {
   var status: String = "" {
     didSet {
       statusField.stringValue = status
-      if status == "Connected" {
+      if isConnected {
         console.editable = true
         console.window?.makeFirstResponder(console)
       } else {
@@ -46,7 +46,7 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate {
   
   var isConnected: Bool {
     get {
-      return status == "Connected"
+      return status == "Connected" || status == "Upgrade available"
     }
   }
   
