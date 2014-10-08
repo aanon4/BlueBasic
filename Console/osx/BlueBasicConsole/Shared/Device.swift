@@ -20,9 +20,12 @@ class Device: NSObject, CBPeripheralDelegate {
   var delegate: DeviceDelegate?
   var readCallbacks = [CBUUID: OneTimeCallbacks<NSData?>]()
   
-  init (peripheral: CBPeripheral, manager: DeviceManager) {
+  var rssi: Int
+  
+  init (peripheral: CBPeripheral, rssi: Int, manager: DeviceManager) {
     self.peripheral = peripheral
     self.manager = manager
+    self.rssi = rssi
     super.init()
     self.peripheral.delegate = self
   }

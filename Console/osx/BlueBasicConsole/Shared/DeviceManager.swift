@@ -81,8 +81,12 @@ class DeviceManager: NSObject, CBCentralManagerDelegate {
   
   func centralManager(central: CBCentralManager!, didDiscoverPeripheral peripheral: CBPeripheral!, advertisementData: [NSObject : AnyObject]!, RSSI: NSNumber!) {
     let name = deviceName(peripheral)
-    if devices[peripheral.identifier!] == nil {
-      let device = Device(peripheral: peripheral, manager: self)
+    if let device = devices[peripheral.identifier!] {
+      if (RSSI.integerValue <= 0) {
+        device.rssi = RSSI.integerValue
+      }
+    } else {
+      let device = Device(peripheral: peripheral, rssi: RSSI.integerValue, manager: self)
       devices[peripheral.identifier] = device
     }
     findCallbacks.call(devices[peripheral.identifier]!)
