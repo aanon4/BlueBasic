@@ -2886,8 +2886,8 @@
       <name>BUILDACTION</name>
       <archiveVersion>1</archiveVersion>
       <data>
-        <prebuild>"$PROJ_DIR$\..\..\common\CC2540\timestamp.bat" $CONFIG_NAME$ "$OBJ_DIR$"</prebuild>
-        <postbuild>"$PROJ_DIR$\..\..\common\CC2540\convert-and-merge.bat" "$PROJ_DIR$" CC2541-ImgA CC2541-ImgB CC2541</postbuild>
+        <prebuild>"$PROJ_DIR$\..\..\common\CC2540\timestamp.bat" "$PROJ_DIR$" CC2541 "$OBJ_DIR$"</prebuild>
+        <postbuild>"$PROJ_DIR$\..\..\common\CC2540\convert-and-merge.bat" "$PROJ_DIR$" CC2541-ImgA  CC2541-ImgB  CC2541</postbuild>
       </data>
     </settings>
     <settings>
@@ -3973,7 +3973,7 @@
       <name>BUILDACTION</name>
       <archiveVersion>1</archiveVersion>
       <data>
-        <prebuild>"$PROJ_DIR$\..\..\common\CC2540\timestamp.bat" $CONFIG_NAME$ "$OBJ_DIR$"</prebuild>
+        <prebuild>"$PROJ_DIR$\..\..\common\CC2540\timestamp.bat" "$PROJ_DIR$" CC2540 "$OBJ_DIR$"</prebuild>
         <postbuild>"$PROJ_DIR$\..\..\common\CC2540\convert-and-merge.bat" "$PROJ_DIR$" CC2540-ImgA CC2540-ImgB CC2540</postbuild>
       </data>
     </settings>
@@ -5059,7 +5059,7 @@
       <name>BUILDACTION</name>
       <archiveVersion>1</archiveVersion>
       <data>
-        <prebuild>"$PROJ_DIR$\..\..\common\CC2540\timestamp.bat" $CONFIG_NAME$ "$OBJ_DIR$"</prebuild>
+        <prebuild>"$PROJ_DIR$\..\..\common\CC2540\timestamp.bat" "$PROJ_DIR$" Petra "$OBJ_DIR$"</prebuild>
         <postbuild>"$PROJ_DIR$\..\..\common\CC2540\convert-and-merge.bat" "$PROJ_DIR$" CC2540-ImgA Petra Petra</postbuild>
       </data>
     </settings>
@@ -5614,10 +5614,10 @@
             <name>$PROJ_DIR$\..\..\..\..\COMPONENTS\hal\target\CC2540EB\hal_dma.h</name>
           </file>
           <file>
-            <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2540EB\hal_mcu.h</name>
+            <name>$PROJ_DIR$\..\..\..\..\COMPONENTS\hal\target\CC2540EB\hal_mcu.h</name>
           </file>
           <file>
-            <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2540EB\hal_types.h</name>
+            <name>$PROJ_DIR$\..\..\..\..\COMPONENTS\hal\target\CC2540EB\hal_types.h</name>
           </file>
         </group>
       </group>
