@@ -169,7 +169,11 @@ static const uint8 devInfoHardwareRev[] = "-";
 
 // Software Revision String characteristic
 static uint8 devInfoSoftwareRevProps = GATT_PROP_READ;
+#ifdef kVersion
 static const uint8 devInfoSoftwareRev[] = "BlueBasic " kVersion;
+#else
+static const uint8 devInfoSoftwareRev[] = "BlueBasicLoader";
+#endif
 
 // Manufacturer Name String characteristic
 static uint8 devInfoMfrNameProps = GATT_PROP_READ;

@@ -5060,7 +5060,7 @@
       <archiveVersion>1</archiveVersion>
       <data>
         <prebuild>"$PROJ_DIR$\..\..\common\CC2540\timestamp.bat" "$PROJ_DIR$" Petra "$OBJ_DIR$"</prebuild>
-        <postbuild>"$PROJ_DIR$\..\..\common\CC2540\convert-and-merge.bat" "$PROJ_DIR$" CC2540-ImgA Petra Petra</postbuild>
+        <postbuild>"$PROJ_DIR$\..\..\common\CC2540\convert-and-merge.bat" "$PROJ_DIR$" Petra Petra Petra</postbuild>
       </data>
     </settings>
     <settings>
@@ -5614,10 +5614,10 @@
             <name>$PROJ_DIR$\..\..\..\..\COMPONENTS\hal\target\CC2540EB\hal_dma.h</name>
           </file>
           <file>
-            <name>$PROJ_DIR$\..\..\..\..\COMPONENTS\hal\target\CC2540EB\hal_mcu.h</name>
+            <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2540EB\hal_mcu.h</name>
           </file>
           <file>
-            <name>$PROJ_DIR$\..\..\..\..\COMPONENTS\hal\target\CC2540EB\hal_types.h</name>
+            <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2540EB\hal_types.h</name>
           </file>
         </group>
       </group>

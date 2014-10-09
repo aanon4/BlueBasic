@@ -209,6 +209,7 @@ void BlueBasic_Init( uint8 task_id )
 #if defined FEATURE_OAD
   VOID OADTarget_AddService();                    // OAD Profile
 #endif
+  DevInfo_AddService();                           // Device information
 
   // Setup a delayed profile startup
   osal_set_event( blueBasicLoader_TaskID, BLUEBASICLOADER_START_DEVICE_EVT );

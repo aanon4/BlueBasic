@@ -9,19 +9,15 @@
       <name>All</name>
       <member>
         <project>BlueBasicLoader</project>
-        <configuration>CC2541</configuration>
-      </member>
-      <member>
-        <project>BlueBasicLoader</project>
-        <configuration>CC2540</configuration>
-      </member>
-      <member>
-        <project>BlueBasicLoader</project>
         <configuration>CC2540-ImgA</configuration>
       </member>
       <member>
         <project>BlueBasicLoader</project>
         <configuration>CC2541-ImgA</configuration>
+      </member>
+      <member>
+        <project>BlueBasicLoader</project>
+        <configuration>Petra</configuration>
       </member>
     </batchDefinition>
   </batchBuild>
