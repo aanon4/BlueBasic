@@ -11,7 +11,7 @@ import CoreBluetooth
 
 class Firmware: ConsoleDelegate {
 
-  let console: Console
+  let console: ConsoleProtocol
   var complete: CompletionHandler? = nil
   let device: Device
   var firmware : NSData?
@@ -19,7 +19,7 @@ class Firmware: ConsoleDelegate {
   var written = 0
   var blockCharacteristic: CBCharacteristic?
   
-  init(_ console: Console) {
+  init(_ console: ConsoleProtocol) {
     self.console = console
     self.device = console.current!
   }
@@ -32,7 +32,7 @@ class Firmware: ConsoleDelegate {
     if console.isUpgradable {
       flash()
     } else {
-      console.status = "Rebooting"
+      console.setStatus("Rebooting")
       console.write("REBOOT UP\n")
       // Wait a moment to give device chance to reboot
       dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1_000_000_000), dispatch_get_main_queue()) {
@@ -70,7 +70,7 @@ class Firmware: ConsoleDelegate {
     case UUIDS.imgBlockUUID:
       written++
       if written == wrote - 1 { // Last ack is always lost as device reboots
-        console.status = "Waiting..."
+        console.setStatus("Waiting...")
         // Wait for 5 seconds to give last writes change to finish
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5_000_000_000), dispatch_get_main_queue()) {
           self.console.disconnect() {
@@ -79,7 +79,7 @@ class Firmware: ConsoleDelegate {
           }
         }
       } else {
-        console.status = String(format: "Upgrading...%d%%", 100 * written / wrote)
+        console.setStatus(String(format: "Upgrading...%d%%", 100 * written / wrote))
       }
       break
     default:
@@ -96,7 +96,7 @@ class Firmware: ConsoleDelegate {
     device.services() {
       list in
       
-      self.console.delegate = self;
+      self.console.setDelegate(self)
 
       self.blockCharacteristic = list[UUIDS.oadServiceUUID]!.characteristics[UUIDS.imgBlockUUID]!
       

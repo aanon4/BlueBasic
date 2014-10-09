@@ -7,7 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		221E095019E5F7EB0015992F /* AutoUpdateFirmware.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221E094F19E5F7EB0015992F /* AutoUpdateFirmware.swift */; };
+		221E095419E6543E0015992F /* ConsoleProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221E095319E6543E0015992F /* ConsoleProtocol.swift */; };
+		221E095519E6543E0015992F /* ConsoleProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221E095319E6543E0015992F /* ConsoleProtocol.swift */; };
+		221E095719E65B250015992F /* AutoUpdateFirmware.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221E095619E65B250015992F /* AutoUpdateFirmware.swift */; };
+		221E095819E65B250015992F /* AutoUpdateFirmware.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221E095619E65B250015992F /* AutoUpdateFirmware.swift */; };
+		221E095A19E65B990015992F /* Firmware.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221E095919E65B990015992F /* Firmware.swift */; };
+		221E095B19E65B990015992F /* Firmware.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221E095919E65B990015992F /* Firmware.swift */; };
 		222C27C219DFCC5A001031AB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C27C119DFCC5A001031AB /* AppDelegate.swift */; };
 		222C27C419DFCC5A001031AB /* MasterViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C27C319DFCC5A001031AB /* MasterViewController.swift */; };
 		222C27C619DFCC5A001031AB /* DetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C27C519DFCC5A001031AB /* DetailViewController.swift */; };
@@ -41,7 +46,6 @@
 		22CE828319E0A9C30043EA84 /* ConsoleDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CE828219E0A9C30043EA84 /* ConsoleDelegate.swift */; };
 		22CE828419E0A9C30043EA84 /* ConsoleDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CE828219E0A9C30043EA84 /* ConsoleDelegate.swift */; };
 		22E1F47D19D3919700A0F716 /* Uploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22E1F47C19D3919700A0F716 /* Uploader.swift */; };
-		22E1F47F19D391B200A0F716 /* Firmware.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22E1F47E19D391B200A0F716 /* Firmware.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,7 +66,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		221E094F19E5F7EB0015992F /* AutoUpdateFirmware.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutoUpdateFirmware.swift; sourceTree = "<group>"; };
+		221E095319E6543E0015992F /* ConsoleProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConsoleProtocol.swift; sourceTree = "<group>"; };
+		221E095619E65B250015992F /* AutoUpdateFirmware.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutoUpdateFirmware.swift; sourceTree = "<group>"; };
+		221E095919E65B990015992F /* Firmware.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Firmware.swift; sourceTree = "<group>"; };
 		222C27BD19DFCC5A001031AB /* BlueBasicIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BlueBasicIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		222C27C019DFCC5A001031AB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		222C27C119DFCC5A001031AB /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -96,7 +102,6 @@
 		22C0D8B619D2958C002964C4 /* Console.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Console.swift; sourceTree = "<group>"; };
 		22CE828219E0A9C30043EA84 /* ConsoleDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConsoleDelegate.swift; sourceTree = "<group>"; };
 		22E1F47C19D3919700A0F716 /* Uploader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Uploader.swift; sourceTree = "<group>"; };
-		22E1F47E19D391B200A0F716 /* Firmware.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Firmware.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -175,6 +180,8 @@
 		222C284219DFCF95001031AB /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				221E095919E65B990015992F /* Firmware.swift */,
+				221E095619E65B250015992F /* AutoUpdateFirmware.swift */,
 				22CE828219E0A9C30043EA84 /* ConsoleDelegate.swift */,
 				222C284419DFD00C001031AB /* DeviceManager.swift */,
 				222C284519DFD00C001031AB /* Device.swift */,
@@ -183,6 +190,7 @@
 				222C284819DFD00C001031AB /* UUIDS.swift */,
 				222C284919DFD00C001031AB /* DeviceService.swift */,
 				222C284A19DFD00C001031AB /* DeviceListDelegate.swift */,
+				221E095319E6543E0015992F /* ConsoleProtocol.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -214,7 +222,6 @@
 		22567DAC19D1DB170029B430 /* BlueBasicConsole */ = {
 			isa = PBXGroup;
 			children = (
-				221E094F19E5F7EB0015992F /* AutoUpdateFirmware.swift */,
 				222C285B19DFD069001031AB /* DeviceList.swift */,
 				22567DAF19D1DB170029B430 /* AppDelegate.swift */,
 				22567DB119D1DB170029B430 /* Images.xcassets */,
@@ -222,7 +229,6 @@
 				22567DAD19D1DB170029B430 /* Supporting Files */,
 				22C0D8B619D2958C002964C4 /* Console.swift */,
 				22E1F47C19D3919700A0F716 /* Uploader.swift */,
-				22E1F47E19D391B200A0F716 /* Firmware.swift */,
 				222C285D19DFD8A9001031AB /* Utilities.swift */,
 			);
 			path = BlueBasicConsole;
@@ -415,9 +421,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				222C285A19DFD00C001031AB /* DeviceListDelegate.swift in Sources */,
+				221E095519E6543E0015992F /* ConsoleProtocol.swift in Sources */,
 				222C27C619DFCC5A001031AB /* DetailViewController.swift in Sources */,
 				222C286019DFD90B001031AB /* Utilities.swift in Sources */,
 				222C27C419DFCC5A001031AB /* MasterViewController.swift in Sources */,
+				221E095819E65B250015992F /* AutoUpdateFirmware.swift in Sources */,
+				221E095B19E65B990015992F /* Firmware.swift in Sources */,
 				222C285419DFD00C001031AB /* Callbacks.swift in Sources */,
 				222C27C219DFCC5A001031AB /* AppDelegate.swift in Sources */,
 				222C285019DFD00C001031AB /* Device.swift in Sources */,
@@ -446,13 +455,14 @@
 				222C285E19DFD8A9001031AB /* Utilities.swift in Sources */,
 				22E1F47D19D3919700A0F716 /* Uploader.swift in Sources */,
 				222C285119DFD00C001031AB /* DeviceDelegate.swift in Sources */,
-				221E095019E5F7EB0015992F /* AutoUpdateFirmware.swift in Sources */,
+				221E095419E6543E0015992F /* ConsoleProtocol.swift in Sources */,
+				221E095A19E65B990015992F /* Firmware.swift in Sources */,
 				222C285319DFD00C001031AB /* Callbacks.swift in Sources */,
-				22E1F47F19D391B200A0F716 /* Firmware.swift in Sources */,
 				222C285519DFD00C001031AB /* UUIDS.swift in Sources */,
 				22C0D8B719D2958C002964C4 /* Console.swift in Sources */,
 				222C284F19DFD00C001031AB /* Device.swift in Sources */,
 				222C285719DFD00C001031AB /* DeviceService.swift in Sources */,
+				221E095719E65B250015992F /* AutoUpdateFirmware.swift in Sources */,
 				222C285919DFD00C001031AB /* DeviceListDelegate.swift in Sources */,
 				222C285C19DFD069001031AB /* DeviceList.swift in Sources */,
 				22CE828319E0A9C30043EA84 /* ConsoleDelegate.swift in Sources */,

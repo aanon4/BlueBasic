@@ -9,16 +9,17 @@
 import Foundation
 import CoreBluetooth
 
+var _firmwareVersion: String?
+var _firmwareBlob: NSData?
+
 class AutoUpdateFirmware {
   
   let baseURL = "https://github.com/aanon4/BlueBasic/raw/master/hex/BlueBasic-"
 
-  let console: Console
+  let console: ConsoleProtocol
   let device: Device
-  var version: String?
-  var firmware: NSData?
   
-  init(console: Console) {
+  init(console: ConsoleProtocol) {
     self.console = console
     self.device = console.current!
   }
@@ -44,18 +45,18 @@ class AutoUpdateFirmware {
   }
   
   func upgrade(onComplete: CompletionHandler? = nil) {
-    if firmware == nil {
+    if _firmwareBlob == nil {
       onComplete?(false)
     } else {
-      Firmware(console).upgrade(firmware!, onComplete: onComplete)
+      Firmware(console).upgrade(_firmwareBlob!, onComplete: onComplete)
     }
   }
   
   func fetchLatestVersion(currentVersion: String, onComplete: CompletionHandler) {
-    if version == currentVersion {
+    if _firmwareVersion == currentVersion {
       onComplete(false)
-    } else if version != nil {
-      onComplete(firmware != nil)
+    } else if _firmwareVersion != nil {
+      onComplete(_firmwareBlob != nil)
     } else {
       var session = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration())
 
@@ -67,14 +68,14 @@ class AutoUpdateFirmware {
         } else {
           var versionInfo = NSString(data: data!, encoding: NSASCIIStringEncoding)!.substringToIndex(14)
           if versionInfo <= versionParts[1] {
-            self.version = currentVersion
+            _firmwareVersion = currentVersion
             onComplete(false)
           } else {
             (session.dataTaskWithURL(NSURL(string: self.baseURL + versionParts[0] + ".bin")!) {
               data, response, error in
               if error == nil && data != nil {
-                self.firmware = data
-                self.version = "\(versionParts[0])/\(versionInfo)"
+                _firmwareBlob = data
+                _firmwareVersion = "\(versionParts[0])/\(versionInfo)"
               }
               onComplete(error == nil)
             }).resume()

@@ -10,7 +10,7 @@ import Foundation
 import Cocoa
 import CoreBluetooth
 
-class Console: NSObject, NSTextViewDelegate, DeviceDelegate {
+class Console: NSObject, NSTextViewDelegate, DeviceDelegate, ConsoleProtocol {
   
   let statusField: NSTextField
   let console: NSTextView
@@ -32,7 +32,7 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate {
     console.delegate = self
   }
 
-  var status: String = "" {
+  var status: String {
     didSet {
       statusField.stringValue = status
       if isConnected {
@@ -42,6 +42,16 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate {
         console.editable = false
       }
     }
+  }
+  
+  // Workaround
+  func setStatus(status: String) {
+    self.status = status
+  }
+  
+  // Workaround
+  func setDelegate(delegate: ConsoleDelegate) {
+    self.delegate = delegate
   }
   
   var isConnected: Bool {
@@ -130,7 +140,7 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate {
     }
   }
 
-  func disconnect(onDisconnect: CompletionHandler? = nil) {
+  func disconnect(_ onDisconnect: CompletionHandler? = nil) {
     if let old = current {
       current = nil
       delegate = nil

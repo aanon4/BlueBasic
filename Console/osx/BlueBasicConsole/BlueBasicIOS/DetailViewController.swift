@@ -9,13 +9,12 @@
 import UIKit
 import CoreBluetooth
 
-var current: Device?
-var currentOwner: UIViewController?
+var _current: Device?
+var _currentOwner: UIViewController?
 
-class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate {
+class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate, ConsoleProtocol {
 
   @IBOutlet weak var console: UITextView!
-  @IBOutlet weak var statusField: UILabel?
 
   var inputCharacteristic: CBCharacteristic?
   var outputCharacteristic: CBCharacteristic?
@@ -25,10 +24,37 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
   
   var delegate: ConsoleDelegate?
   
+  var autoUpgrade: AutoUpdateFirmware?
+  
   var detailItem: AnyObject? {
     didSet {
-      currentOwner = self
-      connectTo(detailItem as Device)
+      connectTo(detailItem as Device) {
+        success in
+        if success {
+          self.autoUpgrade = AutoUpdateFirmware(console: self)
+          self.autoUpgrade!.detectUpgrade() {
+            needupgrade in
+            if needupgrade {
+              self.status = "Upgrade available"
+              self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Upgrade", style: .Plain, target: self, action: "upgrade")
+            } else {
+              self.autoUpgrade = nil
+              self.navigationItem.rightBarButtonItem = nil
+            }
+          }
+
+        }
+      }
+    }
+  }
+  
+  var current: Device? {
+    get {
+      return _current
+    }
+    set {
+      _currentOwner = self
+      _current = newValue
     }
   }
 
@@ -37,8 +63,7 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
     console.dataDetectorTypes = .None
     console.delegate = self
     console.layoutManager.allowsNonContiguousLayout = false // Fix scroll jump when keyboard dismissed
-    statusField?.text = status
-
+    self.navigationItem.title = status
   }
   
   override func viewWillAppear(animated: Bool) {
@@ -69,8 +94,8 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
   
   var status: String = "Not connected" {
     didSet {
-      statusField?.text = status
-      if status == "Connected" {
+      self.navigationItem.title = status
+      if isConnected {
         console?.editable = true
         console.becomeFirstResponder()
       } else {
@@ -81,7 +106,7 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
   
   var isConnected: Bool {
     get {
-      return status == "Connected"
+      return status == "Connected" || status == "Upgrade available"
     }
   }
   
@@ -91,11 +116,21 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
     }
   }
   
+  // Workaround
+  func setStatus(status: String) {
+    self.status = status
+  }
+  
+  // Workaround
+  func setDelegate(delegate: ConsoleDelegate) {
+    self.delegate = delegate
+  }
+  
   func connectTo(device: Device, onConnected: CompletionHandler? = nil) {
     disconnect() {
       success in
       self.status = "Connecting..."
-      current = device
+      self.current = device
       device.connect() {
         success in
         if success {
@@ -104,15 +139,15 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
             if list[UUIDS.commsServiceUUID] != nil {
               self.inputCharacteristic = list[UUIDS.commsServiceUUID]!.characteristics[UUIDS.inputCharacteristicUUID]
               self.outputCharacteristic = list[UUIDS.commsServiceUUID]!.characteristics[UUIDS.outputCharacteristicUUID]
-              if current == nil {
+              if self.current == nil {
                 self.status = "Failed"
                 onConnected?(false)
               } else {
-                current!.read(self.inputCharacteristic!) {
+                self.current!.read(self.inputCharacteristic!) {
                   data in
                   if data == nil {
                     if list[UUIDS.oadServiceUUID] != nil {
-                      current!.delegate = self
+                      self.current!.delegate = self
                       self.status = "Upgradable"
                       onConnected?(true)
                     } else {
@@ -122,14 +157,14 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
                     }
                   } else {
                     self.status = "Connected"
-                    current!.delegate = self
-                    current!.notify(UUIDS.inputCharacteristicUUID, serviceUUID: UUIDS.commsServiceUUID)
+                    self.current!.delegate = self
+                    self.current!.notify(UUIDS.inputCharacteristicUUID, serviceUUID: UUIDS.commsServiceUUID)
                     onConnected?(true)
                   }
                 }
               }
             } else if list[UUIDS.oadServiceUUID] != nil {
-              current!.delegate = self
+              self.current!.delegate = self
               self.status = "Upgradable"
               onConnected?(true)
             } else {
@@ -170,7 +205,7 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
     }
   }
   
-  func disconnect(onDisconnect: CompletionHandler? = nil) {
+  func disconnect(_ onDisconnect: CompletionHandler? = nil) {
     if let old = current {
       current = nil
       delegate = nil
@@ -221,10 +256,30 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
   }
   
   func resignActive() {
-    if currentOwner == self {
+    if _currentOwner == self {
       disconnect()
     }
   }
+
+  func upgrade() {
+    if autoUpgrade != nil {
+      let alert = UIAlertController(title: "Upgrade?", message: "Do you want to upgrade the device firmware?", preferredStyle: .Alert)
+      alert.addAction(UIAlertAction(title: "OK", style: .Destructive, handler: {
+        action in
+        self.navigationItem.rightBarButtonItem = nil
+        UIApplication.sharedApplication().idleTimerDisabled = true
+        self.autoUpgrade!.upgrade() {
+          success in
+          UIApplication.sharedApplication().idleTimerDisabled = false
+        }
+      }))
+      alert.addAction(UIAlertAction(title: "Cancel", style: .Default, handler: {
+        action in
+      }))
+      self.presentViewController(alert, animated: true, completion: nil)
+    }
+  }
+
   
   func keyboardDidShow(notification: NSNotification) {
     if keyboardOpen == nil {
