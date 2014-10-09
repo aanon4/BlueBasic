@@ -1,0 +1,14 @@
+5 //
+6 // "Simple serial echo test. Echo what we receive back to the sender"
+7 //
+9 // "9600 baud, no parity, 8 bits, 1 stop bit, hardware handshaking"
+10 SERIAL 9600,N,8,1,H ONREAD GOSUB 100
+20 RETURN
+100 // "Subroutine called when we recieve a character"
+105 READ #SERIAL, A
+110 IF A != -1
+115  WRITE # SERIAL,A
+117  // "Keep reading until we get -1 (no more characters waiting)"
+120  GOTO 100
+130 END
+140 RETURN
