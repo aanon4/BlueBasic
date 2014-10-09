@@ -25,6 +25,7 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
   var delegate: ConsoleDelegate?
   
   var autoUpgrade: AutoUpdateFirmware?
+  var recoveryMode = false
   
   var detailItem: AnyObject? {
     didSet {
@@ -95,7 +96,7 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
   var status: String = "Not connected" {
     didSet {
       self.navigationItem.title = status
-      if isConnected {
+      if isConnected && !isRecoveryMode {
         console?.editable = true
         console.becomeFirstResponder()
       } else {
@@ -110,9 +111,9 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
     }
   }
   
-  var isUpgradable: Bool {
+  var isRecoveryMode: Bool {
     get {
-      return status == "Upgradable"
+      return recoveryMode
     }
   }
   
@@ -148,7 +149,8 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
                   if data == nil {
                     if list[UUIDS.oadServiceUUID] != nil {
                       self.current!.delegate = self
-                      self.status = "Upgradable"
+                      self.recoveryMode = true
+                      self.status = "Recovery mode"
                       onConnected?(true)
                     } else {
                       self.status = "Failed"
@@ -165,7 +167,8 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
               }
             } else if list[UUIDS.oadServiceUUID] != nil {
               self.current!.delegate = self
-              self.status = "Upgradable"
+              self.recoveryMode = true
+              self.status = "Recovery mode"
               onConnected?(true)
             } else {
               self.status = "Unsupported"
@@ -210,6 +213,7 @@ class DetailViewController: UIViewController, UITextViewDelegate, DeviceDelegate
       current = nil
       delegate = nil
       status = "Not connected"
+      recoveryMode = false
       old.delegate = nil
       old.disconnect() {
         success in

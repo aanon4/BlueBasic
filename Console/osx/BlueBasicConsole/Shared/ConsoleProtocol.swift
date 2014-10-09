@@ -20,7 +20,9 @@ protocol ConsoleProtocol {
   
   var current: Device? { get }
   
-  var isUpgradable: Bool { get }
+  var isConnected: Bool { get }
+  
+  var isRecoveryMode: Bool { get }
   
   func connectTo(device: Device, onConnected: CompletionHandler?)
   

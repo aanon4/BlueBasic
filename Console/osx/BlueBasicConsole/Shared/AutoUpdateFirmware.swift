@@ -25,19 +25,19 @@ class AutoUpdateFirmware {
   }
   
   func detectUpgrade(onComplete: CompletionHandler) {
-    if console.isUpgradable {
-      // We cannot autodetect upgrade if the board is already in upgrade mode :-(
-      onComplete(false)
-    } else {
-      device.services() {
-        list in
-        let revision = list[UUIDS.deviceInfoServiceUUID]!.characteristics[UUIDS.firmwareRevisionUUID]!
-        self.device.read(revision) {
-          data in
-          if data == nil {
-            onComplete(false)
-          } else {
-            self.fetchLatestVersion(NSString(data: data!, encoding: NSASCIIStringEncoding)!, onComplete)
+    device.services() {
+      list in
+      let revision = list[UUIDS.deviceInfoServiceUUID]!.characteristics[UUIDS.firmwareRevisionUUID]!
+      self.device.read(revision) {
+        data in
+        if data == nil {
+          onComplete(false)
+        } else {
+          self.fetchLatestVersion(NSString(data: data!, encoding: NSASCIIStringEncoding)!) {
+            success in
+            dispatch_async(dispatch_get_main_queue()) {
+              onComplete(success)
+            }
           }
         }
       }

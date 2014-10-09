@@ -29,7 +29,7 @@ class Firmware: ConsoleDelegate {
     self.firmware = firmware
     self.complete = onComplete
     
-    if console.isUpgradable {
+    if console.isRecoveryMode {
       flash()
     } else {
       console.setStatus("Rebooting")

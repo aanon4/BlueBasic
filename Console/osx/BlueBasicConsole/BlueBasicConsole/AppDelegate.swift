@@ -46,22 +46,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, DeviceListDelegate {
     console.connectTo(device) {
       success in
       if success {
-        if self.console.isUpgradable {
-          // If in upgrade mode, we cannot auto-recognise how to upgrade it. Let
-          // the use select a file
-          self.autoUpgrade = nil
-          self.upgradeMenu.enabled = true
-        } else {
-          self.toDeviceMenu.enabled = true
-          self.autoUpgrade = AutoUpdateFirmware(console: self.console)
-          self.autoUpgrade!.detectUpgrade() {
-            needupgrade in
-            if needupgrade {
-              self.console.status = "Upgrade available"
-              self.upgradeMenu.enabled = true
-            } else {
-              self.autoUpgrade = nil
-            }
+        self.toDeviceMenu.enabled = true
+        self.autoUpgrade = AutoUpdateFirmware(console: self.console)
+        self.autoUpgrade!.detectUpgrade() {
+          needupgrade in
+          if needupgrade {
+            self.console.status = "Upgrade available"
+            self.upgradeMenu.enabled = true
+          } else {
+            self.autoUpgrade = nil
           }
         }
       }
@@ -92,16 +85,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, DeviceListDelegate {
   @IBAction func upgrade(sender: AnyObject) {
     if autoUpgrade != nil {
       autoUpgrade!.upgrade()
-    } else if console.isUpgradable {
-      var panel = NSOpenPanel()
-      panel.canChooseFiles = true
-      panel.canChooseDirectories = false
-      panel.allowsMultipleSelection = false
-      panel.title = "Select new firmware for device"
-      panel.allowedFileTypes = [ "bin" ]
-      if panel.runModal() == NSOKButton {
-        Firmware(self.console!).upgrade(NSData(contentsOfURL: panel.URL!)!)
-      }
     }
   }
 }

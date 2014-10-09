@@ -19,6 +19,7 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate, ConsoleProtocol {
   var inputCharacteristic: CBCharacteristic?
   var outputCharacteristic: CBCharacteristic?
   var pending = ""
+  var recoveryMode = false
   
   var delegate: ConsoleDelegate?
 
@@ -35,7 +36,7 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate, ConsoleProtocol {
   var status: String {
     didSet {
       statusField.stringValue = status
-      if isConnected {
+      if isConnected && !isRecoveryMode {
         console.editable = true
         console.window?.makeFirstResponder(console)
       } else {
@@ -60,9 +61,9 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate, ConsoleProtocol {
     }
   }
   
-  var isUpgradable: Bool {
+  var isRecoveryMode: Bool {
     get {
-      return status == "Upgradable"
+      return recoveryMode
     }
   }
   
@@ -84,7 +85,8 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate, ConsoleProtocol {
                 if data == nil {
                   if list[UUIDS.oadServiceUUID] != nil {
                     self.current!.delegate = self
-                    self.status = "Upgradable"
+                    self.recoveryMode = true
+                    self.status = "Recovery mode"
                     onConnected?(true)
                   } else {
                     self.status = "Failed"
@@ -100,7 +102,8 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate, ConsoleProtocol {
               }
             } else if list[UUIDS.oadServiceUUID] != nil {
               self.current!.delegate = self
-              self.status = "Upgradable"
+              self.recoveryMode = true
+              self.status = "Recovery mode"
               onConnected?(true)
             } else {
               self.status = "Unsupported"
@@ -145,6 +148,7 @@ class Console: NSObject, NSTextViewDelegate, DeviceDelegate, ConsoleProtocol {
       current = nil
       delegate = nil
       status = "Not connected"
+      recoveryMode = false
       old.delegate = nil
       old.disconnect(onDisconnect)
     } else {
