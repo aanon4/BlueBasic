@@ -3676,7 +3676,7 @@ cmd_spi:
   goto run_next_statement;
   
 //
-// I2C MASTER <scl pin> <sda pin>
+// I2C MASTER <scl pin> <sda pin> [PULLUP]
 //  or
 // I2C WRITE <addr>, <data, ...> [, READ <variable>|<array>]
 //  or
@@ -3688,22 +3688,35 @@ cmd_i2c:
   {
     case SPI_MASTER:
     {
+      unsigned char pullup = 0;
       unsigned char* ptr = heap;
 
       i2cScl = pin_parse();
       i2cSda = pin_parse();
       if (error_num)
       {
-        break;
+        goto qwhat;
       }
-      // Setup the i2c port so everything is INPUT_PULLUP.
+      ignore_blanks();
+      if (*txtpos == PM_PULLUP)
+      {
+        txtpos++;
+        pullup = 1;
+      }
+      // Setup the i2c port with optional INPUT_PULLUP.
       // We the outputs to LOW so when the pin is set to OUTPUT, it
       // will be driven low by default.
       *ptr++ = WIRE_PIN_INPUT | i2cScl;
-      *ptr++ = WIRE_INPUT_PULLUP;
+      if (pullup)
+      {
+        *ptr++ = WIRE_INPUT_PULLUP;
+      }
       *ptr++ = WIRE_LOW;
       *ptr++ = WIRE_PIN_INPUT | i2cSda;
-      *ptr++ = WIRE_INPUT_PULLUP;
+      if (pullup)
+      {
+        *ptr++ = WIRE_INPUT_PULLUP;
+      }
       *ptr++ = WIRE_LOW;
       
       pin_wire(heap, ptr);
