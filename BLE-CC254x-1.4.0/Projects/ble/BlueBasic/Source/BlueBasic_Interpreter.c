@@ -506,6 +506,7 @@ static unsigned char PERCFG;
 #endif
 
 static unsigned char spiChannel;
+static unsigned char spiWordsize;
 static unsigned char analogReference;
 static unsigned char analogResolution = 0x30; // 14-bits
 static unsigned char i2cScl;
@@ -3525,7 +3526,7 @@ qhoom:
   }
 
 //
-// SPI MASTER <port 0|1|2|3> <mode 0|1|2|3> LSB|MSB <speed>
+// SPI MASTER <port 0|1|2|3>, <mode 0|1|2|3>, LSB|MSB <speed> [, wordsize]
 //  or
 // SPI TRANSFER Px(y) <array>
 //
@@ -3552,7 +3553,28 @@ cmd_spi:
         goto qwhat;
       }
       txtpos++;
-      speed = expression(EXPR_NORMAL);
+      speed = expression(EXPR_COMMA);
+      if (*txtpos != NL)
+      {
+        switch (expression(EXPR_NORMAL))
+        {
+          case 8:
+            spiWordsize = 0;
+            break;
+          case 16:
+            spiWordsize = 1;
+            break;
+          case 32:
+            spiWordsize = 3;
+            break;
+          default:
+            goto qwhat;
+        }
+      }
+      else
+      {
+        spiWordsize = 255;
+      }
       if (error_num)
       {
         goto qwhat;
@@ -3613,12 +3635,11 @@ cmd_spi:
       unsigned char pin[2];
       variable_frame* vframe;
       unsigned char* ptr;
-      unsigned short len;
       
       txtpos++;
       pin[0] = pin_parse();
-      pin[1] = pin[0] | WIRE_PIN_HIGH;
-      pin[0] |= WIRE_PIN_LOW;
+      pin[1] = pin[0] | WIRE_PIN_LOW;
+      pin[0] |= WIRE_PIN_HIGH;
       if (error_num)
       {
         goto qwhat;
@@ -3637,10 +3658,12 @@ cmd_spi:
       txtpos++;
 
       // .. transfer ..
-      pin_wire(pin, pin + 1);
+      pin_wire(pin + 1, pin + 2);
+      unsigned short len = vframe->header.frame_size - sizeof(variable_frame);
+      unsigned short pos = 0;
       if (spiChannel == 0)
       {
-        for (len = vframe->header.frame_size - sizeof(variable_frame); len; len--, ptr++)
+        for (;;)
         {
           U0CSR &= 0xF9; // Clear flags
           U0DBUF = *ptr;
@@ -3649,12 +3672,20 @@ cmd_spi:
 #endif
           while ((U0CSR & 0x02) != 0x02)
             ;
-          *ptr = U0DBUF;
+          *ptr++ = U0DBUF;
+          if (++pos == len)
+          {
+            break;
+          }
+          else if ((((unsigned char)++pos) & spiWordsize) == 0)
+          {
+            pin_wire(pin, pin + 2);
+          }
         }
       }
       else
       {
-        for (len = vframe->header.frame_size - sizeof(variable_frame); len; len--, ptr++)
+        for (;;)
         {
           U1CSR &= 0xF9;
           U1DBUF = *ptr;
@@ -3663,10 +3694,18 @@ cmd_spi:
 #endif
           while ((U1CSR & 0x02) != 0x02)
             ;
-          *ptr = U1DBUF;
+          *ptr++ = U1DBUF;
+          if (++pos == len)
+          {
+            break;
+          }
+          else if ((((unsigned char)pos) & spiWordsize) == 0)
+          {
+            pin_wire(pin, pin + 2);
+          }
         }
       }
-      pin_wire(pin + 1, pin + 2);
+      pin_wire(pin, pin + 1);
     }
     else
     {
