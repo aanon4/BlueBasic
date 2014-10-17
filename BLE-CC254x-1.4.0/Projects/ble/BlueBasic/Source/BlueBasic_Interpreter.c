@@ -1099,6 +1099,12 @@ static void clean_memory(void)
   
   // Reset file handles
   OS_memset(files, 0, sizeof(files));
+  
+  // Stop timers
+  for (unsigned char i = 0; i < OS_MAX_TIMER; i++)
+  {
+    OS_timer_stop(i);
+  }
 
   // Remove any persistent info from the stack.
   sp = (unsigned char*)variables_begin;
