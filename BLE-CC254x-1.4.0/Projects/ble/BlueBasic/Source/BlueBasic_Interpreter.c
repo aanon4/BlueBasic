@@ -2525,7 +2525,7 @@ cmd_pinmode:
         }
         else if (pinMode == PM_ADC)
         {
-          if (PIN_MAJOR(cmd[1]) != 0)
+          if (PIN_MAJOR(cmd[-1]) != 0)
           {
             goto qwhat;
           }
