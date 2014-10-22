@@ -1038,9 +1038,11 @@ static unsigned char* parse_variable_address(variable_frame** vframe)
   unsigned char* ptr = get_variable_frame(name, vframe);
   if ((*vframe)->type == VAR_DIM_BYTE)
   {
+    unsigned char* otxtpos = txtpos;
     VAR_TYPE index = expression(EXPR_BRACES);
     if (error_num || index < 0 || index >= (*vframe)->header.frame_size - sizeof(variable_frame))
     {
+      txtpos = otxtpos;
       return NULL;
     }
     ptr += index;
@@ -2251,24 +2253,44 @@ assignment:
     unsigned char* ptr;
 
     ptr = parse_variable_address(&frame);
-    if (!ptr || *txtpos != OP_EQ)
+    if (*txtpos != OP_EQ || (ptr == NULL && (frame == NULL || frame->type != VAR_DIM_BYTE)))
     {
       goto qwhat;
     }
+    error_num = ERROR_OK;
     txtpos++;
-    val = expression(EXPR_NORMAL);
-    if (error_num)
+    if (ptr)
     {
-      goto qwhat;
-    }
-    if (frame->type == VAR_DIM_BYTE)
-    {
-      *ptr = val;
+      val = expression(EXPR_NORMAL);
+      if (error_num)
+      {
+        goto qwhat;
+      }
+      if (frame->type == VAR_DIM_BYTE)
+      {
+        *ptr = val;
+      }
+      else
+      {
+        *(VAR_TYPE*)ptr = val;
+      }
     }
     else
     {
-      *(VAR_TYPE*)ptr = val;
+      // Array assignment
+      ptr = ((unsigned char*)frame) + sizeof(variable_frame);
+      unsigned short len = frame->header.frame_size - sizeof(variable_frame);
+      while (len--)
+      {
+        val = expression(EXPR_COMMA);
+        if (error_num)
+        {
+          goto qwhat;
+        }
+        *ptr++ = val;
+      }
     }
+    
     if (frame->ble)
     {
       ble_notify_assign(frame->ble);
@@ -2394,7 +2416,7 @@ cmd_dim:
     }
     name = *txtpos++;
     size = expression(EXPR_BRACES);
-    if (error_num)
+    if (error_num || !size)
     {
       goto qwhat;
     }

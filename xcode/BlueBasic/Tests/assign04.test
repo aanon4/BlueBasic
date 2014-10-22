@@ -1,0 +1,11 @@
+DIM A(3)
+A = 3, 5, 8
+PRINT A(0),A(1),A(2)
+.
+DIM A(3)
+OK
+A = 3, 5, 8
+OK
+PRINT A(0),A(1),A(2)
+358
+OK
