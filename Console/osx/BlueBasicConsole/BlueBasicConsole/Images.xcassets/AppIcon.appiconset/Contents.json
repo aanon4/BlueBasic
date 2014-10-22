@@ -47,8 +47,9 @@
       "scale" : "1x"
     },
     {
-      "idiom" : "mac",
       "size" : "512x512",
+      "idiom" : "mac",
+      "filename" : "BlueBasicIcon1024.png",
       "scale" : "2x"
     }
   ],
