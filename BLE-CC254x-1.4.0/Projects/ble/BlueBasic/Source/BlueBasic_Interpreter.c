@@ -3706,7 +3706,7 @@ cmd_spi:
           {
             break;
           }
-          else if ((((unsigned char)pos) & spiWordsize) == 0)
+          else if ((pos & spiWordsize) == 0)
           {
             pin_wire(pin, pin + 2);
           }
@@ -3724,11 +3724,12 @@ cmd_spi:
           while ((U1CSR & 0x02) != 0x02)
             ;
           *ptr++ = U1DBUF;
-          if (++pos == len)
+          pos++;
+          if (pos == len)
           {
             break;
           }
-          else if ((((unsigned char)pos) & spiWordsize) == 0)
+          else if ((pos & spiWordsize) == 0)
           {
             pin_wire(pin, pin + 2);
           }
