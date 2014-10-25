@@ -92,11 +92,7 @@ static const char initmsg[]           = "BlueBasic " kVersion;
 static const char urlmsg[]            = "http://blog.xojs.org/bluebasic";
 static const char memorymsg[]         = " bytes free.";
 
-#ifdef TARGET_CC254X
 #define VAR_TYPE    long int
-#else
-#define VAR_TYPE    int
-#endif
 #define VAR_SIZE    (sizeof(VAR_TYPE))
 
 
@@ -437,6 +433,7 @@ typedef struct
   char type;
   char name;
   char oflags;
+  VAR_TYPE ovalue;
   struct gatt_variable_ref* ble;
   // .... bytes ...
 } variable_frame;
@@ -448,22 +445,21 @@ typedef struct
   LINENUM connect;
 } service_frame;
 
+// Frame types
 enum
 {
-  FRAME_GOSUB_FLAG = 'G',
-  FRAME_FOR_FLAG = 'F',
-  FRAME_VARIABLE_FLAG = 'V',
-  FRAME_EVENT_FLAG = 'E',
-  FRAME_SERVICE_FLAG = 'S',
+  FRAME_GOSUB_FLAG = 1,
+  FRAME_FOR_FLAG,
+  FRAME_VARIABLE_FLAG,
+  FRAME_EVENT_FLAG,
+  FRAME_SERVICE_FLAG
 };
 
+// Variable types
 enum
 {
-  VAR_NORMAL   = 0x00,
-  VAR_VARIABLE = 0x01,
-  // These flags are used inside the special struct
-  VAR_INT      = 0x02,
-  VAR_DIM_BYTE = 0x04,
+  VAR_INT = 1,
+  VAR_DIM_BYTE
 };
 
 static __data unsigned char** lineptr;
@@ -478,16 +474,31 @@ static unsigned char* list_line;
 static unsigned char** program_start;
 static LINENUM linenum;
 
-static unsigned char cache_name;
-static variable_frame* cache_frame;
-static unsigned char* cache_ptr;
-static variable_frame normal_variable = { { FRAME_VARIABLE_FLAG, 0 }, VAR_INT, 0, 0, NULL };
+static variable_frame normal_variable = { { FRAME_VARIABLE_FLAG, 0 }, VAR_INT, 0, 0, 0, NULL };
 
 #define VARIABLE_INT_ADDR(F)    (((VAR_TYPE*)variables_begin) + ((F) - 'A'))
 #define VARIABLE_INT_GET(F)     (*VARIABLE_INT_ADDR(F))
 #define VARIABLE_INT_SET(F,V)   (*VARIABLE_INT_ADDR(F) = (V))
-#define VARIABLE_FLAGS_GET(F)   (vname = (F) - 'A', (((*(variables_begin + 26 * VAR_SIZE + vname / 8)) >> (vname % 8)) & 0x01))
-#define VARIABLE_FLAGS_SET(F,V) do { vname = (F) - 'A'; unsigned char* v = variables_begin + 26 * VAR_SIZE + vname / 8; *v = (*v & (255 - (1 << (vname % 8)))) | ((V) << (vname % 8)); } while(0)
+
+#define VARIABLE_IS_EXTENDED(F)  (vname = (F) - 'A', (*(variables_begin + 26 * VAR_SIZE + vname / 8) & (1 << (vname % 8))))
+#define VARIABLE_SAVE(V) \
+  do { \
+    unsigned char vname = (V)->name - 'A'; \
+    unsigned char* v = variables_begin + 26 * VAR_SIZE + (vname >> 3); \
+    VAR_TYPE* p = ((VAR_TYPE*)variables_begin) + vname; \
+    vname = 1 << (vname & 7); \
+    (V)->oflags = *v & vname; \
+    *v |= vname; \
+    (V)->ovalue = *p; \
+    *(unsigned char**)p = (unsigned char*)(V); \
+  } while(0)
+#define VARIABLE_RESTORE(V) \
+  do { \
+    unsigned char vname = (V)->name - 'A'; \
+    unsigned char* v = variables_begin + 26 * VAR_SIZE + (vname >> 3); \
+    *v = (*v & (255 - (1 << (vname & 7)))) | (V)->oflags; \
+    ((VAR_TYPE*)variables_begin)[vname] = (V)->ovalue; \
+  } while(0)
 
 #define CHECK_SP_OOM(S,E)   if (sp - (S) < heap) goto E; else sp -= (S)
 #define CHECK_HEAP_OOM(S,E) if (heap + (S) > sp) goto E; else heap += (S)
@@ -977,48 +988,19 @@ error:
 //
 static unsigned char* get_variable_frame(char name, variable_frame** frame)
 {
-  unsigned char* ptr;
   unsigned char vname;
 
-  if (name == cache_name)
+  if (VARIABLE_IS_EXTENDED(name))
   {
-    *frame = cache_frame;
-    return cache_ptr;
-  }
-  if (VARIABLE_FLAGS_GET(name) == VAR_VARIABLE)
-  {
-    // Search for variable on the stack - most likely to be there
-    for (ptr = sp; ptr < variables_begin; ptr += ((frame_header*)ptr)->frame_size)
-    {
-      if (((frame_header*)ptr)->frame_type == FRAME_VARIABLE_FLAG && ((variable_frame*)ptr)->name == name)
-      {
-        goto found;
-      }
-    }
-    // Might be on the heap, but less likely
-    for (ptr = (unsigned char*)program_end; ptr < heap; ptr += ((frame_header*)ptr)->frame_size)
-    {
-      if (((frame_header*)ptr)->frame_type == FRAME_VARIABLE_FLAG && ((variable_frame*)ptr)->name == name)
-      {
-        goto found;
-      }
-    }
-  }
-  *frame = &normal_variable;
-  return (unsigned char*)VARIABLE_INT_ADDR(name);
-found:
-  cache_name = name;
-  cache_frame = (variable_frame*)ptr;
-  *frame = cache_frame;
-  if (((variable_frame*)ptr)->type == VAR_INT)
-  {
-    cache_ptr = (unsigned char*)VARIABLE_INT_ADDR(name);
+    unsigned char* ptr = *(unsigned char**)VARIABLE_INT_ADDR(name);
+    *frame = (variable_frame*)ptr;
+    return ptr + sizeof(variable_frame);
   }
   else
   {
-    cache_ptr = ptr + sizeof(variable_frame);
+    *frame = &normal_variable;
+    return (unsigned char*)VARIABLE_INT_ADDR(name);
   }
-  return cache_ptr;
 }
 
 //
@@ -1055,7 +1037,6 @@ static unsigned char* parse_variable_address(variable_frame** vframe)
 //
 static void create_dim(unsigned char name, VAR_TYPE size, unsigned char* data)
 {
-  unsigned char vname;
   variable_frame* f;
   CHECK_SP_OOM(sizeof(variable_frame) + size, qoom);
   f = (variable_frame*)sp;
@@ -1063,9 +1044,8 @@ static void create_dim(unsigned char name, VAR_TYPE size, unsigned char* data)
   f->header.frame_size = sizeof(variable_frame) + size;
   f->type = VAR_DIM_BYTE;
   f->name = name;
-  f->oflags = VARIABLE_FLAGS_GET(name);
   f->ble = NULL;
-  VARIABLE_FLAGS_SET(name, VAR_VARIABLE);
+  VARIABLE_SAVE(f);
   if (data)
   {
     OS_memcpy(sp + sizeof(variable_frame), data, size);
@@ -1074,7 +1054,6 @@ static void create_dim(unsigned char name, VAR_TYPE size, unsigned char* data)
   {
     OS_memset(sp + sizeof(variable_frame), 0, size);
   }
-  cache_name = 0;
   return;
 qoom:
   error_num = ERROR_OOM;
@@ -1092,9 +1071,6 @@ static void clean_memory(void)
     return;
   }
   lineptr = NULL;
-
-  // Kill array cache
-  cache_name = 0;
   
   // Reset variables to 0 and remove all types
   OS_memset(variables_begin, 0, 26 * VAR_SIZE + 4);
@@ -2046,6 +2022,7 @@ cmd_else:
 
 forloop:
   {
+    unsigned char vname;
     unsigned char var;
     VAR_TYPE initial;
     VAR_TYPE step;
@@ -2102,6 +2079,10 @@ forloop:
 
     CHECK_SP_OOM(sizeof(for_frame), qoom);
     f = (for_frame *)sp;
+    if (VARIABLE_IS_EXTENDED(var))
+    {
+      goto qwhat;
+    }
     VARIABLE_INT_SET(var, initial);
     f->header.frame_type = FRAME_FOR_FLAG;
     f->header.frame_size = sizeof(for_frame);
@@ -2192,13 +2173,7 @@ gosub_return:
         break;
       case FRAME_VARIABLE_FLAG:
         {
-          unsigned char vname;
-          variable_frame* f = (variable_frame*)sp;
-          VARIABLE_FLAGS_SET(f->name, f->oflags);
-          if (cache_name == f->name)
-          {
-            cache_name = 0;
-          }
+          VARIABLE_RESTORE((variable_frame*)sp);
         }
         break;
       default:
@@ -2814,7 +2789,6 @@ ble_gatt:
         const unsigned char ch = *--txtpos;
         if (ch >= 'A' && ch <= 'Z')
         {
-          unsigned char vname;
           variable_frame* vframe;
           get_variable_frame(ch, &vframe);
           if (vframe == &normal_variable)
@@ -2825,9 +2799,8 @@ ble_gatt:
             vframe->header.frame_size = sizeof(variable_frame);
             vframe->type = VAR_INT;
             vframe->name = ch;
-            vframe->oflags = VARIABLE_FLAGS_GET(ch);
             vframe->ble = NULL;
-            VARIABLE_FLAGS_SET(ch, VAR_VARIABLE);
+            VARIABLE_SAVE(vframe);
           }
         }
         else
@@ -5238,6 +5211,7 @@ void ble_connection_status(unsigned short connHandle, unsigned char changeType, 
   unsigned char j;
   unsigned char f;
   short i;
+  unsigned char vname;
 
   for (ptr = (unsigned char*)program_end; ptr < heap; ptr += ((frame_header*)ptr)->frame_size)
   {
@@ -5246,6 +5220,10 @@ void ble_connection_status(unsigned short connHandle, unsigned char changeType, 
     {
       if (vframe->connect)
       {
+        if (VARIABLE_IS_EXTENDED('H') || VARIABLE_IS_EXTENDED('S') || VARIABLE_IS_EXTENDED('V'))
+        {
+          continue; // Silently fail
+        }
         VARIABLE_INT_SET('H', connHandle);
         VARIABLE_INT_SET('S', changeType);
         if (changeType == LINKDB_STATUS_UPDATE_STATEFLAGS)
@@ -5284,7 +5262,7 @@ void ble_connection_status(unsigned short connHandle, unsigned char changeType, 
 
 extern void interpreter_devicefound(unsigned char addtype, unsigned char* address, signed char rssi, unsigned char eventtype, unsigned char len, unsigned char* data)
 {
-  if (blueBasic_discover.linenum)
+  if (blueBasic_discover.linenum && !VARIABLE_IS_EXTENDED('A') && !VARIABLE_IS_EXTENDED('R') && !VARIABLE_IS_EXTENDED('E'))
   {
     unsigned char* osp = sp;
     error_num = ERROR_OK;
