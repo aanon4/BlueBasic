@@ -2823,6 +2823,10 @@ ble_gatt:
           goto qoom;
       }
       break;
+    case KW_CLOSE:
+      // Close any active connections
+      GAPRole_TerminateConnection();
+      break;
     default:
       goto qwhat;
   }
@@ -5262,6 +5266,8 @@ void ble_connection_status(unsigned short connHandle, unsigned char changeType, 
 
 extern void interpreter_devicefound(unsigned char addtype, unsigned char* address, signed char rssi, unsigned char eventtype, unsigned char len, unsigned char* data)
 {
+  unsigned char vname;
+
   if (blueBasic_discover.linenum && !VARIABLE_IS_EXTENDED('A') && !VARIABLE_IS_EXTENDED('R') && !VARIABLE_IS_EXTENDED('E'))
   {
     unsigned char* osp = sp;

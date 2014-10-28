@@ -188,6 +188,11 @@ unsigned char GAPObserverRole_CancelDiscovery(void)
   return SUCCESS;
 }
 
+unsigned char GAPRole_TerminateConnection(void)
+{
+  return SUCCESS;
+}
+
 void OS_flashstore_init(void)
 {
   FILE* fp = fopen("/tmp/flashstore", "r");

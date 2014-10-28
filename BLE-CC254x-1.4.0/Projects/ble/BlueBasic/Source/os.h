@@ -151,6 +151,7 @@ extern unsigned char GATTServApp_ProcessCharCfg(gattCharCfg_t* charcfgtbl, void*
 extern unsigned char GATTServApp_ProcessCCCWriteReq(unsigned short handle, gattAttribute_t* attr, unsigned char* value, unsigned char len, unsigned short offset, unsigned short validcfg);
 extern unsigned char GAPRole_SetParameter(unsigned short param, unsigned long value, unsigned char len, void* addr);
 extern unsigned char GAPRole_GetParameter(unsigned short param, unsigned long* shortValue, unsigned char len, void* longValue);
+extern unsigned char GAPRole_TerminateConnection(void);
 extern unsigned char GGS_SetParameter(unsigned short param, unsigned char len, void* addr);
 extern unsigned char HCI_EXT_SetTxPowerCmd(unsigned char power);
 extern unsigned char HCI_EXT_SetRxGainCmd(unsigned char gain);
