@@ -4105,12 +4105,20 @@ static unsigned char pin_parse(void)
   {
     goto badpin;
   }
+#ifdef ENABLE_PORT2
+  // Exclude pins used for lowpower clock
+  if (major == KW_PIN_P2 && (minor == 3 || minor == 4))
+  {
+    goto badpin;
+  }
 #ifdef ENABLE_DEBUG_INTERFACE
   if (major == KW_PIN_P2 && (minor == 1 || minor == 2))
   {
     goto badpin;
   }
 #endif
+#endif // ENABLE_PORT2
+#ifdef ENABLE_PORT1
 #ifdef OS_UART_PORT
 #if OS_UART_PORT == HAL_UART_PORT_1
   if (major == KW_PIN_P1 && minor >= 4)
@@ -4119,6 +4127,7 @@ static unsigned char pin_parse(void)
   }
 #endif
 #endif
+#endif // ENABLE_PORT1
   return PIN_MAKE(major - KW_PIN_P0, minor);
 badpin:
   error_num = ERROR_BADPIN;
