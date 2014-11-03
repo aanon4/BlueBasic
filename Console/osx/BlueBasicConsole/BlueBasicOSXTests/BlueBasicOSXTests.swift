@@ -1,15 +1,15 @@
 //
-//  BlueBasicConsoleTests.swift
-//  BlueBasicConsoleTests
+//  BlueBasicOSXTests.swift
+//  BlueBasicOSXTests
 //
-//  Created by tim on 9/23/14.
+//  Created by tim on 11/3/14.
 //  Copyright (c) 2014 tim. All rights reserved.
 //
 
 import Cocoa
 import XCTest
 
-class BlueBasicConsoleTests: XCTestCase {
+class BlueBasicOSXTests: XCTestCase {
     
     override func setUp() {
         super.setUp()
