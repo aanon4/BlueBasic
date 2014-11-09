@@ -5616,7 +5616,7 @@
             <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2540EB\hal_crc.h</name>
           </file>
           <file>
-            <name>$PROJ_DIR$\..\..\..\..\COMPONENTS\hal\target\CC2540EB\hal_dma.h</name>
+            <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2540EB\hal_dma.h</name>
           </file>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2540EB\hal_mcu.h</name>
@@ -5725,21 +5725,9 @@
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\Profiles\Roles\gapbondmgr.c</name>
-      <excluded>
-        <configuration>CC2541</configuration>
-        <configuration>CC2540</configuration>
-        <configuration>CC2541-ImgB</configuration>
-        <configuration>CC2540-ImgB</configuration>
-      </excluded>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\Profiles\Roles\gapbondmgr.h</name>
-      <excluded>
-        <configuration>CC2541</configuration>
-        <configuration>CC2540</configuration>
-        <configuration>CC2541-ImgB</configuration>
-        <configuration>CC2540-ImgB</configuration>
-      </excluded>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\Include\gapgattserver.h</name>
