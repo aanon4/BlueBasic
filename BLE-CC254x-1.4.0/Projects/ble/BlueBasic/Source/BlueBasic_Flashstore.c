@@ -8,6 +8,9 @@
 
 #include "os.h"
 
+extern __data unsigned char* heap;
+extern __data unsigned char* sp;
+
 #define FLASHSTORE_WORDS(LEN)     ((LEN) >> 2)
 
 #ifdef SIMULATE_FLASH
@@ -273,6 +276,7 @@ unsigned char** flashstore_addline(unsigned char* line)
 
 unsigned char flashstore_addspecial(unsigned char* item)
 {
+  *(unsigned short*)item = FLASHID_SPECIAL;
   unsigned char len = FLASHSTORE_PADDEDSIZE(item[sizeof(unsigned short)]);
   // Find space for the new line in the youngest page
   signed char pg = flashstore_findspace(len);
@@ -451,4 +455,48 @@ static void flashstore_invalidate(unsigned short* mem)
   OS_flashstore_write(FLASHSTORE_FADDR(mem), (unsigned char*)&invalid, FLASHSTORE_WORDS(sizeof(invalid)));
 
   orderedpages[((unsigned char*)mem - flashstore) / FLASHSTORE_PAGESIZE].waste += invalid.len;
+}
+
+//
+// Support the OSAL flash API
+//
+
+unsigned char osal_snv_read(unsigned char id, unsigned char len, void *pBuf)
+{
+  unsigned char* mem = flashstore_findspecial(FLASHSPECIAL_SNV + id);
+  if (mem && mem[FLASHSPECIAL_DATA_LEN] == len)
+  {
+    OS_memcpy(pBuf, mem + FLASHSPECIAL_DATA_OFFSET, len);
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+unsigned char osal_snv_write(unsigned char id, unsigned char len, void *pBuf)
+{      
+  if (heap + len + FLASHSPECIAL_DATA_OFFSET > sp)
+  {
+    return 0;
+  }
+  else
+  {
+    unsigned char* item = heap;
+    heap += len + FLASHSPECIAL_DATA_OFFSET;
+
+    *(unsigned long*)&item[FLASHSPECIAL_ITEM_ID] = FLASHSPECIAL_SNV + id;
+    item[FLASHSPECIAL_DATA_LEN] = len;
+    OS_memcpy(item + FLASHSPECIAL_DATA_OFFSET, pBuf, len);
+    unsigned char r = flashstore_addspecial(item);
+    
+    heap = item;
+    return r;
+  }
+}
+
+unsigned char osal_snv_compact(unsigned char threshold)
+{
+  return 0;
 }

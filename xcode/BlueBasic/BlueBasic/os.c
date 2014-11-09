@@ -163,6 +163,24 @@ unsigned char GAPRole_GetParameter(unsigned short param, unsigned long* shortVal
   return SUCCESS;
 }
 
+unsigned char GAPBondMgr_SetParameter(unsigned short param, unsigned long value, unsigned char len, void* addr)
+{
+  return SUCCESS;
+}
+
+unsigned char GAPBondMgr_GetParameter(unsigned short param, unsigned long* shortValue, unsigned char len, void* longValue)
+{
+  if (shortValue)
+  {
+    *(unsigned short*)shortValue = 0;
+  }
+  else
+  {
+    memset(longValue, 0, len);
+  }
+  return SUCCESS;
+}
+
 unsigned char GGS_SetParameter(unsigned short param, unsigned char len, void* addr)
 {
   return SUCCESS;

@@ -280,6 +280,7 @@
           <state>HAL_KEY=FALSE</state>
           <state>HAL_ADC=FALSE</state>
           <state>HAL_AES=FALSE</state>
+          <state>GAP_BOND_MGR=TRUE</state>
           <state>FEATURE_DEVINFO=TRUE</state>
           <state>TARGET_CC2541=TRUE</state>
           <state>FEATURE_BOOST_CONVERTER=P2_0</state>
@@ -1360,6 +1361,7 @@
           <state>HAL_KEY=FALSE</state>
           <state>HAL_ADC=FALSE</state>
           <state>HAL_AES=FALSE</state>
+          <state>GAP_BOND_MGR=TRUE</state>
           <state>TARGET_CC2540=TRUE</state>
           <state>FEATURE_BOOST_CONVERTER=P2_0</state>
         </option>
@@ -2439,6 +2441,7 @@
           <state>HAL_KEY=FALSE</state>
           <state>HAL_ADC=FALSE</state>
           <state>HAL_AES=FALSE</state>
+          <state>GAP_BOND_MGR=TRUE</state>
           <state>FEATURE_DEVINFO=TRUE</state>
           <state>TARGET_CC2541=TRUE</state>
           <state>xFEATURE_OAD</state>
@@ -3525,6 +3528,7 @@
           <state>HAL_KEY=FALSE</state>
           <state>HAL_ADC=FALSE</state>
           <state>HAL_AES=FALSE</state>
+          <state>GAP_BOND_MGR=TRUE</state>
           <state>FEATURE_DEVINFO=TRUE</state>
           <state>TARGET_CC2540=TRUE</state>
           <state>xFEATURE_OAD</state>
@@ -4612,6 +4616,7 @@
           <state>HAL_KEY=FALSE</state>
           <state>HAL_ADC=FALSE</state>
           <state>HAL_AES=FALSE</state>
+          <state>GAP_BOND_MGR=TRUE</state>
           <state>FEATURE_DEVINFO=TRUE</state>
           <state>TARGET_PETRA=TRUE</state>
           <state>xFEATURE_OAD</state>
@@ -5725,7 +5730,6 @@
         <configuration>CC2540</configuration>
         <configuration>CC2541-ImgB</configuration>
         <configuration>CC2540-ImgB</configuration>
-        <configuration>Petra</configuration>
       </excluded>
     </file>
     <file>
@@ -5735,7 +5739,6 @@
         <configuration>CC2540</configuration>
         <configuration>CC2541-ImgB</configuration>
         <configuration>CC2540-ImgB</configuration>
-        <configuration>Petra</configuration>
       </excluded>
     </file>
     <file>

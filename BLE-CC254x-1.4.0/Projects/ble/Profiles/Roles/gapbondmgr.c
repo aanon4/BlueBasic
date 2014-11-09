@@ -256,115 +256,68 @@ static void gapBondMgrSlaveSecurityReq( uint16 connHandle );
  *
  * Public function defined in gapbondmgr.h.
  */
-bStatus_t GAPBondMgr_SetParameter( uint16 param, uint8 len, void *pValue )
+bStatus_t GAPBondMgr_SetParameter( uint16 param, uint32 val, uint8 len, void *pValue )
 {
   bStatus_t ret = SUCCESS;  // return value
-
-  switch ( param )
+  
+  if (len == 0)
   {
-    case GAPBOND_PAIRING_MODE:
-      if ( (len == sizeof ( uint8 )) && (*((uint8*)pValue) <= GAPBOND_PAIRING_MODE_INITIATE) )
-      {
-        gapBond_PairingMode = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
+    switch ( param )
+    {
+      case GAPBOND_PAIRING_MODE:
+        if ( val <= GAPBOND_PAIRING_MODE_INITIATE )
+        {
+          gapBond_PairingMode = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
 
-    case GAPBOND_INITIATE_WAIT:
-      if ( len == sizeof ( uint16 ) )
-      {
-        gapBond_InitiateWait = *((uint16*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
+      case GAPBOND_INITIATE_WAIT:
+        gapBond_InitiateWait = val;
+        break;
 
-    case GAPBOND_MITM_PROTECTION:
-      if ( (len == sizeof ( uint8 )) && (*((uint8*)pValue) <= TRUE) )
-      {
-        gapBond_MITM = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
+      case GAPBOND_MITM_PROTECTION:
+        gapBond_MITM = !!val;
+        break;
 
-    case GAPBOND_IO_CAPABILITIES:
-      if ( (len == sizeof ( uint8 )) && (*((uint8*)pValue) <= GAPBOND_IO_CAP_KEYBOARD_DISPLAY) )
-      {
-        gapBond_IOCap = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
+      case GAPBOND_IO_CAPABILITIES:
+        if ( val <= GAPBOND_IO_CAP_KEYBOARD_DISPLAY )
+        {
+          gapBond_IOCap = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
 
-    case GAPBOND_OOB_ENABLED:
-      if ( (len == sizeof ( uint8 )) && (*((uint8*)pValue) <= TRUE) )
-      {
-        gapBond_OOBDataFlag = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
+      case GAPBOND_OOB_ENABLED:
+        gapBond_OOBDataFlag = !!val;
+        break;
+      
+      case GAPBOND_BONDING_ENABLED:
+        gapBond_Bonding = !!val;
+        break;
 
-    case GAPBOND_OOB_DATA:
-      if ( len == KEYLEN )
-      {
-        VOID osal_memcpy( gapBond_OOBData, pValue, KEYLEN ) ;
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
+      case GAPBOND_KEY_DIST_LIST:
+        gapBond_KeyDistList = val;
+        break;
 
-    case GAPBOND_BONDING_ENABLED:
-      if ( (len == sizeof ( uint8 )) && (*((uint8*)pValue) <= TRUE) )
-      {
-        gapBond_Bonding = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
+      case GAPBOND_DEFAULT_PASSCODE:
+        if ( val <= GAP_PASSCODE_MAX )
+        {
+          gapBond_Passcode = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
 
-    case GAPBOND_KEY_DIST_LIST:
-      if ( len == sizeof ( uint8 ) )
-      {
-        gapBond_KeyDistList = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-    case GAPBOND_DEFAULT_PASSCODE:
-      if ( (len == sizeof ( uint32 ))
-          && (*((uint32*)pValue) <= GAP_PASSCODE_MAX) )
-      {
-        gapBond_Passcode = *((uint32*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-    case GAPBOND_ERASE_ALLBONDS:
-      if ( len == 0 )
-      {
+      case GAPBOND_ERASE_ALLBONDS:
         // Make sure there's no active connection
         if ( GAP_NumActiveConnections() == 0 )
         {
@@ -381,136 +334,131 @@ bStatus_t GAPBondMgr_SetParameter( uint16 param, uint8 len, void *pValue )
         {
           eraseAllBonds = TRUE;
         }
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-    case GAPBOND_ERASE_SINGLEBOND:
-      if ( len == (1 + B_ADDR_LEN) )
-      {
-        uint8 idx;
-        uint8 devAddr[B_ADDR_LEN];
-
-        // Reverse bytes
-        VOID osal_revmemcpy( devAddr, (uint8 *)pValue+1, B_ADDR_LEN );
+        break;
         
-        // Resolve address and find index
-        idx = GAPBondMgr_ResolveAddr( *((uint8 *)pValue), devAddr, NULL );
-        if ( idx < GAP_BONDINGS_MAX )
+      case GAPBOND_AUTO_FAIL_PAIRING:
+        gapBond_AutoFail = !!val;
+        break;
+
+      case GAPBOND_AUTO_FAIL_REASON:
+        if ( val <= SMP_PAIRING_FAILED_REPEATED_ATTEMPTS )
         {
-          // Make sure there's no active connection
-          if ( GAP_NumActiveConnections() == 0 )
+          gapBond_AutoFailReason = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
+
+      case GAPBOND_KEYSIZE:
+        if ( (val >= MIN_ENC_KEYSIZE) && (val <= MAX_ENC_KEYSIZE) )
+        {
+          gapBond_KeySize = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
+
+      case GAPBOND_AUTO_SYNC_WL:
+        {
+          uint8 oldVal = autoSyncWhiteList;
+
+          autoSyncWhiteList = !!val;
+
+          // only call if parameter changes from FALSE to TRUE
+          if ( ( oldVal == FALSE ) && ( autoSyncWhiteList == TRUE ) )
           {
-            // Erase bond
-            VOID gapBondMgrEraseBonding( idx );
-            
-            // See if NV needs a compaction
-            VOID osal_snv_compact( NV_COMPACT_THRESHOLD );
-            
-            // Make sure Bond RAM Shadow is up-to-date
+            // make sure bond is updated from NV
             gapBondMgrReadBonds();
+          }
+        }
+        break;
+
+ #if ( HOST_CONFIG & CENTRAL_CFG )
+      case GAPBOND_BOND_FAIL_ACTION:
+        if ( val <= GAPBOND_FAIL_TERMINATE_ERASE_BONDS) )
+        {
+          gapBond_BondFailOption = val;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
+ #endif
+
+      default:
+        ret = INVALIDPARAMETER;
+        break;
+    }
+  }
+  else
+  {
+    switch ( param )
+    {
+      case GAPBOND_OOB_DATA:
+        if ( len == KEYLEN )
+        {
+          VOID osal_memcpy( gapBond_OOBData, pValue, KEYLEN ) ;
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
+        
+      case GAPBOND_ERASE_SINGLEBOND:
+        if ( len == (1 + B_ADDR_LEN) )
+        {
+          uint8 idx;
+          uint8 devAddr[B_ADDR_LEN];
+
+          // Reverse bytes
+          VOID osal_revmemcpy( devAddr, (uint8 *)pValue+1, B_ADDR_LEN );
+          
+          // Resolve address and find index
+          idx = GAPBondMgr_ResolveAddr( *((uint8 *)pValue), devAddr, NULL );
+          if ( idx < GAP_BONDINGS_MAX )
+          {
+            // Make sure there's no active connection
+            if ( GAP_NumActiveConnections() == 0 )
+            {
+              // Erase bond
+              VOID gapBondMgrEraseBonding( idx );
+
+              // See if NV needs a compaction
+              VOID osal_snv_compact( NV_COMPACT_THRESHOLD );
+
+              // Make sure Bond RAM Shadow is up-to-date
+              gapBondMgrReadBonds();
+            }
+            else
+            {
+              // Mark entry to be deleted when disconnected
+              bondsToDelete[idx] = TRUE;
+            }
           }
           else
           {
-            // Mark entry to be deleted when disconnected
-            bondsToDelete[idx] = TRUE;
+            ret = INVALIDPARAMETER;
           }
         }
         else
         {
-          ret = INVALIDPARAMETER;
+          // Parameter is not the correct length
+          ret = bleInvalidRange;
         }
-      }
-      else
-      {
-        // Parameter is not the correct length
-        ret = bleInvalidRange;
-      }
-      break;
-      
-    case GAPBOND_AUTO_FAIL_PAIRING:
-      if ( (len == sizeof ( uint8 )) && (*((uint8*)pValue) <= TRUE) )
-      {
-        gapBond_AutoFail = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
+        break;
 
-    case GAPBOND_AUTO_FAIL_REASON:
-      if ( (len == sizeof ( uint8 )) && (*((uint8*)pValue) <= SMP_PAIRING_FAILED_REPEATED_ATTEMPTS) )
-      {
-        gapBond_AutoFailReason = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-    case GAPBOND_KEYSIZE:
-      if ( (len == sizeof ( uint8 ))
-          && ((*((uint8*)pValue) >= MIN_ENC_KEYSIZE) && (*((uint8*)pValue) <= MAX_ENC_KEYSIZE)) )
-      {
-        gapBond_KeySize = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-    case GAPBOND_AUTO_SYNC_WL:
-      if ( len == sizeof( uint8 ) )
-      {
-        uint8 oldVal = autoSyncWhiteList;
-
-        autoSyncWhiteList = *((uint8 *)pValue);
-
-        // only call if parameter changes from FALSE to TRUE
-        if ( ( oldVal == FALSE ) && ( autoSyncWhiteList == TRUE ) )
-        {
-          // make sure bond is updated from NV
-          gapBondMgrReadBonds();
-        }
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-
-#if ( HOST_CONFIG & CENTRAL_CFG )
-    case GAPBOND_BOND_FAIL_ACTION:
-      if ( (len == sizeof ( uint8 )) && (*((uint8*)pValue) <= GAPBOND_FAIL_TERMINATE_ERASE_BONDS) )
-      {
-        gapBond_BondFailOption = *((uint8*)pValue);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-#endif
-
-    default:
-      // The param value isn't part of this profile, try the GAP.
-      if ( (param < TGAP_PARAMID_MAX) && (len == sizeof ( uint16 )) )
-      {
-        ret = GAP_SetParamValue( param, *((uint16*)pValue) );
-      }
-      else
-      {
+      default:
         ret = INVALIDPARAMETER;
-      }
-      break;
+        break;
+    }
   }
-
+ 
   return ( ret );
 }
 
@@ -519,79 +467,91 @@ bStatus_t GAPBondMgr_SetParameter( uint16 param, uint8 len, void *pValue )
  *
  * Public function defined in gapbondmgr.h.
  */
-bStatus_t GAPBondMgr_GetParameter( uint16 param, void *pValue )
+bStatus_t GAPBondMgr_GetParameter( uint16 param, uint32* pSimpleValue, uint8 len, void *pLongValue )
 {
   bStatus_t ret = SUCCESS;  // return value
-
-  switch ( param )
+  
+  if (pSimpleValue)
   {
-    case GAPBOND_PAIRING_MODE:
-      *((uint8*)pValue) = gapBond_PairingMode;
-      break;
+    switch ( param )
+    {
+      case GAPBOND_PAIRING_MODE:
+        *pSimpleValue = gapBond_PairingMode;
+        break;
 
-    case GAPBOND_INITIATE_WAIT:
-      *((uint16*)pValue) = gapBond_InitiateWait;
-      break;
+      case GAPBOND_INITIATE_WAIT:
+        *pSimpleValue = gapBond_InitiateWait;
+        break;
 
-    case GAPBOND_MITM_PROTECTION:
-      *((uint8*)pValue) = gapBond_MITM;
-      break;
+      case GAPBOND_MITM_PROTECTION:
+        *pSimpleValue = gapBond_MITM;
+        break;
 
-    case GAPBOND_IO_CAPABILITIES:
-      *((uint8*)pValue) = gapBond_IOCap;
-      break;
+      case GAPBOND_IO_CAPABILITIES:
+        *pSimpleValue = gapBond_IOCap;
+        break;
 
-    case GAPBOND_OOB_ENABLED:
-      *((uint8*)pValue) = gapBond_OOBDataFlag;
-      break;
+      case GAPBOND_OOB_ENABLED:
+        *pSimpleValue = gapBond_OOBDataFlag;
+        break;
 
-    case GAPBOND_OOB_DATA:
-      VOID osal_memcpy( pValue, gapBond_OOBData, KEYLEN ) ;
-      break;
+      case GAPBOND_BONDING_ENABLED:
+        *pSimpleValue = gapBond_Bonding;
+        break;
 
-    case GAPBOND_BONDING_ENABLED:
-      *((uint8*)pValue) = gapBond_Bonding;
-      break;
+      case GAPBOND_KEY_DIST_LIST:
+        *pSimpleValue = gapBond_KeyDistList;
+        break;
 
-    case GAPBOND_KEY_DIST_LIST:
-      *((uint8*)pValue) = gapBond_KeyDistList;
-      break;
+      case GAPBOND_DEFAULT_PASSCODE:
+        *pSimpleValue = gapBond_Passcode;
+        break;
 
-    case GAPBOND_DEFAULT_PASSCODE:
-      *((uint32*)pValue) = gapBond_Passcode;
-      break;
+      case GAPBOND_AUTO_FAIL_PAIRING:
+        *pSimpleValue = gapBond_AutoFail;
+        break;
 
-    case GAPBOND_AUTO_FAIL_PAIRING:
-      *((uint8*)pValue) = gapBond_AutoFail;
-      break;
+      case GAPBOND_AUTO_FAIL_REASON:
+        *pSimpleValue = gapBond_AutoFailReason;
+        break;
 
-    case GAPBOND_AUTO_FAIL_REASON:
-      *((uint8*)pValue) = gapBond_AutoFailReason;
-      break;
+      case GAPBOND_KEYSIZE:
+        *pSimpleValue = gapBond_KeySize;
+        break;
 
-    case GAPBOND_KEYSIZE:
-      *((uint8*)pValue) = gapBond_KeySize;
-      break;
+      case GAPBOND_AUTO_SYNC_WL:
+        *pSimpleValue = autoSyncWhiteList;
+        break;
 
-    case GAPBOND_AUTO_SYNC_WL:
-      *((uint8*)pValue) = autoSyncWhiteList;
-      break;
+      case GAPBOND_BOND_COUNT:
+        *pSimpleValue = gapBondMgrBondTotal();
+        break;
 
-    case GAPBOND_BOND_COUNT:
-      *((uint8*)pValue) = gapBondMgrBondTotal();
-      break;
-
-    default:
-      // The param value isn't part of this profile, try the GAP.
-      if ( param < TGAP_PARAMID_MAX )
-      {
-        *((uint16*)pValue) = GAP_GetParamValue( param );
-      }
-      else
-      {
+      default:
         ret = INVALIDPARAMETER;
-      }
-      break;
+        break;
+    }
+  }
+  else
+  {
+    switch ( param )
+    {
+      case GAPBOND_OOB_DATA:
+        if ( len < KEYLEN )
+        {
+          ret = bleInvalidRange;
+        }
+        else
+        {
+          VOID osal_memset( pLongValue, 0, len );
+          VOID osal_memcpy( pLongValue, gapBond_OOBData, KEYLEN ) ;
+        }
+        break;
+   
+      default:
+        ret = INVALIDPARAMETER;
+        break;
+    }
   }
 
   return ( ret );

@@ -467,8 +467,10 @@ static __data unsigned char* txtpos;
 static __data unsigned char** program_end;
 static __data unsigned char error_num;
 static __data unsigned char* variables_begin;
-static __data unsigned char* sp;
-static __data unsigned char* heap;
+
+__data unsigned char* sp;   // 
+__data unsigned char* heap; // Access in flashstore
+
 
 static unsigned char* list_line;
 static unsigned char** program_start;
@@ -1484,7 +1486,14 @@ static VAR_TYPE expression(unsigned char mode)
                 {
                   goto expr_error; // Not supported
                 }
-                GAPRole_GetParameter(top, (unsigned long*)&queueptr[-1], 0, NULL);
+                if (top >= BLE_PAIRING_MODE && top <= BLE_ERASE_SINGLEBOND)
+                {
+                  GAPBondMgr_GetParameter(top, (unsigned long*)&queueptr[-1], 0, NULL);
+                }
+                else
+                {
+                  GAPRole_GetParameter(top, (unsigned long*)&queueptr[-1], 0, NULL);
+                }
                 break;
 
               default:
@@ -2483,7 +2492,6 @@ cmd_autorun:
     if (v)
     {
       unsigned char autorun[7];
-      *(unsigned short*)autorun = FLASHID_SPECIAL;
       autorun[2] = 7;
       *(unsigned long*)&autorun[3] = FLASHSPECIAL_AUTORUN;
       addspecial_with_compact(autorun);
@@ -3140,7 +3148,14 @@ cmd_btpoke:
       {
         goto qwhat;
       }
-      if (GAPRole_SetParameter(_GAPROLE(param), 0, vframe->header.frame_size - sizeof(variable_frame), ptr) != SUCCESS)
+      if (param >= BLE_PAIRING_MODE && param <= BLE_ERASE_SINGLEBOND)
+      {
+        if (GAPBondMgr_SetParameter(_GAPROLE(param), 0, vframe->header.frame_size - sizeof(variable_frame), ptr) != SUCCESS)
+        {
+          goto qwhat;
+        }
+      }
+      else if (GAPRole_SetParameter(_GAPROLE(param), 0, vframe->header.frame_size - sizeof(variable_frame), ptr) != SUCCESS)
       {
         goto qwhat;
       }
@@ -3153,7 +3168,14 @@ cmd_btpoke:
       {
         goto qwhat;
       }
-      if (GAPRole_SetParameter(_GAPROLE(param), val, 0, NULL) != SUCCESS)
+      if (param >= BLE_PAIRING_MODE && param <= BLE_ERASE_SINGLEBOND)
+      {
+        if (GAPBondMgr_SetParameter(_GAPROLE(param), val, 0, NULL) != SUCCESS)
+        {
+          goto qwhat;
+        }
+      }
+      else if (GAPRole_SetParameter(_GAPROLE(param), val, 0, NULL) != SUCCESS)
       {
         goto qwhat;
       }
@@ -3458,7 +3480,6 @@ cmd_write:
       unsigned char* iptr = item + FLASHSPECIAL_DATA_OFFSET;
       unsigned char ilen = FLASHSPECIAL_DATA_OFFSET;
       CHECK_HEAP_OOM(ilen, qhoom);
-      *(unsigned short*)item = FLASHID_SPECIAL;
       *(unsigned long*)&item[FLASHSPECIAL_ITEM_ID] = special;
 
       txtpos--;
@@ -4739,7 +4760,7 @@ wire_error:
   return;
 }
 
-unsigned char addspecial_with_compact(unsigned char* item)
+static unsigned char addspecial_with_compact(unsigned char* item)
 {
   if (!flashstore_addspecial(item))
   {

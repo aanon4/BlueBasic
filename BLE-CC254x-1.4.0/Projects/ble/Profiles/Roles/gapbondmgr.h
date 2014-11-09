@@ -235,7 +235,7 @@ typedef struct
  *
  * @return      SUCCESS or INVALIDPARAMETER (invalid paramID)
  */
-extern bStatus_t GAPBondMgr_SetParameter( uint16 param, uint8 len, void *pValue );
+extern bStatus_t GAPBondMgr_SetParameter( uint16 param, uint32 val, uint8 len, void *pValue );
 
 /**
  * @brief       Get a GAP Bond Manager parameter.
@@ -252,7 +252,7 @@ extern bStatus_t GAPBondMgr_SetParameter( uint16 param, uint8 len, void *pValue 
  *
  * @return      SUCCESS or INVALIDPARAMETER (invalid paramID)
  */
-extern bStatus_t GAPBondMgr_GetParameter( uint16 param, void *pValue );
+extern bStatus_t GAPBondMgr_GetParameter( uint16 param, uint32* pSimpleValue, uint8 len, void *pLongValue );
 
 /**
  * @brief       Notify the Bond Manager that a connection has been made.
