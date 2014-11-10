@@ -291,6 +291,8 @@ enum
   CO_POWER,
   CO_INTERNAL,
   CO_EXTERNAL,
+  CO_DEFAULT_PASSCODE,
+  CO_BONDING_ENABLED,
 };
 
 // Constant map (so far all constants are <= 16 bits)
@@ -323,6 +325,8 @@ static const VAR_TYPE constantmap[] =
   CO_POWER,
   CO_INTERNAL,
   CO_EXTERNAL,
+  BLE_DEFAULT_PASSCODE,
+  BLE_BONDING_ENABLED,
 };
 
 //

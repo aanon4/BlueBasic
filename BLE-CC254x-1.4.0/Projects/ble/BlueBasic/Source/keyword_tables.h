@@ -19,6 +19,7 @@ static const unsigned char keywords_0[] =
 static const unsigned char keywords_1[] =
 {
   'B','A','T','T','E','R','Y',FUNC_BATTERY,
+  'B','O','N','D','I','N','G','_','E','N','A','B','L','E','D',KW_CONSTANT,CO_BONDING_ENABLED,
   'B','T','P','E','E','K',BLE_FUNC_BTPEEK,
   'B','T','P','O','K','E',KW_BTPOKE,
   'O','F','F',KW_CONSTANT,CO_OFF,
@@ -40,6 +41,7 @@ static const unsigned char keywords_2[] =
   'P','0',KW_PIN_P0,
   'P','1',KW_PIN_P1,
   'P','2',KW_PIN_P2,
+  'P','A','S','S','C','O','D','E',KW_CONSTANT,CO_DEFAULT_PASSCODE,
   'P','I','N','M','O','D','E',KW_PINMODE,
   'P','O','W','E','R',KW_CONSTANT,CO_POWER,
   'P','R','I','N','T',KW_PRINT,
