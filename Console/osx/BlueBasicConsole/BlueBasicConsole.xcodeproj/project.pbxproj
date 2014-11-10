@@ -16,7 +16,6 @@
 		222C27C919DFCC5A001031AB /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 222C27C719DFCC5A001031AB /* Main.storyboard */; };
 		222C27CB19DFCC5A001031AB /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 222C27CA19DFCC5A001031AB /* Images.xcassets */; };
 		222C27CE19DFCC5A001031AB /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 222C27CC19DFCC5A001031AB /* LaunchScreen.xib */; };
-		222C27DA19DFCC5A001031AB /* BlueBasicIOSTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C27D919DFCC5A001031AB /* BlueBasicIOSTests.swift */; };
 		222C284E19DFD00C001031AB /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C284419DFD00C001031AB /* DeviceManager.swift */; };
 		222C285019DFD00C001031AB /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C284519DFD00C001031AB /* Device.swift */; };
 		222C285219DFD00C001031AB /* DeviceDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C284619DFD00C001031AB /* DeviceDelegate.swift */; };
@@ -28,7 +27,6 @@
 		222C3DC91A0838E2001676FF /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C3DC81A0838E2001676FF /* AppDelegate.swift */; };
 		222C3DCB1A0838E2001676FF /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 222C3DCA1A0838E2001676FF /* Images.xcassets */; };
 		222C3DCE1A0838E2001676FF /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 222C3DCC1A0838E2001676FF /* MainMenu.xib */; };
-		222C3DDA1A0838E2001676FF /* BlueBasicOSXTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C3DD91A0838E2001676FF /* BlueBasicOSXTests.swift */; };
 		222C3DE61A083946001676FF /* BlueBasicOSX.entitlements in Resources */ = {isa = PBXBuildFile; fileRef = 222C3DE11A083946001676FF /* BlueBasicOSX.entitlements */; };
 		222C3DE71A083946001676FF /* Console.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C3DE21A083946001676FF /* Console.swift */; };
 		222C3DE81A083946001676FF /* DeviceList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222C3DE31A083946001676FF /* DeviceList.swift */; };
@@ -48,23 +46,6 @@
 		22CE828419E0A9C30043EA84 /* ConsoleDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CE828219E0A9C30043EA84 /* ConsoleDelegate.swift */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		222C27D419DFCC5A001031AB /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 22567DA219D1DB170029B430 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 222C27BC19DFCC5A001031AB;
-			remoteInfo = BlueBasicIOS;
-		};
-		222C3DD41A0838E2001676FF /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 22567DA219D1DB170029B430 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 222C3DC31A0838E2001676FF;
-			remoteInfo = BlueBasicOSX;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXFileReference section */
 		221E095319E6543E0015992F /* ConsoleProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConsoleProtocol.swift; sourceTree = "<group>"; };
 		221E095619E65B250015992F /* AutoUpdateFirmware.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutoUpdateFirmware.swift; sourceTree = "<group>"; };
@@ -77,9 +58,6 @@
 		222C27C819DFCC5A001031AB /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		222C27CA19DFCC5A001031AB /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		222C27CD19DFCC5A001031AB /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/LaunchScreen.xib; sourceTree = "<group>"; };
-		222C27D319DFCC5A001031AB /* BlueBasicIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BlueBasicIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		222C27D819DFCC5A001031AB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		222C27D919DFCC5A001031AB /* BlueBasicIOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlueBasicIOSTests.swift; sourceTree = "<group>"; };
 		222C284419DFD00C001031AB /* DeviceManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
 		222C284519DFD00C001031AB /* Device.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
 		222C284619DFD00C001031AB /* DeviceDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceDelegate.swift; sourceTree = "<group>"; };
@@ -93,9 +71,6 @@
 		222C3DC81A0838E2001676FF /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		222C3DCA1A0838E2001676FF /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		222C3DCD1A0838E2001676FF /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
-		222C3DD31A0838E2001676FF /* BlueBasicOSXTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BlueBasicOSXTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		222C3DD81A0838E2001676FF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		222C3DD91A0838E2001676FF /* BlueBasicOSXTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlueBasicOSXTests.swift; sourceTree = "<group>"; };
 		222C3DE11A083946001676FF /* BlueBasicOSX.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = BlueBasicOSX.entitlements; sourceTree = "<group>"; };
 		222C3DE21A083946001676FF /* Console.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Console.swift; sourceTree = "<group>"; };
 		222C3DE31A083946001676FF /* DeviceList.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceList.swift; sourceTree = "<group>"; };
@@ -113,21 +88,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		222C27D019DFCC5A001031AB /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		222C3DC11A0838E2001676FF /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		222C3DD01A0838E2001676FF /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -156,23 +117,6 @@
 			isa = PBXGroup;
 			children = (
 				222C27C019DFCC5A001031AB /* Info.plist */,
-			);
-			name = "Supporting Files";
-			sourceTree = "<group>";
-		};
-		222C27D619DFCC5A001031AB /* BlueBasicIOSTests */ = {
-			isa = PBXGroup;
-			children = (
-				222C27D919DFCC5A001031AB /* BlueBasicIOSTests.swift */,
-				222C27D719DFCC5A001031AB /* Supporting Files */,
-			);
-			path = BlueBasicIOSTests;
-			sourceTree = "<group>";
-		};
-		222C27D719DFCC5A001031AB /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				222C27D819DFCC5A001031AB /* Info.plist */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -219,32 +163,13 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
-		222C3DD61A0838E2001676FF /* BlueBasicOSXTests */ = {
-			isa = PBXGroup;
-			children = (
-				222C3DD91A0838E2001676FF /* BlueBasicOSXTests.swift */,
-				222C3DD71A0838E2001676FF /* Supporting Files */,
-			);
-			path = BlueBasicOSXTests;
-			sourceTree = "<group>";
-		};
-		222C3DD71A0838E2001676FF /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				222C3DD81A0838E2001676FF /* Info.plist */,
-			);
-			name = "Supporting Files";
-			sourceTree = "<group>";
-		};
 		22567DA119D1DB170029B430 = {
 			isa = PBXGroup;
 			children = (
 				222C284219DFCF95001031AB /* Shared */,
 				22567DD519D210710029B430 /* CoreBluetooth.framework */,
 				222C27BE19DFCC5A001031AB /* BlueBasicIOS */,
-				222C27D619DFCC5A001031AB /* BlueBasicIOSTests */,
 				222C3DC51A0838E2001676FF /* BlueBasicOSX */,
-				222C3DD61A0838E2001676FF /* BlueBasicOSXTests */,
 				22567DAB19D1DB170029B430 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -253,9 +178,7 @@
 			isa = PBXGroup;
 			children = (
 				222C27BD19DFCC5A001031AB /* BlueBasicIOS.app */,
-				222C27D319DFCC5A001031AB /* BlueBasicIOSTests.xctest */,
 				222C3DC41A0838E2001676FF /* BlueBasicOSX.app */,
-				222C3DD31A0838E2001676FF /* BlueBasicOSXTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -280,24 +203,6 @@
 			productReference = 222C27BD19DFCC5A001031AB /* BlueBasicIOS.app */;
 			productType = "com.apple.product-type.application";
 		};
-		222C27D219DFCC5A001031AB /* BlueBasicIOSTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 222C27E019DFCC5A001031AB /* Build configuration list for PBXNativeTarget "BlueBasicIOSTests" */;
-			buildPhases = (
-				222C27CF19DFCC5A001031AB /* Sources */,
-				222C27D019DFCC5A001031AB /* Frameworks */,
-				222C27D119DFCC5A001031AB /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				222C27D519DFCC5A001031AB /* PBXTargetDependency */,
-			);
-			name = BlueBasicIOSTests;
-			productName = BlueBasicIOSTests;
-			productReference = 222C27D319DFCC5A001031AB /* BlueBasicIOSTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 		222C3DC31A0838E2001676FF /* BlueBasicOSX */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 222C3DDB1A0838E2001676FF /* Build configuration list for PBXNativeTarget "BlueBasicOSX" */;
@@ -315,24 +220,6 @@
 			productReference = 222C3DC41A0838E2001676FF /* BlueBasicOSX.app */;
 			productType = "com.apple.product-type.application";
 		};
-		222C3DD21A0838E2001676FF /* BlueBasicOSXTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 222C3DDE1A0838E2001676FF /* Build configuration list for PBXNativeTarget "BlueBasicOSXTests" */;
-			buildPhases = (
-				222C3DCF1A0838E2001676FF /* Sources */,
-				222C3DD01A0838E2001676FF /* Frameworks */,
-				222C3DD11A0838E2001676FF /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				222C3DD51A0838E2001676FF /* PBXTargetDependency */,
-			);
-			name = BlueBasicOSXTests;
-			productName = BlueBasicOSXTests;
-			productReference = 222C3DD31A0838E2001676FF /* BlueBasicOSXTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -346,10 +233,6 @@
 						CreatedOnToolsVersion = 6.1;
 						DevelopmentTeam = JAQ8839UNZ;
 					};
-					222C27D219DFCC5A001031AB = {
-						CreatedOnToolsVersion = 6.1;
-						TestTargetID = 222C27BC19DFCC5A001031AB;
-					};
 					222C3DC31A0838E2001676FF = {
 						CreatedOnToolsVersion = 6.1;
 						DevelopmentTeam = JAQ8839UNZ;
@@ -358,10 +241,6 @@
 								enabled = 1;
 							};
 						};
-					};
-					222C3DD21A0838E2001676FF = {
-						CreatedOnToolsVersion = 6.1;
-						TestTargetID = 222C3DC31A0838E2001676FF;
 					};
 				};
 			};
@@ -379,9 +258,7 @@
 			projectRoot = "";
 			targets = (
 				222C27BC19DFCC5A001031AB /* BlueBasicIOS */,
-				222C27D219DFCC5A001031AB /* BlueBasicIOSTests */,
 				222C3DC31A0838E2001676FF /* BlueBasicOSX */,
-				222C3DD21A0838E2001676FF /* BlueBasicOSXTests */,
 			);
 		};
 /* End PBXProject section */
@@ -397,13 +274,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		222C27D119DFCC5A001031AB /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		222C3DC21A0838E2001676FF /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -411,13 +281,6 @@
 				222C3DE61A083946001676FF /* BlueBasicOSX.entitlements in Resources */,
 				222C3DCB1A0838E2001676FF /* Images.xcassets in Resources */,
 				222C3DCE1A0838E2001676FF /* MainMenu.xib in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		222C3DD11A0838E2001676FF /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -446,14 +309,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		222C27CF19DFCC5A001031AB /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				222C27DA19DFCC5A001031AB /* BlueBasicIOSTests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		222C3DC01A0838E2001676FF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -477,28 +332,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		222C3DCF1A0838E2001676FF /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				222C3DDA1A0838E2001676FF /* BlueBasicOSXTests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		222C27D519DFCC5A001031AB /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 222C27BC19DFCC5A001031AB /* BlueBasicIOS */;
-			targetProxy = 222C27D419DFCC5A001031AB /* PBXContainerItemProxy */;
-		};
-		222C3DD51A0838E2001676FF /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 222C3DC31A0838E2001676FF /* BlueBasicOSX */;
-			targetProxy = 222C3DD41A0838E2001676FF /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		222C27C719DFCC5A001031AB /* Main.storyboard */ = {
@@ -532,6 +366,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -541,7 +376,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos8.0;
+				SDKROOT = iphoneos8.1;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -550,50 +385,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				INFOPLIST_FILE = BlueBasicIOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos8.0;
+				SDKROOT = iphoneos8.1;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = Release;
-		};
-		222C27DD19DFCC5A001031AB /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)/Developer/Library/Frameworks",
-					"$(inherited)",
-				);
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = BlueBasicIOSTests/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos8.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BlueBasicIOS.app/BlueBasicIOS";
-			};
-			name = Debug;
-		};
-		222C27DE19DFCC5A001031AB /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)/Developer/Library/Frameworks",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = BlueBasicIOSTests/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos8.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BlueBasicIOS.app/BlueBasicIOS";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -627,44 +426,6 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
-		};
-		222C3DDF1A0838E2001676FF /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				COMBINE_HIDPI_IMAGES = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(DEVELOPER_FRAMEWORKS_DIR)",
-					"$(inherited)",
-				);
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = BlueBasicOSXTests/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BlueBasicOSX.app/Contents/MacOS/BlueBasicOSX";
-			};
-			name = Debug;
-		};
-		222C3DE01A0838E2001676FF /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				COMBINE_HIDPI_IMAGES = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(DEVELOPER_FRAMEWORKS_DIR)",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = BlueBasicOSXTests/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BlueBasicOSX.app/Contents/MacOS/BlueBasicOSX";
 			};
 			name = Release;
 		};
@@ -757,29 +518,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		222C27E019DFCC5A001031AB /* Build configuration list for PBXNativeTarget "BlueBasicIOSTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				222C27DD19DFCC5A001031AB /* Debug */,
-				222C27DE19DFCC5A001031AB /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		222C3DDB1A0838E2001676FF /* Build configuration list for PBXNativeTarget "BlueBasicOSX" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				222C3DDC1A0838E2001676FF /* Debug */,
 				222C3DDD1A0838E2001676FF /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		222C3DDE1A0838E2001676FF /* Build configuration list for PBXNativeTarget "BlueBasicOSXTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				222C3DDF1A0838E2001676FF /* Debug */,
-				222C3DE01A0838E2001676FF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
