@@ -1492,11 +1492,17 @@ static VAR_TYPE expression(unsigned char mode)
                 }
                 if (top >= BLE_PAIRING_MODE && top <= BLE_ERASE_SINGLEBOND)
                 {
-                  GAPBondMgr_GetParameter(top, (unsigned long*)&queueptr[-1], 0, NULL);
+                  if (GAPBondMgr_GetParameter(top, (unsigned long*)&queueptr[-1], 0, NULL) != SUCCESS)
+                  {
+                    goto expr_error;
+                  }
                 }
                 else
                 {
-                  GAPRole_GetParameter(top, (unsigned long*)&queueptr[-1], 0, NULL);
+                  if (GAPRole_GetParameter(top, (unsigned long*)&queueptr[-1], 0, NULL) != SUCCESS)
+                  {
+                    goto expr_error;
+                  }
                 }
                 break;
 
