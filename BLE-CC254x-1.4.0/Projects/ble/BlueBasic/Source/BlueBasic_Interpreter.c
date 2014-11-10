@@ -258,6 +258,8 @@ enum
 
   IN_ATTACH,
   IN_DETACH,
+  
+  BLE_AUTH,
 
   LAST_KEYWORD
 };
@@ -2785,6 +2787,7 @@ ble_gatt:
     case BLE_WRITENORSP:
     case BLE_NOTIFY:
     case BLE_INDICATE:
+    case BLE_AUTH:
       {
         servicecount++;
         for (;;)
@@ -2798,6 +2801,7 @@ ble_gatt:
             case KW_READ:
             case KW_WRITE:
             case BLE_WRITENORSP:
+            case BLE_AUTH:
               break;
             default:
               goto value_done;
@@ -4895,7 +4899,7 @@ static char ble_build_service(void)
         goto error;
       }
     }
-    else if (cmd == KW_READ || cmd == KW_WRITE || cmd == BLE_NOTIFY || cmd == BLE_INDICATE || cmd == BLE_WRITENORSP)
+    else if (cmd == KW_READ || cmd == KW_WRITE || cmd == BLE_NOTIFY || cmd == BLE_INDICATE || cmd == BLE_WRITENORSP || cmd == BLE_AUTH)
     {
       txtpos--;
       ch = 0;
@@ -4917,6 +4921,20 @@ static char ble_build_service(void)
             break;
           case BLE_WRITENORSP:
             ch |= GATT_PROP_WRITE_NO_RSP;
+            break;
+          case BLE_AUTH:
+            ch |= GATT_PROP_AUTHEN;
+            switch (*txtpos)
+            {
+              case KW_READ:
+                attributes[count].permissions |= GATT_PERMIT_AUTHEN_READ;
+                break;
+              case KW_WRITE:
+                attributes[count].permissions |= GATT_PERMIT_AUTHEN_WRITE;
+                break;
+              default:
+                break;
+            }
             break;
           default:
             txtpos--;

@@ -62,6 +62,8 @@ extern void OS_flashstore_erase(unsigned long page);
 
 #define GATT_PERMIT_READ        1
 #define GATT_PERMIT_WRITE       2
+#define GATT_PERMIT_AUTHEN_READ 4
+#define GATT_PERMIT_AUTHEN_WRITE 8
 
 #define GATT_PROP_BCAST         1
 #define GATT_PROP_READ          2

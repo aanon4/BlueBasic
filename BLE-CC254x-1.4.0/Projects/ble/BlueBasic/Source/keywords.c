@@ -88,6 +88,7 @@ struct keyword
   { "READ", "KW_READ" },
   { "WRITENORSP", "BLE_WRITENORSP" },
   { "WRITE", "KW_WRITE" },
+  { "AUTH", "BLE_AUTH" },
   { "NOTIFY", "BLE_NOTIFY" },
   { "INDICATE", "BLE_INDICATE" },
   { "ADVERT", "KW_ADVERT" },
