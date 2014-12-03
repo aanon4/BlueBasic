@@ -8,7 +8,7 @@
 // os.h
 //
 
-#define kVersion "v0.5"
+#define kVersion "v0.6"
 
 #if __APPLE__
 
