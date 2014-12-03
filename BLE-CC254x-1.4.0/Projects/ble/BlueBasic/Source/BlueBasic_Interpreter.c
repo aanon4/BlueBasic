@@ -10,6 +10,9 @@
 //	      Scott Lawrence <yorgle@gmail.com>
 //
 
+// v0.6: 2014-12-01
+//      Finalize Petra version.
+//
 // v0.5: 2014-09-09
 //      Flash storage system for programs.
 //
@@ -3156,20 +3159,21 @@ cmd_btpoke:
     // Expects an array
     if (param & 0x8000)
     {
+      param = _GAPROLE(param);
       variable_frame* vframe;
       ptr = get_variable_frame(*txtpos, &vframe);
       if (vframe->type != VAR_DIM_BYTE)
       {
         goto qwhat;
       }
-      if (param >= BLE_PAIRING_MODE && param <= BLE_ERASE_SINGLEBOND)
+      if (param >= _GAPROLE(BLE_PAIRING_MODE) && param <= _GAPROLE(BLE_ERASE_SINGLEBOND))
       {
-        if (GAPBondMgr_SetParameter(_GAPROLE(param), 0, vframe->header.frame_size - sizeof(variable_frame), ptr) != SUCCESS)
+        if (GAPBondMgr_SetParameter(param, 0, vframe->header.frame_size - sizeof(variable_frame), ptr) != SUCCESS)
         {
           goto qwhat;
         }
       }
-      else if (GAPRole_SetParameter(_GAPROLE(param), 0, vframe->header.frame_size - sizeof(variable_frame), ptr) != SUCCESS)
+      else if (GAPRole_SetParameter(param, 0, vframe->header.frame_size - sizeof(variable_frame), ptr) != SUCCESS)
       {
         goto qwhat;
       }
@@ -3182,14 +3186,14 @@ cmd_btpoke:
       {
         goto qwhat;
       }
-      if (param >= BLE_PAIRING_MODE && param <= BLE_ERASE_SINGLEBOND)
+      if (param >= _GAPROLE(BLE_PAIRING_MODE) && param <= _GAPROLE(BLE_ERASE_SINGLEBOND))
       {
-        if (GAPBondMgr_SetParameter(_GAPROLE(param), val, 0, NULL) != SUCCESS)
+        if (GAPBondMgr_SetParameter(param, val, 0, NULL) != SUCCESS)
         {
           goto qwhat;
         }
       }
-      else if (GAPRole_SetParameter(_GAPROLE(param), val, 0, NULL) != SUCCESS)
+      else if (GAPRole_SetParameter(param, val, 0, NULL) != SUCCESS)
       {
         goto qwhat;
       }
