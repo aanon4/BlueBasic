@@ -12,7 +12,7 @@
       <name>General</name>
       <archiveVersion>1</archiveVersion>
       <data>
-        <version>5</version>
+        <version>6</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>1</debug>
         <option>
@@ -180,7 +180,7 @@
         </option>
         <option>
           <name>General Idata Stack Size</name>
-          <state>0xC0</state>
+          <state>0x80</state>
         </option>
         <option>
           <name>General Pdata Stack Size</name>
@@ -249,6 +249,18 @@
           <name>GRuntimeLibSelectSlave2</name>
           <version>0</version>
           <state>3</state>
+        </option>
+        <option>
+          <name>Extended stack address</name>
+          <state>0x9B</state>
+        </option>
+        <option>
+          <name>Extended stack mask</name>
+          <state>0x03</state>
+        </option>
+        <option>
+          <name>Extended stack is offset</name>
+          <state>0</state>
         </option>
       </data>
     </settings>
@@ -1093,7 +1105,7 @@
       <name>General</name>
       <archiveVersion>1</archiveVersion>
       <data>
-        <version>5</version>
+        <version>6</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>1</debug>
         <option>
@@ -1261,7 +1273,7 @@
         </option>
         <option>
           <name>General Idata Stack Size</name>
-          <state>0xC0</state>
+          <state>0x80</state>
         </option>
         <option>
           <name>General Pdata Stack Size</name>
@@ -1330,6 +1342,18 @@
           <name>GRuntimeLibSelectSlave2</name>
           <version>0</version>
           <state>3</state>
+        </option>
+        <option>
+          <name>Extended stack address</name>
+          <state>0x9B</state>
+        </option>
+        <option>
+          <name>Extended stack mask</name>
+          <state>0x03</state>
+        </option>
+        <option>
+          <name>Extended stack is offset</name>
+          <state>0</state>
         </option>
       </data>
     </settings>
@@ -2173,7 +2197,7 @@
       <name>General</name>
       <archiveVersion>1</archiveVersion>
       <data>
-        <version>5</version>
+        <version>6</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>0</debug>
         <option>
@@ -2341,7 +2365,7 @@
         </option>
         <option>
           <name>General Idata Stack Size</name>
-          <state>0xC0</state>
+          <state>0x80</state>
         </option>
         <option>
           <name>General Pdata Stack Size</name>
@@ -2410,6 +2434,18 @@
           <name>GRuntimeLibSelectSlave2</name>
           <version>0</version>
           <state>3</state>
+        </option>
+        <option>
+          <name>Extended stack address</name>
+          <state>0x9B</state>
+        </option>
+        <option>
+          <name>Extended stack mask</name>
+          <state>0x03</state>
+        </option>
+        <option>
+          <name>Extended stack is offset</name>
+          <state>0</state>
         </option>
       </data>
     </settings>
@@ -3260,7 +3296,7 @@
       <name>General</name>
       <archiveVersion>1</archiveVersion>
       <data>
-        <version>5</version>
+        <version>6</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>0</debug>
         <option>
@@ -3428,7 +3464,7 @@
         </option>
         <option>
           <name>General Idata Stack Size</name>
-          <state>0xC0</state>
+          <state>0x80</state>
         </option>
         <option>
           <name>General Pdata Stack Size</name>
@@ -3497,6 +3533,18 @@
           <name>GRuntimeLibSelectSlave2</name>
           <version>0</version>
           <state>3</state>
+        </option>
+        <option>
+          <name>Extended stack address</name>
+          <state>0x9B</state>
+        </option>
+        <option>
+          <name>Extended stack mask</name>
+          <state>0x03</state>
+        </option>
+        <option>
+          <name>Extended stack is offset</name>
+          <state>0</state>
         </option>
       </data>
     </settings>
@@ -4348,7 +4396,7 @@
       <name>General</name>
       <archiveVersion>1</archiveVersion>
       <data>
-        <version>5</version>
+        <version>6</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>0</debug>
         <option>
@@ -4516,7 +4564,7 @@
         </option>
         <option>
           <name>General Idata Stack Size</name>
-          <state>0xC0</state>
+          <state>0x80</state>
         </option>
         <option>
           <name>General Pdata Stack Size</name>
@@ -4585,6 +4633,18 @@
           <name>GRuntimeLibSelectSlave2</name>
           <version>0</version>
           <state>3</state>
+        </option>
+        <option>
+          <name>Extended stack address</name>
+          <state>0x9B</state>
+        </option>
+        <option>
+          <name>Extended stack mask</name>
+          <state>0x03</state>
+        </option>
+        <option>
+          <name>Extended stack is offset</name>
+          <state>0</state>
         </option>
       </data>
     </settings>
