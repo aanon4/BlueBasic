@@ -491,7 +491,7 @@ static variable_frame normal_variable = { { FRAME_VARIABLE_FLAG, 0 }, VAR_INT, 0
 #define VARIABLE_INT_GET(F)     (*VARIABLE_INT_ADDR(F))
 #define VARIABLE_INT_SET(F,V)   (*VARIABLE_INT_ADDR(F) = (V))
 
-#define VARIABLE_IS_EXTENDED(F)  (vname = (F) - 'A', (*(variables_begin + 26 * VAR_SIZE + vname / 8) & (1 << (vname % 8))))
+#define VARIABLE_IS_EXTENDED(F)  (vname = (F) - 'A', (*(variables_begin + 26 * VAR_SIZE + (vname >> 3)) & (1 << (vname & 7))))
 #define VARIABLE_SAVE(V) \
   do { \
     unsigned char vname = (V)->name - 'A'; \
@@ -2815,16 +2815,17 @@ ble_gatt:
         if (ch >= 'A' && ch <= 'Z')
         {
           variable_frame* vframe;
-          get_variable_frame(ch, &vframe);
+          unsigned char* ptr = get_variable_frame(ch, &vframe);
           if (vframe == &normal_variable)
           {
             vframe = (variable_frame*)heap;
-            CHECK_HEAP_OOM(sizeof(variable_frame), qoom);
+            CHECK_HEAP_OOM(sizeof(variable_frame) + VAR_SIZE, qoom);
             vframe->header.frame_type = FRAME_VARIABLE_FLAG;
-            vframe->header.frame_size = sizeof(variable_frame);
+            vframe->header.frame_size = sizeof(variable_frame) + VAR_SIZE;
             vframe->type = VAR_INT;
             vframe->name = ch;
             vframe->ble = NULL;
+            *(VAR_TYPE*)(vframe + 1) = *(VAR_TYPE*)ptr;
             VARIABLE_SAVE(vframe);
           }
         }
