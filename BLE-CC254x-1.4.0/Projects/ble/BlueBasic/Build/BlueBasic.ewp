@@ -180,7 +180,7 @@
         </option>
         <option>
           <name>General Idata Stack Size</name>
-          <state>0x80</state>
+          <state>0xA0</state>
         </option>
         <option>
           <name>General Pdata Stack Size</name>
@@ -1273,7 +1273,7 @@
         </option>
         <option>
           <name>General Idata Stack Size</name>
-          <state>0x80</state>
+          <state>0xA0</state>
         </option>
         <option>
           <name>General Pdata Stack Size</name>
@@ -2365,7 +2365,7 @@
         </option>
         <option>
           <name>General Idata Stack Size</name>
-          <state>0x80</state>
+          <state>0xA0</state>
         </option>
         <option>
           <name>General Pdata Stack Size</name>
@@ -3464,7 +3464,7 @@
         </option>
         <option>
           <name>General Idata Stack Size</name>
-          <state>0x80</state>
+          <state>0xA0</state>
         </option>
         <option>
           <name>General Pdata Stack Size</name>
@@ -4564,7 +4564,7 @@
         </option>
         <option>
           <name>General Idata Stack Size</name>
-          <state>0x80</state>
+          <state>0xA0</state>
         </option>
         <option>
           <name>General Pdata Stack Size</name>
