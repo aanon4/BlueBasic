@@ -2482,15 +2482,22 @@ cmd_timer:
 
 //
 // DELAY <timeout>
-// Pauses execution for timeout-ms 
+// Pauses execution for timeout-ms. -1 means forever
 //
 cmd_delay:
   val = expression(EXPR_NORMAL);
-  if (error_num || val < 0)
+  if (error_num)
   {
     goto qwhat;
   }
-  OS_timer_start(DELAY_TIMER, val, 0, *(LINENUM*)lineptr[1]);
+  if (val >= 0)
+  {
+    OS_timer_start(DELAY_TIMER, val, 0, *(LINENUM*)lineptr[1]);
+  }
+  else if (val < -1)
+  {
+    goto qwhat;
+  }
   return IX_PROMPT;
 
 //
