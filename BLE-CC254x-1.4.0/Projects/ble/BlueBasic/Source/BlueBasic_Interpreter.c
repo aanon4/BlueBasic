@@ -3951,6 +3951,7 @@ cmd_i2c:
           WIRE_SDA_HIGH();
         }
         WIRE_SCL_HIGH();
+        WIRE_SCL_WAIT();
         WIRE_SCL_LOW();
         WIRE_SDA_HIGH();
       }
@@ -3983,6 +3984,7 @@ i2c_end:
           if (!(idx & 7))
           {
             *rdata++ = v;
+            ptr++;
             v = 0;
           }
         }
