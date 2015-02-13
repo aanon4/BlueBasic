@@ -1764,6 +1764,8 @@ unsigned char interpreter_run(LINENUM gofrom, unsigned char canreturn)
     heap = (unsigned char*)program_end;
   }
 
+prompt:;
+  OS_prompt_buffer(heap + sizeof(LINENUM), sp);
   return IX_PROMPT;
 
 // -- Commands ---------------------------------------------------------------
@@ -1772,7 +1774,7 @@ direct:
   txtpos = heap + sizeof(LINENUM);
   if (*txtpos == NL)
   {
-    return IX_PROMPT;
+    goto prompt;
   }
   else
   {
@@ -1951,8 +1953,11 @@ print_error_or_ok:
     printline(0, 1);
     OS_putchar(NL);
   }
-  return error_num == ERROR_OOM ? IX_OUTOFMEMORY : IX_PROMPT;
-  
+  if (error_num == ERROR_OOM)
+  {
+    return IX_OUTOFMEMORY;
+  }
+  goto prompt;  
 
 // --- Commands --------------------------------------------------------------
 
@@ -1977,7 +1982,7 @@ cmd_elif:
         if (lineptr >= program_end)
         {
           printmsg(error_msgs[ERROR_OK]);
-          return IX_PROMPT;
+          goto prompt;
         }
         switch (txtpos[sizeof(LINENUM) + sizeof(char)])
         {
@@ -2026,7 +2031,7 @@ cmd_else:
       if (lineptr >= program_end)
       {
         printmsg(error_msgs[ERROR_OK]);
-        return IX_PROMPT;
+        goto prompt;
       }
       if (txtpos[sizeof(LINENUM) + sizeof(char)] == KW_IF)
       {
@@ -2166,7 +2171,7 @@ gosub_return:
         if (txtpos[-1] == KW_RETURN)
         {
           sp += ((frame_header*)sp)->frame_size;
-          return IX_PROMPT;
+          goto prompt;
         }
         break;
       case FRAME_FOR_FLAG:
@@ -2498,7 +2503,7 @@ cmd_delay:
   {
     goto qwhat;
   }
-  return IX_PROMPT;
+  goto prompt;
 
 //
 // AUTORUN ON|OFF
