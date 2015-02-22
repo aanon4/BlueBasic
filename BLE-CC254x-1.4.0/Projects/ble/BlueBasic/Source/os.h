@@ -186,6 +186,7 @@ extern unsigned char GAPObserverRole_CancelDiscovery(void);
 
 #define TARGET_CC2540           1
 #define ENABLE_DEBUG_INTERFACE  1
+#define ENABLE_LOWPOWER_CLOCK   1
 #define ENABLE_BLE_CONSOLE      1
 #define ENABLE_FAKE_OAD_PROFILE 1
 #define ENABLE_PORT0            1
@@ -194,7 +195,6 @@ extern unsigned char GAPObserverRole_CancelDiscovery(void);
 
 #else // TARGET_PETRA
 
-#define ENABLE_DEBUG_INTERFACE  1
 #define ENABLE_BLE_CONSOLE      1
 #define ENABLE_FAKE_OAD_PROFILE 1
 #define ENABLE_PORT0            1

@@ -4160,11 +4160,13 @@ static unsigned char pin_parse(void)
     goto badpin;
   }
 #ifdef ENABLE_PORT2
+#ifdef ENABLE_LOWPOWER_CLOCK
   // Exclude pins used for lowpower clock
   if (major == KW_PIN_P2 && (minor == 3 || minor == 4))
   {
     goto badpin;
   }
+#endif
 #ifdef ENABLE_DEBUG_INTERFACE
   if (major == KW_PIN_P2 && (minor == 1 || minor == 2))
   {
