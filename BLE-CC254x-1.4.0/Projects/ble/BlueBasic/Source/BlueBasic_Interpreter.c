@@ -538,9 +538,6 @@ static VAR_TYPE pin_read(unsigned char major, unsigned char minor);
 static unsigned char pin_parse(void);
 static void pin_wire_parse(void);
 static void pin_wire(unsigned char* start, unsigned char* end);
-#define PIN_MAKE(A,I) (((A) << 6) | ((I) << 3))
-#define PIN_MAJOR(P)  ((P) >> 6)
-#define PIN_MINOR(P)  (((P) >> 3) & 7)
 
 static unsigned char pinParseCurrent;
 static unsigned char* pinParsePtr;
@@ -2660,15 +2657,13 @@ cmd_interrupt:
         if (PIN_MINOR(pin) < 4)
         {
           PICTL = (PICTL & 0x02) | (falling << 1);
-          P1IEN |= i;
-          IEN2 |= 1 << 4;
         }
         else
         {
           PICTL = (PICTL & 0x04) | (falling << 2);
-          P1IEN |= i;
-          IEN2 |= 1 << 4;
         }
+        P1IEN |= i;
+        IEN2 |= 1 << 4;
       }
       else
       {
@@ -4209,7 +4204,7 @@ static VAR_TYPE pin_read(unsigned char major, unsigned char minor)
           ;
         val = ADCL;
         val |= ADCH << 8;
-        return val >> (8 - (analogResolution / 8));
+        return val >> (8 - (analogResolution >> 3));
       }
       return (P0 >> minor) & 1;
     case 1:

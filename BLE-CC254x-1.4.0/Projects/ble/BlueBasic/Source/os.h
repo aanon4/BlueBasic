@@ -351,6 +351,10 @@ extern void interpreter_loop(void);
 extern unsigned char interpreter_run(unsigned short gofrom, unsigned char canreturn);
 extern void interpreter_timer_event(unsigned short id);
 
+#define PIN_MAKE(A,I) (((A) << 6) | ((I) << 3))
+#define PIN_MAJOR(P)  ((P) >> 6)
+#define PIN_MINOR(P)  (((P) >> 3) & 7)
+
 #define FLASHSTORE_NRPAGES    4
 #define FLASHSTORE_PAGESIZE   2048
 #define FLASHSTORE_LEN        (FLASHSTORE_NRPAGES * FLASHSTORE_PAGESIZE)

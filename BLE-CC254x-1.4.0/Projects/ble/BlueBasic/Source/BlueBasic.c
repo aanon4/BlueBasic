@@ -535,7 +535,7 @@ HAL_ISR_FUNCTION(port0Isr, P0INT_VECTOR)
 
     for (i = 0; i < OS_MAX_INTERRUPT; i++)
     {
-      if (blueBasic_interrupts[i].pin < 0x008 && (status & (1 << (blueBasic_interrupts[i].pin & 7))))
+      if (PIN_MAJOR(blueBasic_interrupts[i].pin) == 0 && (status & (1 << PIN_MINOR(blueBasic_interrupts[i].pin))))
       {
         osal_set_event(blueBasic_TaskID, BLUEBASIC_EVENT_INTERRUPT << i);
       }
@@ -561,7 +561,7 @@ HAL_ISR_FUNCTION(port1Isr, P1INT_VECTOR)
 
     for (i = 0; i < OS_MAX_INTERRUPT; i++)
     {
-      if (blueBasic_interrupts[i].pin >= 0x100 && blueBasic_interrupts[i].pin < 0x108 && (status & (1 << (blueBasic_interrupts[i].pin & 7))))
+      if (PIN_MAJOR(blueBasic_interrupts[i].pin) == 1 && (status & (1 << PIN_MINOR(blueBasic_interrupts[i].pin))))
       {
         osal_set_event(blueBasic_TaskID, BLUEBASIC_EVENT_INTERRUPT << i);
       }
@@ -587,7 +587,7 @@ HAL_ISR_FUNCTION(port2Isr, P2INT_VECTOR)
 
     for (i = 0; i < OS_MAX_INTERRUPT; i++)
     {
-      if (blueBasic_interrupts[i].pin >= 0x200 && (status & (1 << (blueBasic_interrupts[i].pin & 7))))
+      if (PIN_MAJOR(blueBasic_interrupts[i].pin) == 2 && (status & (1 << PIN_MINOR(blueBasic_interrupts[i].pin))))
       {
         osal_set_event(blueBasic_TaskID, BLUEBASIC_EVENT_INTERRUPT << i);
       }
