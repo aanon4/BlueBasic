@@ -2575,6 +2575,7 @@ cmd_pinmode:
         break;
       case PM_OUTPUT:
         *cmd++ = WIRE_OUTPUT;
+        *cmd++ = WIRE_INPUT_NORMAL; // Despite this saying 'input', it sets up the rest of the pin
         break;
       default:
         txtpos--;
