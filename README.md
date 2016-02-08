@@ -1,6 +1,8 @@
 BlueBasic
 =========
 
+NOTE: I no longer have access to either hardware or tools to update the builds.
+
 BASIC interpreter for CC2540 and CC2541 Bluetooth LE chips.
 
 This project contains a BASIC interpreter which can be flashed onto a CC2540 or CC2541 Bluetooth module. Once installed, simple use the Bluetooth Console tool to connect and start coding on the device using good old BASIC.
