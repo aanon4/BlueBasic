@@ -1,7 +1,9 @@
 BlueBasic
 =========
 
-NOTE: I no longer have access to either hardware or tools to update the builds.
+**NOTE: I no longer have access to either hardware or tools to update the builds.**
+
+**ALSO NOTE: This project has moved to https://gitlab.com/timwilkinson/BlueBasic**
 
 BASIC interpreter for CC2540 and CC2541 Bluetooth LE chips.
 
